@@ -1,0 +1,13 @@
+#!/bin/bash
+
+TOOLS_DIR="${TOOLS_DIR:=$HOME/tools}"
+OUTPUT_FILE="all_results.csv"
+
+cd "$TOOLS_DIR/outputs"
+echo "mobility,manager,velocity,distance,nWifi,nWifiReal,seed,throughput" > "$OUTPUT_FILE"
+
+for file in *.csv; do
+    if [[ "$file" != "$OUTPUT_FILE" ]]; then
+        cat "$file" >> "$OUTPUT_FILE"
+    fi
+done
