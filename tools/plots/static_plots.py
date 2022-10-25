@@ -8,7 +8,7 @@ from scipy.stats import t
 from plots.common import all_managers
 
 
-TOOLS_DIR = os.path.join(os.path.expanduser("~"), 'tools')
+TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'tools'))
 DATA_FILE = os.path.join(TOOLS_DIR, 'outputs', 'all_results.csv')
 
 
@@ -45,7 +45,7 @@ def plot_results(distance):
     plt.legend()
     plt.tight_layout()
 
-    plt.savefig(f'static d{distance} mcs.svg', bbox_inches='tight')
+    plt.savefig(f'static d{distance} thr.svg', bbox_inches='tight')
     plt.clf()
 
 
