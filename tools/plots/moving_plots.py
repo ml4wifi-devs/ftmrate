@@ -8,7 +8,7 @@ from scipy.stats import t
 from plots.common import all_managers
 
 
-TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'tools'))
+TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))
 DATA_FILE = os.path.join(TOOLS_DIR, 'outputs', 'all_results.csv')
 
 
