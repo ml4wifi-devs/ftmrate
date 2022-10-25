@@ -8,6 +8,8 @@
 #include "ns3/wifi-utils.h"
 #include "ml-wifi-manager.h"
 
+#define SAMPLE_INTERVAL 0.01
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("MlWifiManager");
@@ -52,6 +54,7 @@ MlWifiManager::DoCreateStation (void) const
   NS_LOG_FUNCTION (this);
 
   MlWifiRemoteStation *st = new MlWifiRemoteStation ();
+  st->last_sample = Simulator::Now ().GetSeconds ();
   st->m_mode = 0;
 
   auto env = m_env->EnvSetterCond ();
@@ -127,24 +130,14 @@ MlWifiManager::DoGetDataTxVector (WifiRemoteStation *station)
 
   auto st = static_cast<MlWifiRemoteStation *> (station);
 
-  auto env = m_env->EnvSetterCond ();
-  env->time = Simulator::Now ().GetSeconds ();
-  env->distance = m_distance;
-  env->station_id = st->m_station_id;
-  env->mode = st->m_mode;
-  env->type = 1;
-  m_env->SetCompleted ();
-
-  auto act = m_env->ActionGetterCond ();
-  if (act->station_id != st->m_station_id)
+#ifdef SAMPLE_INTERVAL
+  if (Simulator::Now ().GetSeconds () - st->last_sample >= SAMPLE_INTERVAL)
     {
-      std::cout << "Env sid: " << st->m_station_id << " Act sid: " << act->station_id << std::endl;
-      NS_ASSERT_MSG (
-          act->station_id == st->m_station_id,
-          "Error! Difference between station_id in ns3-ai action and remote station structures!");
+      SampleMode (st);
     }
-  st->m_mode = act->mode;
-  m_env->GetCompleted ();
+#else
+  SampleMode (st);
+#endif
 
   WifiMode mode ("HeMcs" + std::to_string (st->m_mode));
 
@@ -175,6 +168,31 @@ MlWifiManager::DoGetRtsTxVector (WifiRemoteStation *station)
       0,
       GetChannelWidthForTransmission (m_ctlMode, GetChannelWidth (station)),
       GetAggregation (station));
+}
+
+void
+MlWifiManager::SampleMode(MlWifiRemoteStation *st)
+{
+  auto env = m_env->EnvSetterCond ();
+  env->time = Simulator::Now ().GetSeconds ();
+  env->distance = m_distance;
+  env->station_id = st->m_station_id;
+  env->mode = st->m_mode;
+  env->type = 1;
+  m_env->SetCompleted ();
+
+  auto act = m_env->ActionGetterCond ();
+  if (act->station_id != st->m_station_id)
+    {
+      std::cout << "Env sid: " << st->m_station_id << " Act sid: " << act->station_id << std::endl;
+      NS_ASSERT_MSG (
+          act->station_id == st->m_station_id,
+          "Error! Difference between station_id in ns3-ai action and remote station structures!");
+    }
+  st->m_mode = act->mode;
+  m_env->GetCompleted ();
+
+  st->last_sample = Simulator::Now ().GetSeconds ();
 }
 
 } //namespace ns3

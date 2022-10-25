@@ -21,6 +21,7 @@ struct sEnv
 struct sAct
 {
   uint32_t station_id;
+  double last_sample;
   uint8_t mode;
 } Packed;
 
@@ -53,6 +54,8 @@ private:
   void DoReportFinalDataFailed (WifiRemoteStation *station) override;
   WifiTxVector DoGetDataTxVector (WifiRemoteStation *station) override;
   WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station) override;
+
+  void SampleMode(MlWifiRemoteStation *station);
 
   WifiMode m_ctlMode;   // Wi-Fi mode for RTS frames
   double m_distance;    // current distance between STA and AP
