@@ -6,7 +6,7 @@ import pandas as pd
 import seaborn as sn
 from scipy.stats import ttest_ind, f_oneway
 
-from plots.common import all_managers
+from tools.plots.common import all_managers
 
 
 TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))

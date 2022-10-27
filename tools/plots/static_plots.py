@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from scipy.stats import t
 
-from plots.common import all_managers
+from tools.plots.common import all_managers
 
 
 TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))

@@ -6,7 +6,7 @@ import pandas as pd
 import seaborn as sn
 from scipy.stats import ttest_ind, f_oneway
 
-from plots.common import all_managers
+from tools.plots.common import all_managers
 
 
 TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))
@@ -51,7 +51,7 @@ def plot_results(distance, n_wifi, output_file):
 
 
 if __name__ == '__main__':
-    n_wifi_to_compare = 30
+    n_wifi_to_compare = 20
 
     for distance in [0, 20, 40]:
         plot_results(distance, n_wifi_to_compare, f'static d{distance} n{n_wifi_to_compare} t-test')

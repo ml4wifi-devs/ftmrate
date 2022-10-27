@@ -6,7 +6,7 @@ import pandas as pd
 import seaborn as sn
 from scipy.stats import ttest_ind, f_oneway
 
-from plots.common import all_managers
+from tools.plots.common import all_managers
 
 
 TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))
@@ -54,4 +54,4 @@ if __name__ == '__main__':
     distance_to_compare = 15
 
     for velocity in [1, 2]:
-        plot_results(velocity, distance_to_compare, f'moving v{velocity} d{distance_to_compare}')
+        plot_results(velocity, distance_to_compare, f'moving v{velocity} d{distance_to_compare} t-test')
