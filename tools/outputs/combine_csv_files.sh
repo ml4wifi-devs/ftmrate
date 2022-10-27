@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TOOLS_DIR="${TOOLS_DIR:=$HOME/tools}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 OUTPUT_FILE="all_results.csv"
 
 cd "$TOOLS_DIR/outputs"

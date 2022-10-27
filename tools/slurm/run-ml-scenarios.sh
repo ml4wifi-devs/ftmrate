@@ -1,6 +1,6 @@
 #!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
 
-TOOLS_DIR="${TOOLS_DIR:=$HOME/tools}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 TASKS_PER_NODE=5

@@ -1,6 +1,6 @@
 #!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
 
-TOOLS_DIR="${TOOLS_DIR:=$HOME/tools}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 
 MANAGERS=("ns3::MinstrelHtWifiManager" "ns3::ThompsonSamplingWifiManager")
 MANAGERS_NAMES=("MinstrelHt" "TS")
