@@ -1,49 +1,23 @@
-import os
-
 import matplotlib.pyplot as plt
-import numpy as np
 import pandas as pd
-import seaborn as sn
-from scipy.stats import ttest_ind, f_oneway
+import seaborn as sns
 
-from tools.plots.common import all_managers
-
-
-TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))
-DATA_FILE = os.path.join(TOOLS_DIR, 'outputs', 'all_results.csv')
+from tools.plots.common import *
 
 
-def plot_results(output_file):
+def plot_results(output_file: str) -> None:
     df = pd.read_csv(DATA_FILE)
     df = df[df.mobility == 'RWPM']
 
-    throughputs = []
-    managers = []
-
-    for manager in all_managers:
-        if len(data := df[df.manager == manager].throughput) == 0:
-            continue
-
-        throughputs.append(data)
-        managers.append(manager.replace('_', ' '))
-
-    results = np.zeros((len(managers), len(managers)))
-
-    for i in range(len(managers)):
-        for j in range(i, len(managers)):
-            stats, pval = ttest_ind(throughputs[i], throughputs[j], equal_var=False)
-            results[i, j] = pval
-
-    stats, pval = f_oneway(*throughputs)
-
+    results = get_thr_ttest(df)
     mask = np.tril(np.ones_like(results))
-    ax = sn.heatmap(results, xticklabels=managers, yticklabels=managers, annot=True, mask=mask, cmap='flare')
+
+    ax = sns.heatmap(results, xticklabels=ALL_MANAGERS, yticklabels=ALL_MANAGERS, annot=True, mask=mask, cmap='flare')
 
     ax.figure.subplots_adjust(left=0.3)
     ax.figure.subplots_adjust(bottom=0.3)
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
-    plt.title(f'ANOVA p-value: {pval:.3f}')
     plt.tight_layout()
 
     plt.savefig(f'{output_file}.svg', bbox_inches='tight')

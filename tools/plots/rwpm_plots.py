@@ -1,24 +1,15 @@
-import os
-
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
-from tools.plots.common import all_managers
+from tools.plots.common import DATA_FILE, ALL_MANAGERS
 
 
-TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))
-DATA_FILE = os.path.join(TOOLS_DIR, 'outputs', 'all_results.csv')
-
-
-def plot_results():
+def plot_results() -> None:
     df = pd.read_csv(DATA_FILE)
     df = df[df.mobility == 'RWPM']
 
-    if len(df) == 0:
-        return
-
-    df = df[df.manager.isin(all_managers)].sort_values('manager')
+    df = df[df.manager.isin(ALL_MANAGERS)].sort_values('manager')
     sns.boxplot(df, x='manager', y='throughput')
         
     plt.ylim(bottom=0)
