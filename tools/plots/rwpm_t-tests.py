@@ -5,7 +5,7 @@ import seaborn as sns
 from tools.plots.common import *
 
 
-def plot_results(output_file: str) -> None:
+def plot_results() -> None:
     df = pd.read_csv(DATA_FILE)
     df = df[df.mobility == 'RWPM']
 
@@ -20,9 +20,9 @@ def plot_results(output_file: str) -> None:
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
     plt.tight_layout()
 
-    plt.savefig(f'{output_file}.svg', bbox_inches='tight')
+    plt.savefig('rwpm t-test.svg', bbox_inches='tight')
     plt.clf()
 
 
 if __name__ == '__main__':
-    plot_results(f'rwpm t-test')
+    plot_results()

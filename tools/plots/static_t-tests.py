@@ -5,7 +5,7 @@ import seaborn as sns
 from tools.plots.common import *
 
 
-def plot_results(distance: float, n_wifi: int, output_file: str) -> None:
+def plot_results(distance: float, n_wifi: int) -> None:
     df = pd.read_csv(DATA_FILE)
     df = df.loc[(df.mobility == 'Static') & (df.nWifiReal == n_wifi) & (df.distance == distance)]
 
@@ -20,7 +20,7 @@ def plot_results(distance: float, n_wifi: int, output_file: str) -> None:
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
     plt.tight_layout()
 
-    plt.savefig(f'{output_file}.svg', bbox_inches='tight')
+    plt.savefig(f'static d{distance} n{n_wifi} t-test.svg', bbox_inches='tight')
     plt.clf()
 
 
@@ -28,4 +28,4 @@ if __name__ == '__main__':
     n_wifi_to_compare = 16
 
     for distance in [0, 20, 40]:
-        plot_results(distance, n_wifi_to_compare, f'static d{distance} n{n_wifi_to_compare} t-test')
+        plot_results(distance, n_wifi_to_compare)

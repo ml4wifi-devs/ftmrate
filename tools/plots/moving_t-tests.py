@@ -5,7 +5,7 @@ import seaborn as sns
 from tools.plots.common import *
 
 
-def plot_results(velocity: float, distance: float, output_file: str) -> None:
+def plot_results(velocity: float, distance: float) -> None:
     df = pd.read_csv(DATA_FILE)
     df = df.loc[(df.mobility == 'Moving') & (df.velocity == velocity) & (df.distance == distance)]
 
@@ -20,7 +20,7 @@ def plot_results(velocity: float, distance: float, output_file: str) -> None:
     plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
     plt.tight_layout()
 
-    plt.savefig(f'{output_file}.svg', bbox_inches='tight')
+    plt.savefig(f'moving v{velocity} d{distance} t-test.svg', bbox_inches='tight')
     plt.clf()
 
 
@@ -28,4 +28,4 @@ if __name__ == '__main__':
     distance_to_compare = 10
 
     for velocity in [1, 2]:
-        plot_results(velocity, distance_to_compare, f'moving v{velocity} d{distance_to_compare} t-test')
+        plot_results(velocity, distance_to_compare)
