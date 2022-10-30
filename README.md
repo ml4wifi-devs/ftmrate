@@ -71,6 +71,7 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 ## Reproducing results
 
 ### Using the Slurm workload manager
+
 To produce reliable results, many independant simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
 To collect results from multiple WiFi scenarios so to reproduce our results presented in our [article](LINK_TO_OUR_ARTICLE), you need to run
 ```
@@ -81,6 +82,11 @@ to collect results into CSV format  and
 sbatch ftmrate/tools/generate-plots.sh
 ```
 to aggregate results into matplotlib plots.
+
+#### Tuning hardware
+
+When using GPU in slurm, you need to empirically determine the optimal number of tasks running per node. We store this value in
+`TASKS_PER_NODE` variable in *run-ml-scenarios.sh* file. If set to high - a lack of memory might be encountered, if set to low - the computation efficiency would be suboptimal. The variable value is passed directly to the `sbatch` command as the `--ntasks-per-node` parameter. While working with our machines, the optimal number turned out to be about 5, so we suggest to start searching from that value.
 
 ### Without Slurm
 **TODO**
