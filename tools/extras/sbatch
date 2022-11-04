@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import subprocess
 from argparse import ArgumentParser
 
@@ -16,8 +17,11 @@ if __name__ == '__main__':
     else:
         array_ids = range(1)
 
+    env = {'PATH': f'{os.environ.get("PATH")}:.', 'HOME': os.path.expanduser('~')}
+
     for i in array_ids:
-        output = subprocess.check_output(['bash'] + script_args, env={'SLURM_ARRAY_TASK_ID': str(i)})
+        env['SLURM_ARRAY_TASK_ID'] = str(i)
+        output = subprocess.check_output(['bash'] + script_args, env=env)
 
         with open(f'slurm_{i}.out', 'wb') as file:
             file.write(output)
