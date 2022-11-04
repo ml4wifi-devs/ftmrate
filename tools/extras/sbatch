@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+
+import subprocess
+from argparse import ArgumentParser
+
+
+if __name__ == '__main__':
+    args = ArgumentParser()
+    args.add_argument('-p', type=str)
+    args.add_argument('--array', type=str)
+    args, script_args = args.parse_known_args()
+
+    if args.array:
+        start, stop = tuple(map(int, args.array.split('-')))
+        array_ids = range(start, stop + 1)
+    else:
+        array_ids = range(1)
+
+    for i in array_ids:
+        output = subprocess.check_output(['bash'] + script_args, env={'SLURM_ARRAY_TASK_ID': str(i)})
+
+        with open(f'slurm_{i}.out', 'wb') as file:
+            file.write(output)
