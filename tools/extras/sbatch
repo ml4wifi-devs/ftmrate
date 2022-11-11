@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+import time
 from argparse import ArgumentParser
 
 
@@ -23,5 +24,5 @@ if __name__ == '__main__':
         env['SLURM_ARRAY_TASK_ID'] = str(i)
         output = subprocess.check_output(['bash'] + script_args, env=env)
 
-        with open(f'slurm_{i}.out', 'wb') as file:
+        with open(f'slurm_{int(time.time() * 1e6)}_{i}.out', 'wb') as file:
             file.write(output)
