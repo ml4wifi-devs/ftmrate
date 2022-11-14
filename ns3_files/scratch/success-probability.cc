@@ -103,6 +103,12 @@ main (int argc, char *argv[])
   NodeContainer wifiApNode (1);
   NodeContainer wifiStaNode (1);
 
+  // Configure mobility
+  MobilityHelper mobility;
+  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+  mobility.Install (wifiApNode);
+  mobility.Install (wifiStaNode);
+
   // Configure wireless channel
   YansWifiPhyHelper phy;
   YansWifiChannelHelper channelHelper = YansWifiChannelHelper::Default ();
@@ -160,12 +166,6 @@ main (int argc, char *argv[])
 
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
                TimeValue (NanoSeconds (minGI)));
-
-  // Configure mobility
-  MobilityHelper mobility;
-  mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
-  mobility.Install (wifiApNode);
-  mobility.Install (wifiStaNode);
 
   // Install an Internet stack
   InternetStackHelper stack;

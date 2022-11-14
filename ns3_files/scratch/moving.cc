@@ -120,6 +120,31 @@ main (int argc, char *argv[])
   NodeContainer wifiApNode (1);
   NodeContainer wifiStaNode (1);
 
+  // Configure mobility
+  MobilityHelper mobility;
+  mobility.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
+  mobility.Install (wifiApNode);
+  mobility.Install (wifiStaNode);
+  wifiStaNode.Get (0)->GetObject<MobilityModel> ()->SetPosition (Vector3D (startPosition, 0., 0.));
+
+  // Print position of each node
+  std::cout << "Node positions:" << std::endl;
+
+  // AP position
+  Ptr<MobilityModel> position = wifiApNode.Get (0)->GetObject<MobilityModel> ();
+  Vector3D pos = position->GetPosition ();
+  std::cout << "AP:\tx=" << pos.x << ", y=" << pos.y << std::endl;
+
+  // Stations positions
+  for (auto node = wifiStaNode.Begin (); node != wifiStaNode.End (); ++node)
+    {
+      position = (*node)->GetObject<MobilityModel> ();
+      pos = position->GetPosition ();
+      std::cout << "Sta " << (*node)->GetId () << ":\tx=" << pos.x << ", y=" << pos.y << std::endl;
+    }
+
+  std::cout << std::endl;
+
   // Configure wireless channel
   YansWifiPhyHelper phy;
   YansWifiChannelHelper channelHelper = YansWifiChannelHelper::Default ();
@@ -170,31 +195,6 @@ main (int argc, char *argv[])
 
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
                TimeValue (NanoSeconds (minGI)));
-
-  // Configure mobility
-  MobilityHelper mobility;
-  mobility.SetMobilityModel ("ns3::ConstantVelocityMobilityModel");
-  mobility.Install (wifiApNode);
-  mobility.Install (wifiStaNode);
-  wifiStaNode.Get (0)->GetObject<MobilityModel> ()->SetPosition (Vector3D (startPosition, 0., 0.));
-
-  // Print position of each node
-  std::cout << "Node positions:" << std::endl;
-
-  // AP position
-  Ptr<MobilityModel> position = wifiApNode.Get (0)->GetObject<MobilityModel> ();
-  Vector3D pos = position->GetPosition ();
-  std::cout << "AP:\tx=" << pos.x << ", y=" << pos.y << std::endl;
-
-  // Stations positions
-  for (auto node = wifiStaNode.Begin (); node != wifiStaNode.End (); ++node)
-    {
-      position = (*node)->GetObject<MobilityModel> ();
-      pos = position->GetPosition ();
-      std::cout << "Sta " << (*node)->GetId () << ":\tx=" << pos.x << ", y=" << pos.y << std::endl;
-    }
-
-  std::cout << std::endl;
 
   // Install an Internet stack
   InternetStackHelper stack;

@@ -10,7 +10,7 @@ MANAGERS_NAMES=("PF" "KF" "LT")
 MANAGERS_LEN=${#MANAGERS[@]}
 
 SHIFT=0
-BASE_SEED=100
+SEED_SHIFT=100
 BASE_MEMPOOL=3000
 
 run_static() {
@@ -30,7 +30,6 @@ run_static() {
       START=$ARRAY_SHIFT
       END=$(( ARRAY_SHIFT + N_REP - 1 ))
 
-      SEED_SHIFT=$(( SHIFT + BASE_SEED ))
       MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
       ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
 
@@ -53,7 +52,6 @@ run_rwpm() {
     MANAGER=${MANAGERS[$i]}
     MANAGER_NAME=${MANAGERS_NAMES[$i]}
 
-    SEED_SHIFT=$(( SHIFT + BASE_SEED ))
     MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
 
     sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/rwpm/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$SIM_TIME" "$MEMPOOL_SHIFT"
@@ -83,7 +81,6 @@ run_moving() {
       START=$ARRAY_SHIFT
       END=$(( ARRAY_SHIFT + N_REP - 1 ))
 
-      SEED_SHIFT=$(( SHIFT + BASE_SEED ))
       MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
       ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
 

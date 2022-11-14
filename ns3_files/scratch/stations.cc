@@ -127,57 +127,6 @@ main (int argc, char *argv[])
   NodeContainer wifiApNode (1);
   NodeContainer wifiStaNodes (nWifi);
 
-  // Configure wireless channel
-  YansWifiPhyHelper phy;
-  YansWifiChannelHelper channelHelper = YansWifiChannelHelper::Default ();
-
-  if (lossModel == "Nakagami")
-    {
-      // Add Nakagami fading to the default log distance model
-      channelHelper.AddPropagationLoss ("ns3::NakagamiPropagationLossModel");
-    }
-  else if (lossModel != "LogDistance")
-    {
-      std::cerr << "Selected incorrect loss model!";
-      return 1;
-    }
-  phy.SetChannel (channelHelper.Create ());
-
-  // Configure MAC layer
-  WifiMacHelper mac;
-  WifiHelper wifi;
-
-  wifi.SetStandard (WIFI_STANDARD_80211ax);
-  wifi.SetRemoteStationManager (rateAdaptationManager);
-
-  //Set SSID
-  Ssid ssid = Ssid ("ns3-80211ax");
-  mac.SetType ("ns3::StaWifiMac", "Ssid", SsidValue (ssid), "MaxMissedBeacons",
-               UintegerValue (1000)); // prevents exhaustion of association IDs
-
-  // Create and configure Wi-Fi interfaces
-  NetDeviceContainer staDevice;
-  staDevice = wifi.Install (phy, mac, wifiStaNodes);
-
-  mac.SetType ("ns3::ApWifiMac", "Ssid", SsidValue (ssid));
-
-  NetDeviceContainer apDevice;
-  apDevice = wifi.Install (phy, mac, wifiApNode);
-
-  // Manage AMPDU aggregation
-  if (!ampdu)
-    {
-      Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Mac/BE_MaxAmpduSize",
-                   UintegerValue (0));
-    }
-
-  // Set channel width and shortest GI
-  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelSettings",
-               StringValue ("{0, " + std::to_string (channelWidth) + ", BAND_5GHZ, 0}"));
-
-  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
-               TimeValue (NanoSeconds (minGI)));
-
   // Configure mobility
   MobilityHelper mobility;
 
@@ -244,6 +193,57 @@ main (int argc, char *argv[])
     }
 
   std::cout << std::endl;
+
+  // Configure wireless channel
+  YansWifiPhyHelper phy;
+  YansWifiChannelHelper channelHelper = YansWifiChannelHelper::Default ();
+
+  if (lossModel == "Nakagami")
+    {
+      // Add Nakagami fading to the default log distance model
+      channelHelper.AddPropagationLoss ("ns3::NakagamiPropagationLossModel");
+    }
+  else if (lossModel != "LogDistance")
+    {
+      std::cerr << "Selected incorrect loss model!";
+      return 1;
+    }
+  phy.SetChannel (channelHelper.Create ());
+
+  // Configure MAC layer
+  WifiMacHelper mac;
+  WifiHelper wifi;
+
+  wifi.SetStandard (WIFI_STANDARD_80211ax);
+  wifi.SetRemoteStationManager (rateAdaptationManager);
+
+  //Set SSID
+  Ssid ssid = Ssid ("ns3-80211ax");
+  mac.SetType ("ns3::StaWifiMac", "Ssid", SsidValue (ssid), "MaxMissedBeacons",
+               UintegerValue (1000)); // prevents exhaustion of association IDs
+
+  // Create and configure Wi-Fi interfaces
+  NetDeviceContainer staDevice;
+  staDevice = wifi.Install (phy, mac, wifiStaNodes);
+
+  mac.SetType ("ns3::ApWifiMac", "Ssid", SsidValue (ssid));
+
+  NetDeviceContainer apDevice;
+  apDevice = wifi.Install (phy, mac, wifiApNode);
+
+  // Manage AMPDU aggregation
+  if (!ampdu)
+    {
+      Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Mac/BE_MaxAmpduSize",
+                   UintegerValue (0));
+    }
+
+  // Set channel width and shortest GI
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelSettings",
+               StringValue ("{0, " + std::to_string (channelWidth) + ", BAND_5GHZ, 0}"));
+
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
+               TimeValue (NanoSeconds (minGI)));
 
   // Install an Internet stack
   InternetStackHelper stack;
