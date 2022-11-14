@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import os
 import pathlib
 from argparse import ArgumentParser, ArgumentError
 
@@ -67,6 +68,10 @@ def main() -> None:
     parser.add_argument('--verbose', default=False, action='store_true')
     
     args = parser.parse_args()
+
+    # Adjust the ns-3 path
+    if os.environ.get('NS3_DIR'):
+        args.ns3Path = os.environ.get('NS3_DIR')
 
 
     # Set manager type

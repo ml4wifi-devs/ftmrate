@@ -27,5 +27,5 @@ def plot_results(distance: float) -> None:
 
 
 if __name__ == '__main__':
-    for distance in [0, 20, 40]:
+    for distance in [0, 20]:
         plot_results(distance)

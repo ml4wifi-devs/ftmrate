@@ -10,6 +10,7 @@ if __name__ == '__main__':
     args = ArgumentParser()
     args.add_argument('-p', type=str)
     args.add_argument('--array', type=str)
+    args.add_argument('--ntasks-per-node', type=int)
     args, script_args = args.parse_known_args()
 
     if args.array:
@@ -19,7 +20,18 @@ if __name__ == '__main__':
         array_ids = range(1)
 
     script_dir = os.path.dirname(os.path.realpath(__file__))
-    env = {'PATH': f'{os.environ.get("PATH")}:{script_dir}', 'HOME': os.path.expanduser('~')}
+    env = {
+        'PATH': f'{os.environ.get("PATH")}:{script_dir}', 
+        'HOME': os.path.expanduser('~')
+    }
+    if os.environ.get('TOOLS_DIR'):
+        env['TOOLS_DIR'] = os.environ.get('TOOLS_DIR')
+    if os.environ.get('ML4WIFI_DIR'):
+        env['ML4WIFI_DIR'] = os.environ.get('ML4WIFI_DIR')
+    if os.environ.get('NS3_DIR'):
+        env['NS3_DIR'] = os.environ.get('NS3_DIR')
+    if os.environ.get('PYTHONPATH'):
+        env['PYTHONPATH'] = os.environ.get('PYTHONPATH')
 
     for i in array_ids:
         env['SLURM_ARRAY_TASK_ID'] = str(i)
