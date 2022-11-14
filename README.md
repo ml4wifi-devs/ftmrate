@@ -75,6 +75,7 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 To produce reliable results, many independant simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
 To collect results from multiple WiFi scenarios so to reproduce our results presented in our [article](LINK_TO_OUR_ARTICLE), you need to run
 ```
+sbatch ftmrate/tools/slurm/run-classic-scenarios.sh
 sbatch ftmrate/tools/slurm/run-ml-scenarios.sh
 ```
 to collect results into CSV format  and
@@ -89,4 +90,27 @@ When using GPU in slurm, you need to empirically determine the optimal number of
 `TASKS_PER_NODE` variable in *run-ml-scenarios.sh* file. If set to high - a lack of memory might be encountered, if set to low - the computation efficiency would be suboptimal. The variable value is passed directly to the `sbatch` command as the `--ntasks-per-node` parameter. While working with our machines, the optimal number turned out to be about 5, so we suggest to start searching from that value.
 
 ### Without Slurm
-**TODO**
+
+In case you don't have access to a Slurm-managed cluster, we have provided a slurm-less option to run all the simulations locally. Note that it would take an enormous amount of computation time to gather statistically reliable results, hence this slurm-less option is recommended only for soft tests with appropriately adjusted simulation parameters (in `tools/slurm/run-ml-scenarios.sh` and `tools/slurm/run-classic-scenarios.sh` files). Nevertheless, to reproduce our article results without Slurm, do the following steps.
+
+1. It is recommended to set those environmental variables, otherwise our scripts may not discover appropriate paths:
+	```
+	export TOOLS_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/tools
+	export ML4WIFI_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/ml4wifi
+	export NS3_DIR=$YOUR_NS3_PATH
+	```
+	You should also update your Python path
+	```
+	export PYTHONPATH=$PYTHONPATH:$YOUR_PATH_TO_FTMRATE_ROOT
+	```
+2. Run simulations with our substituted *sbatch* script:
+	```
+	cd $YOUR_PATH_TO_FTMRATE_ROOT
+	./tools/extras/sbatch ./tools/slurm/run-ml-scenarios.sh
+	./tools/extras/sbatch ./tools/slurm/run-classic-scenarios.sh
+	```
+3. Agregate results:
+	```
+	tools/slurm/generate-plots.sh
+	```
+
