@@ -18,7 +18,8 @@ if __name__ == '__main__':
     else:
         array_ids = range(1)
 
-    env = {'PATH': f'{os.environ.get("PATH")}:.', 'HOME': os.path.expanduser('~')}
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    env = {'PATH': f'{os.environ.get("PATH")}:{script_dir}', 'HOME': os.path.expanduser('~')}
 
     for i in array_ids:
         env['SLURM_ARRAY_TASK_ID'] = str(i)

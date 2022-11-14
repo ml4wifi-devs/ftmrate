@@ -100,9 +100,6 @@ run_static 0
 echo -e "\nQueue Static (d=20) scenario"
 run_static 20
 
-echo -e "\nQueue Static (d=40) scenario"
-run_static 40
-
 echo -e "\nQueue Moving scenario"
 run_moving
 
