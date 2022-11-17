@@ -89,11 +89,11 @@ to aggregate results into matplotlib plots.
 When using GPU in slurm, you need to empirically determine the optimal number of tasks running per node. We store this value in
 `TASKS_PER_NODE` variable in *run-ml-scenarios.sh* file. If set to high - a lack of memory might be encountered, if set to low - the computation efficiency would be suboptimal. The variable value is passed directly to the `sbatch` command as the `--ntasks-per-node` parameter. While working with our machines, the optimal number turned out to be about 5, so we suggest to start searching from that value.
 
-### Without Slurm
+### Without slurm
 
-In case you don't have access to a Slurm-managed cluster, we have provided a slurm-less option to run all the simulations locally. Note that it would take an enormous amount of computation time to gather statistically reliable results, hence this slurm-less option is recommended only for soft tests with appropriately adjusted simulation parameters (in `tools/slurm/run-ml-scenarios.sh` and `tools/slurm/run-classic-scenarios.sh` files). Nevertheless, to reproduce our article results without Slurm, do the following steps.
+In case you don't have access to a slurm-managed cluster, we provide a slurm-less option to run all the simulations locally. Note that it would take an enormous amount of computation time to gather statistically reliable results, hence this slurm-less option is recommended only for soft tests with appropriately adjusted simulation parameters (in `tools/slurm/run-ml-scenarios.sh` and `tools/slurm/run-classic-scenarios.sh`). Nevertheless, to reproduce our article results without slurm, do the following steps.
 
-1. It is recommended to set those environmental variables, otherwise our scripts may not discover appropriate paths:
+1. It is recommended to set these environmental variables, otherwise our scripts may not discover appropriate paths:
 	```
 	export TOOLS_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/tools
 	export ML4WIFI_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/ml4wifi
@@ -103,7 +103,7 @@ In case you don't have access to a Slurm-managed cluster, we have provided a slu
 	```
 	export PYTHONPATH=$PYTHONPATH:$YOUR_PATH_TO_FTMRATE_ROOT
 	```
-2. Run simulations with our substituted *sbatch* script:
+2. Run simulations with our substituted `sbatch` script:
 	```
 	cd $YOUR_PATH_TO_FTMRATE_ROOT
 	./tools/extras/sbatch ./tools/slurm/run-ml-scenarios.sh
