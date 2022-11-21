@@ -5,8 +5,8 @@ TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 TASKS_PER_NODE=5
 
-MANAGERS=("pf" "kf" "lt")
-MANAGERS_NAMES=("PF" "KF" "LT")
+MANAGERS=("es" "kf" "pf")
+MANAGERS_NAMES=("ES" "KF" "PF")
 MANAGERS_LEN=${#MANAGERS[@]}
 
 SHIFT=0

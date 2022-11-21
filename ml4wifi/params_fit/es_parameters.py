@@ -10,7 +10,7 @@ import optax
 from chex import Array, Scalar, PRNGKey
 from tqdm import trange
 
-from ml4wifi.agents.linear_trend import linear_trend, LinearTrendState
+from ml4wifi.agents.exponential_smoothing import exponential_smoothing, ExponentialSmoothingState
 from ml4wifi.params_fit import generate_rwpm, load_parameters_file, CSV_FILES_DIR
 from ml4wifi.utils.measurement_manager import DEFAULT_INTERVAL
 
@@ -25,14 +25,14 @@ def loss(
         data: Array
 ) -> Scalar:
     """
-    Returns MSE loss between true distance and distance estimated by LinearTrend agent given noisy measurements.
+    Returns MSE loss between true distance and distance estimated by ExponentialSmoothing agent given noisy measurements.
     """
 
-    agent = linear_trend(*jax.tree_map(jax.nn.sigmoid, params))
+    agent = exponential_smoothing(*jax.tree_map(jax.nn.sigmoid, params))
 
     def one_run_fn(_, run: Array):
 
-        def step_fn(state: LinearTrendState, step: Array) -> Tuple:
+        def step_fn(state: ExponentialSmoothingState, step: Array) -> Tuple:
             measurement, time = step
             state = agent.update(state, DUMMY_KEY, measurement, time)
             return state, agent.sample(state, DUMMY_KEY, time).loc
@@ -93,7 +93,7 @@ def params_fit(
         **_
 ) -> Tuple:
     """
-    Fits the best parameters for LinearTrend agent on `n_datasets` datasets.
+    Fits the best parameters for ExponentialSmoothing agent on `n_datasets` datasets.
     """
 
     global optimizer
@@ -149,6 +149,6 @@ if __name__ == '__main__':
     alpha, beta = params_fit(**vars(args), key=jax.random.PRNGKey(args.seed))
     print(f'\nAlpha: {alpha}\nBeta:  {beta}')
 
-    params_df.loc[:, "lt_alpha"] = alpha
-    params_df.loc[:, "lt_beta"] = beta
+    params_df.loc[:, "es_alpha"] = alpha
+    params_df.loc[:, "es_beta"] = beta
     params_df.to_csv(os.path.join(CSV_FILES_DIR, args.output_name), index=False)

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 from ml4wifi.agents.kalman_filter import kalman_filter
 from ml4wifi.agents.particle_filter import particle_filter
-from ml4wifi.agents.linear_trend import linear_trend
+from ml4wifi.agents.exponential_smoothing import exponential_smoothing
 from ml4wifi.envs.simple_wifi.ftmrate_sim import *
 from ml4wifi.utils.measurement_manager import DEFAULT_INTERVAL
 from ml4wifi.utils.wifi_specs import wifi_modes_snrs
@@ -181,7 +181,7 @@ if __name__ == '__main__':
         total_frames=int(FRAMES_PER_SECOND * args.simulation_time)
     )
 
-    run_test(params, partial(linear_trend, alpha=1.0, beta=1.0), 'Raw data', **vars(args))
-    run_test(params, linear_trend, 'LT', **vars(args))
+    run_test(params, partial(exponential_smoothing, alpha=1.0, beta=1.0), 'Raw data', **vars(args))
+    run_test(params, exponential_smoothing, 'LT', **vars(args))
     run_test(params, kalman_filter, 'KFD', **vars(args))
     run_test(params, particle_filter, 'PFD', **vars(args))

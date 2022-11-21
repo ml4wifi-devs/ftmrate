@@ -6,9 +6,9 @@ from argparse import ArgumentParser, ArgumentError
 
 from py_interface import *
 
+from ml4wifi.agents.exponential_smoothing import ManagersContainer as ExponentialSmoothing
 from ml4wifi.agents.kalman_filter import ManagersContainer as KalmanFilter
 from ml4wifi.agents.particle_filter import ManagersContainer as ParticleFilter
-from ml4wifi.agents.linear_trend import ManagersContainer as LinearTrend
 
 from ml4wifi.utils.wifi_specs import ideal_mcs
 from ml4wifi.envs.ns3_ai_structures import Env, Act
@@ -16,9 +16,9 @@ from ml4wifi.envs.ns3_ai_structures import Env, Act
 
 # Managers dict
 MANAGERS = {
+    'es': ExponentialSmoothing,
     'kf': KalmanFilter,
-    'pf': ParticleFilter,
-    'lt': LinearTrend
+    'pf': ParticleFilter
 }
 
 # Simulation parameters for different scenarios
