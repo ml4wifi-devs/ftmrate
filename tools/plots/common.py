@@ -14,8 +14,9 @@ MIN_REPS = 5
 CONFIDENCE_INTERVAL = 0.99
 
 COLUMN_WIDTH = 3.5
+COLUMN_HIGHT = 2 * COLUMN_WIDTH / (1 + np.sqrt(5))
 PLOT_PARAMS = {
-    'figure.figsize': (COLUMN_WIDTH, 2 * COLUMN_WIDTH / (1 + np.sqrt(5))),
+    'figure.figsize': (COLUMN_WIDTH, COLUMN_HIGHT),
     'figure.dpi': 72,
     'font.size': 9,
     'font.family': 'serif',

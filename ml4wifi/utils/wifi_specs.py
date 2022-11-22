@@ -16,7 +16,7 @@ REFERENCE_SNR = DEFAULT_TX_POWER - DEFAULT_NOISE
 REFERENCE_LOSS = 46.6777
 EXPONENT = 3.0
 
-# distance_to_snr = REFERENCE_SNR - (REFERENCE_LOSS + 10 * EXPONENT * jnp.log10(distance))
+distance_to_snr_scalar = lambda distance: REFERENCE_SNR - (REFERENCE_LOSS + 10 * EXPONENT * jnp.log10(distance))
 distance_to_snr = tfb.Shift(REFERENCE_SNR - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / jnp.log(10.))(tfb.Log()))
 
 # Calculation of SNR uncertainty
