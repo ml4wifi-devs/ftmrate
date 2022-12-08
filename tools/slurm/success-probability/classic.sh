@@ -13,7 +13,7 @@ SNR=$3
 
 CSV_PATH="$TOOLS_DIR/outputs/success-probability/success-probability_m${MODE}_snr${SNR}_s${SEED}.csv"
 
-SIM_TIME=500
+SIM_TIME=1000
 WARMUP_TIME=10
 FUZZ_TIME=5
 LOSS_MODEL="Nakagami"

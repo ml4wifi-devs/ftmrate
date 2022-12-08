@@ -1,35 +1,32 @@
 import jax
 import jax.numpy as jnp
-import matplotlib.pylab as pl
 import matplotlib.pyplot as plt
 
-from common import PLOT_PARAMS
-from ml4wifi.utils.wifi_specs import distance_to_snr, expected_rates, wifi_modes_rates
+from common import PLOT_PARAMS, COLUMN_WIDTH
+from ml4wifi.utils.wifi_specs import expected_rates, wifi_modes_rates
 
 
 def plot_data_rates() -> None:
-    plt.rcParams.update(PLOT_PARAMS)
-
-    colors = pl.cm.jet(jnp.linspace(0., 1., 12))
     n_points = 200
-
-    snr = jnp.linspace(5., 50., n_points)
-    distance = distance_to_snr.inverse(snr)
+    distance = jnp.linspace(0., 60., n_points)
     exp_rates = jax.vmap(expected_rates)(distance)
 
-    for mode, (exp_rate, data_rate, c) in enumerate(zip(exp_rates.T, wifi_modes_rates, colors)):
-        plt.plot(snr, exp_rate, c=c, label=mode)
-        plt.axhline(data_rate, alpha=0.3, c=c, linestyle='--')
+    for mode, (exp_rate, data_rate) in enumerate(zip(exp_rates.T, wifi_modes_rates)):
+        plt.plot(distance, exp_rate, c='C0', linestyle='solid' if mode % 2 == 1 else 'dashdot')
+        plt.axhline(data_rate, alpha=0.4, c='C0', linestyle='--')
+        plt.text(0.5, data_rate + 1, f'MCS {mode}', fontsize=6)
 
-    plt.ylabel(r'$\lambda$ [Mb/s]')
-    plt.xlabel(r'$\gamma$ [dBm]')
-    plt.xlim((5., 50.))
+    plt.ylabel(r'Expected data rate $\lambda$ [Mb/s]')
+    plt.xlabel(r'Distance $\rho$ [m]')
+    plt.xlim((distance.min(), distance.max()))
     plt.ylim((0., 130.))
-    plt.legend(title='MCS')
-
-    plt.savefig(f'data_rates.pdf', bbox_inches='tight')
-    plt.show()
 
 
 if __name__ == '__main__':
+    plt.rcParams.update(PLOT_PARAMS)
+    plt.figure(figsize=(COLUMN_WIDTH, 2 * COLUMN_WIDTH / (1 + jnp.sqrt(5))))
+
     plot_data_rates()
+
+    plt.savefig(f'data-rates.pdf', bbox_inches='tight')
+    plt.clf()

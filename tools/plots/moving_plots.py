@@ -1,28 +1,48 @@
 import matplotlib.pyplot as plt
+import matplotlib.pylab as pl
+import numpy as np
 import pandas as pd
 
 from tools.plots.common import *
 
 
-def plot_results(velocity: float) -> None:
+MAX_DISTANCE = 50
+
+
+def plot_results(ax: plt.Axes, velocity: float) -> None:
+    colors = pl.cm.viridis(np.linspace(0., 1., len(ALL_MANAGERS) - 1))
+
     df = pd.read_csv(DATA_FILE)
-    df = df[(df.mobility == 'Moving') & (df.velocity == velocity)]
+    df = df[(df.mobility == 'Moving') & (df.velocity == velocity) & (df.distance <= MAX_DISTANCE)]
 
-    for manager in ALL_MANAGERS:
+    for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'distance')
-        plt.plot(mean.index, mean, marker='o', markersize=3, label=manager)
-        plt.fill_between(mean.index, ci_low, ci_high, alpha=0.2)
 
-    plt.ylim(bottom=0)
-    plt.xlabel('Distance from AP [m]')
-    plt.ylabel('Station throughput [Mb/s]')
-    plt.legend()
-    plt.tight_layout()
+        if manager == 'Oracle':
+            ax.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
+        else:
+            ax.plot(mean.index, mean, marker='o', markersize=1, label=manager_name, c=colors[i])
+            ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
 
-    plt.savefig(f'moving v{velocity} thr.svg', bbox_inches='tight')
-    plt.clf()
+    ax.set_xlim((0, MAX_DISTANCE))
+    ax.set_ylim(bottom=0)
+
+    ax.set_ylabel('Station throughput [Mb/s]')
+    ax.set_title(fr'$v$ = {velocity} m/s')
+
+    ax.grid()
 
 
 if __name__ == '__main__':
-    for velocity in [1, 2]:
-        plot_results(velocity)
+    plt.rcParams.update(PLOT_PARAMS)
+    fig, axes = plt.subplots(2, 1, sharex='col')
+
+    for velocity, ax in zip([1, 2], axes):
+        plot_results(ax, velocity)
+
+    axes[0].legend()
+    axes[0].tick_params('x', labelbottom=False, bottom=False)
+    axes[1].set_xlabel('Distance from AP [m]')
+
+    plt.savefig(f'moving-thr.pdf', bbox_inches='tight')
+    plt.clf()

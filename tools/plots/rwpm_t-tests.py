@@ -5,24 +5,37 @@ import seaborn as sns
 from tools.plots.common import *
 
 
-def plot_results() -> None:
+N_WIFI = 10
+
+
+def plot_results(velocity: float) -> None:
     df = pd.read_csv(DATA_FILE)
-    df = df[df.mobility == 'RWPM']
+    df = df[(df.mobility == 'RWPM') & (df.nWifiReal == N_WIFI) & (df.velocity == velocity)]
 
     results = get_thr_ttest(df)
     mask = np.tril(np.ones_like(results))
+    managers = ALL_MANAGERS.values()
 
-    ax = sns.heatmap(results, xticklabels=ALL_MANAGERS, yticklabels=ALL_MANAGERS, annot=True, mask=mask, cmap='flare')
+    ax = sns.heatmap(
+        results,
+        xticklabels=managers,
+        yticklabels=managers,
+        annot=True,
+        fmt='.3f',
+        mask=mask,
+        cmap='viridis',
+        annot_kws={'fontsize': 5}
+    )
 
-    ax.figure.subplots_adjust(left=0.3)
-    ax.figure.subplots_adjust(bottom=0.3)
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
-    plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
-    plt.tight_layout()
+    ax.figure.subplots_adjust(left=0.3, bottom=0.5)
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
 
-    plt.savefig('rwpm t-test.svg', bbox_inches='tight')
+    plt.savefig(f'rwpm-v{velocity}-ttest.pdf', bbox_inches='tight')
     plt.clf()
 
 
 if __name__ == '__main__':
-    plot_results()
+    plt.rcParams.update(PLOT_PARAMS)
+
+    for velocity in [0., 1.4]:
+        plot_results(velocity)

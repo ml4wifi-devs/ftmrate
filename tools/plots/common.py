@@ -9,20 +9,29 @@ from scipy.stats import t, ttest_ind
 TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))
 DATA_FILE = os.path.join(TOOLS_DIR, 'outputs', 'all_results.csv')
 
-ALL_MANAGERS = ['KF', 'LT', 'MinstrelHt', 'PF', 'TS']
+ALL_MANAGERS = {
+    'Minstrel': 'Minstrel',
+    'TS': 'Thompson Sampling',
+    'ES': 'FTMRate w/ ES',
+    'KF': 'FTMRate w/ KF',
+    'PF': 'FTMRate w/ PF',
+    'Oracle': 'Oracle'
+}
 MIN_REPS = 5
 CONFIDENCE_INTERVAL = 0.99
 
-COLUMN_WIDTH = 3.5
+COLUMN_WIDTH = 252 / 72
 PLOT_PARAMS = {
-    'figure.figsize': (COLUMN_WIDTH, 2 * COLUMN_WIDTH / (1 + np.sqrt(5))),
+    'figure.figsize': (COLUMN_WIDTH, 1.4 * COLUMN_WIDTH),
     'figure.dpi': 72,
     'font.size': 9,
     'font.family': 'serif',
     'font.serif': 'cm',
+    'axes.titlesize': 9,
     'text.usetex': True,
     'lines.linewidth': 0.5,
     'axes.linewidth': 0.5,
+    'grid.linewidth': 0.5,
     'xtick.major.width': 0.5,
     'ytick.major.width': 0.5,
     'legend.title_fontsize': 5,

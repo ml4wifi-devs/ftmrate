@@ -2,8 +2,8 @@
 
 TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 
-MANAGERS=("ns3::MinstrelHtWifiManager" "ns3::ThompsonSamplingWifiManager")
-MANAGERS_NAMES=("Minstrel" "TS")
+MANAGERS=("ns3::MinstrelHtWifiManager" "ns3::ThompsonSamplingWifiManager" "ns3::OracleWifiManager")
+MANAGERS_NAMES=("Minstrel" "TS" "Oracle")
 MANAGERS_LEN=${#MANAGERS[@]}
 
 SHIFT=0

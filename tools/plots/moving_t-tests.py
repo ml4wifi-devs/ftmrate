@@ -11,20 +11,29 @@ def plot_results(velocity: float, distance: float) -> None:
 
     results = get_thr_ttest(df)
     mask = np.tril(np.ones_like(results))
+    managers = ALL_MANAGERS.values()
 
-    ax = sns.heatmap(results, xticklabels=ALL_MANAGERS, yticklabels=ALL_MANAGERS, annot=True, mask=mask, cmap='flare')
+    ax = sns.heatmap(
+        results,
+        xticklabels=managers,
+        yticklabels=managers,
+        annot=True,
+        fmt='.3f',
+        mask=mask,
+        cmap='viridis',
+        annot_kws={'fontsize': 5}
+    )
 
-    ax.figure.subplots_adjust(left=0.3)
-    ax.figure.subplots_adjust(bottom=0.3)
-    plt.setp(ax.xaxis.get_majorticklabels(), rotation=45, ha="right")
-    plt.setp(ax.yaxis.get_majorticklabels(), rotation=0)
-    plt.tight_layout()
+    ax.figure.subplots_adjust(left=0.3, bottom=0.5)
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
 
-    plt.savefig(f'moving v{velocity} d{distance} t-test.svg', bbox_inches='tight')
+    plt.savefig(f'moving-v{velocity}-d{distance}-ttest.pdf', bbox_inches='tight')
     plt.clf()
 
 
 if __name__ == '__main__':
+    plt.rcParams.update(PLOT_PARAMS)
+
     distance_to_compare = 10
 
     for velocity in [1, 2]:
