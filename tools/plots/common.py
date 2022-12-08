@@ -27,7 +27,9 @@ PLOT_PARAMS = {
     'xtick.major.width': 0.5,
     'ytick.major.width': 0.5,
     'legend.title_fontsize': 5,
-    'legend.fontsize': 5
+    'legend.fontsize': 5,
+    'grid.linewidth': 0.5,
+    'grid.alpha': 0.35,
 }
 
 
