@@ -20,9 +20,10 @@ ALL_MANAGERS = {
 MIN_REPS = 5
 CONFIDENCE_INTERVAL = 0.99
 
-COLUMN_WIDTH = 252 / 72
+COLUMN_WIDTH = 3.5
+COLUMN_HIGHT = 2 * COLUMN_WIDTH / (1 + np.sqrt(5))
 PLOT_PARAMS = {
-    'figure.figsize': (COLUMN_WIDTH, 1.4 * COLUMN_WIDTH),
+    'figure.figsize': (COLUMN_WIDTH, COLUMN_HIGHT),
     'figure.dpi': 72,
     'font.size': 9,
     'font.family': 'serif',
@@ -35,7 +36,9 @@ PLOT_PARAMS = {
     'xtick.major.width': 0.5,
     'ytick.major.width': 0.5,
     'legend.title_fontsize': 5,
-    'legend.fontsize': 5
+    'legend.fontsize': 5,
+    'grid.linewidth': 0.5,
+    'grid.alpha': 0.35,
 }
 
 
