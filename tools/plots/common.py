@@ -30,7 +30,7 @@ PLOT_PARAMS = {
     'font.serif': 'cm',
     'axes.titlesize': 9,
     'axes.linewidth': 0.5,
-    'grid.alpha': 0.5,
+    'grid.alpha': 0.42,
     'grid.linewidth': 0.5,
     'legend.title_fontsize': 5,
     'legend.fontsize': 5,
