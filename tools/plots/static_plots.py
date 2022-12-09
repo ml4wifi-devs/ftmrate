@@ -25,7 +25,7 @@ def plot_results(ax: plt.Axes, distance: float) -> None:
             ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
 
     ax.set_xlim((0, MAX_N_WIFI))
-    ax.set_ylim(bottom=0)
+    ax.set_ylim((0, 125))
 
     ax.set_ylabel('Aggregate throughput [Mb/s]')
     ax.set_title(fr'$\rho$ = {distance} m')
@@ -40,9 +40,9 @@ if __name__ == '__main__':
     for distance, ax in zip([0, 20], axes):
         plot_results(ax, distance)
 
-    axes[0].legend()
     axes[0].tick_params('x', labelbottom=False, bottom=False)
     axes[1].set_xlabel('Number of stations')
+    axes[1].legend()
 
     plt.savefig(f'static-thr.pdf', bbox_inches='tight')
     plt.clf()

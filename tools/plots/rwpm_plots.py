@@ -19,7 +19,8 @@ def plot_results(ax: plt.Axes, velocity: float) -> None:
     oracle = df[df.manager == 'Oracle']['throughput'].mean()
     ax.axhline(oracle, linestyle='--', c='gray', label=f'{ALL_MANAGERS["Oracle"]} mean')
 
-    ax.set_ylim(bottom=0)
+    ax.set_ylim((0, 90))
+    ax.set_yticks([0, 15, 30, 45, 60, 75, 90])
 
     ax.set_ylabel('Aggregate throughput [Mb/s]')
     ax.set_xlabel('')
@@ -30,19 +31,15 @@ def plot_results(ax: plt.Axes, velocity: float) -> None:
 
 if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
-    plt.rcParams['legend.fontsize'] = 7
     fig, axes = plt.subplots(2, 1, sharex='col')
 
     for velocity, ax in zip([0., 1.4], axes):
         plot_results(ax, velocity)
 
-    axes[0].legend()
     axes[0].tick_params('x', labelbottom=False, bottom=False)
     axes[1].set_xticklabels(ALL_MANAGERS.values())
     plt.setp(axes[1].xaxis.get_majorticklabels(), rotation=30, ha="right")
-
-    axes[0].set_yticks([0, 25, 50, 75])
-    axes[1].set_yticks([0, 15, 30, 45, 60])
+    axes[1].legend()
 
     axes[0].set_title('Static stations')
     axes[1].set_title('Mobile stations')

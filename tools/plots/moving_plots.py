@@ -25,7 +25,7 @@ def plot_results(ax: plt.Axes, velocity: float) -> None:
             ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
 
     ax.set_xlim((0, MAX_DISTANCE))
-    ax.set_ylim(bottom=0)
+    ax.set_ylim((0, 125))
 
     ax.set_ylabel('Station throughput [Mb/s]')
     ax.set_title(fr'$v$ = {velocity} m/s')
@@ -40,9 +40,9 @@ if __name__ == '__main__':
     for velocity, ax in zip([1, 2], axes):
         plot_results(ax, velocity)
 
-    axes[0].legend()
     axes[0].tick_params('x', labelbottom=False, bottom=False)
     axes[1].set_xlabel('Distance from AP [m]')
+    axes[1].legend()
 
     plt.savefig(f'moving-thr.pdf', bbox_inches='tight')
     plt.clf()
