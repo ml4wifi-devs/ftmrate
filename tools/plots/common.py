@@ -21,7 +21,7 @@ MIN_REPS = 5
 CONFIDENCE_INTERVAL = 0.99
 
 COLUMN_WIDTH = 3.5
-COLUMN_HIGHT = 2 * COLUMN_WIDTH / (1 + np.sqrt(5))
+COLUMN_HIGHT = 1.4 * COLUMN_WIDTH
 PLOT_PARAMS = {
     'figure.figsize': (COLUMN_WIDTH, COLUMN_HIGHT),
     'figure.dpi': 72,
@@ -29,16 +29,15 @@ PLOT_PARAMS = {
     'font.family': 'serif',
     'font.serif': 'cm',
     'axes.titlesize': 9,
-    'text.usetex': True,
-    'lines.linewidth': 0.5,
     'axes.linewidth': 0.5,
+    'grid.alpha': 0.5,
     'grid.linewidth': 0.5,
-    'xtick.major.width': 0.5,
-    'ytick.major.width': 0.5,
     'legend.title_fontsize': 5,
     'legend.fontsize': 5,
-    'grid.linewidth': 0.5,
-    'grid.alpha': 0.35,
+    'lines.linewidth': 0.5,
+    'text.usetex': True,
+    'xtick.major.width': 0.5,
+    'ytick.major.width': 0.5,
 }
 
 

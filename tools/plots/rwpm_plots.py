@@ -41,6 +41,9 @@ if __name__ == '__main__':
     axes[1].set_xticklabels(ALL_MANAGERS.values())
     plt.setp(axes[1].xaxis.get_majorticklabels(), rotation=30, ha="right")
 
+    axes[0].set_yticks([0, 25, 50, 75])
+    axes[1].set_yticks([0, 15, 30, 45, 60])
+
     axes[0].set_title('Static stations')
     axes[1].set_title('Mobile stations')
 
