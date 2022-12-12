@@ -96,7 +96,7 @@ main (int argc, char *argv[])
             << "- max fuzz time: " << fuzzTime << " s" << std::endl
             << "- loss model: " << lossModel << std::endl
             << "- SNR: " << snr << " dBm" << std::endl
-            << "- mobility model: Static" << std::endl
+            << "- mobility model: Distance" << std::endl
             << std::endl;
 
   // Create AP and stations

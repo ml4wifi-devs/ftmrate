@@ -7,7 +7,7 @@ from tools.plots.common import *
 
 def plot_results(distance: float, n_wifi: int) -> None:
     df = pd.read_csv(DATA_FILE)
-    df = df.loc[(df.mobility == 'Static') & (df.nWifiReal == n_wifi) & (df.distance == distance)]
+    df = df.loc[(df.mobility == 'Distance') & (df.nWifiReal == n_wifi) & (df.distance == distance)]
 
     results = get_thr_ttest(df)
     mask = np.tril(np.ones_like(results))
@@ -27,7 +27,7 @@ def plot_results(distance: float, n_wifi: int) -> None:
     ax.figure.subplots_adjust(left=0.3, bottom=0.5)
     plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
 
-    plt.savefig(f'static-d{distance}-n{n_wifi}-ttest.pdf', bbox_inches='tight')
+    plt.savefig(f'equal-distance-d{distance}-n{n_wifi}-ttest.pdf', bbox_inches='tight')
     plt.clf()
 
 

@@ -9,7 +9,7 @@ MANAGERS_LEN=${#MANAGERS[@]}
 SHIFT=0
 SEED_SHIFT=100
 
-run_static() {
+run_equal_distance() {
   N_REP=10
   N_POINTS=13
   DISTANCE=$1
@@ -83,13 +83,13 @@ run_moving() {
   done
 }
 
-echo -e "\nQueue Static (d=0) scenario"
-run_static 0
+echo -e "\nQueue equal distance (d=0) scenario"
+run_equal_distance 0
 
-echo -e "\nQueue Static (d=20) scenario"
-run_static 20
+echo -e "\nQueue equal distance (d=20) scenario"
+run_equal_distance 20
 
-echo -e "\nQueue Moving scenario"
+echo -e "\nQueue moving station scenario"
 run_moving
 
 echo -e "\nQueue RWPM scenario"

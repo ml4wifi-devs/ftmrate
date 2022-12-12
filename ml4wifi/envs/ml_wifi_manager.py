@@ -100,10 +100,10 @@ def main() -> None:
 
 
     # Set args according to scenario
-    if args.scenario == 'static':
+    if args.scenario == 'distance':
         pname = 'stations'
         NS3_ARGS['distance'] = args.distance
-        NS3_ARGS['mobilityModel'] = 'Static'
+        NS3_ARGS['mobilityModel'] = 'Distance'
         NS3_ARGS['nWifi'] = args.nWifi
 
     elif args.scenario == 'rwpm':

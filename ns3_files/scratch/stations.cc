@@ -59,7 +59,7 @@ main (int argc, char *argv[])
   uint32_t minGI = 3200;
 
   std::string lossModel = "Nakagami";
-  std::string mobilityModel = "Static";
+  std::string mobilityModel = "Distance";
   double area = 40.;
   double nodeSpeed = 1.4;
   double nodePause = 20.;
@@ -71,13 +71,13 @@ main (int argc, char *argv[])
   cmd.AddValue ("channelWidth", "Channel width (MHz)", channelWidth);
   cmd.AddValue ("csvPath", "Path to output CSV file", csvPath);
   cmd.AddValue ("dataRate", "Traffic generator data rate (Mb/s)", dataRate);
-  cmd.AddValue ("distance", "Distance between AP and STAs (m) - only for Static mobility type",distance);
+  cmd.AddValue ("distance", "Distance between AP and STAs (m) - only for Distance mobility type",distance);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
   cmd.AddValue ("lossModel", "Propagation loss model (LogDistance, Nakagami)", lossModel);
   cmd.AddValue ("manager", "Rate adaptation manager", rateAdaptationManager);
   cmd.AddValue ("managerName", "Name of the Wi-Fi manager in CSV", wifiManagerName);
   cmd.AddValue ("minGI", "Shortest guard interval (ns)", minGI);
-  cmd.AddValue ("mobilityModel", "Mobility model (Static, RWPM)", mobilityModel);
+  cmd.AddValue ("mobilityModel", "Mobility model (Distance, RWPM)", mobilityModel);
   cmd.AddValue ("nodeSpeed", "Maximum station speed (m/s) - only for RWPM mobility type",nodeSpeed);
   cmd.AddValue ("nodePause","Maximum time station waits in newly selected position (s) - only for RWPM mobility type",nodePause);
   cmd.AddValue ("nWifi", "Number of stations", nWifi);
@@ -108,7 +108,7 @@ main (int argc, char *argv[])
             << "- max fuzz time: " << fuzzTime << " s" << std::endl
             << "- loss model: " << lossModel << std::endl;
 
-  if (mobilityModel == "Static")
+  if (mobilityModel == "Distance")
     {
       std::cout << "- mobility model: " << mobilityModel << std::endl
                 << "- distance: " << distance << " m" << std::endl
@@ -130,7 +130,7 @@ main (int argc, char *argv[])
   // Configure mobility
   MobilityHelper mobility;
 
-  if (mobilityModel == "Static")
+  if (mobilityModel == "Distance")
     {
       mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
       mobility.Install (wifiApNode);

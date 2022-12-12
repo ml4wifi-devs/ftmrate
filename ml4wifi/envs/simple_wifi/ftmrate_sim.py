@@ -12,7 +12,7 @@ from ml4wifi.utils.measurement_manager import measurement_manager, MeasurementSt
 tfd = tfp.distributions
 tfb = tfp.bijectors
 
-# mean value based on ns-3 static-stations simulation, 1 STA, const MCS
+# mean value based on ns-3 equal distance simulation scenario, 1 STA, const MCS
 FRAMES_PER_SECOND = 188
 
 # If first measurement is in time t=0s, Kalman filter refuses to work

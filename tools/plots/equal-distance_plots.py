@@ -13,7 +13,7 @@ def plot_results(ax: plt.Axes, distance: float) -> None:
     colors = pl.cm.viridis(np.linspace(0., 1., len(ALL_MANAGERS) - 1))
 
     df = pd.read_csv(DATA_FILE)
-    df = df[(df.mobility == 'Static') & (df.distance == distance) & (df.nWifiReal <= MAX_N_WIFI)]
+    df = df[(df.mobility == 'Distance') & (df.distance == distance) & (df.nWifiReal <= MAX_N_WIFI)]
 
     for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'nWifiReal')
@@ -44,5 +44,5 @@ if __name__ == '__main__':
     axes[1].set_xlabel('Number of stations')
     axes[1].legend()
 
-    plt.savefig(f'static-thr.pdf', bbox_inches='tight')
+    plt.savefig(f'equal-distance-thr.pdf', bbox_inches='tight')
     plt.clf()
