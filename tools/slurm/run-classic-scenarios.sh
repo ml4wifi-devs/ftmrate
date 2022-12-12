@@ -28,7 +28,7 @@ run_equal_distance() {
 
       ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
 
-      sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/static/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME"
+      sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/distance/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME"
     done
 
     SHIFT=$(( SHIFT + N_POINTS * N_REP ))
@@ -39,6 +39,7 @@ run_rwpm() {
   N_REP=40
   N_WIFI=10
   SIM_TIME=1000
+  NODE_SPEED=$1
 
   START=0
   END=$(( N_REP - 1 ))
@@ -47,7 +48,7 @@ run_rwpm() {
     MANAGER=${MANAGERS[$i]}
     MANAGER_NAME=${MANAGERS_NAMES[$i]}
 
-    sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/rwpm/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$SIM_TIME"
+    sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/rwpm/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$SIM_TIME" "$NODE_SPEED"
 
     SHIFT=$(( SHIFT + N_REP ))
   done
@@ -57,7 +58,7 @@ run_rwpm() {
 run_moving() {
   N_REP=15
   VELOCITIES=(1 2)
-  SIM_TIMES=("56" "27")
+  SIM_TIMES=("56" "28")
   INTERVALS=("1" "0.5")
   VELOCITIES_LEN=${#VELOCITIES[@]}
 
@@ -92,5 +93,8 @@ run_equal_distance 20
 echo -e "\nQueue moving station scenario"
 run_moving
 
-echo -e "\nQueue RWPM scenario"
-run_rwpm
+echo -e "\nQueue static stations scenario"
+run_rwpm 0
+
+echo -e "\nQueue mobile stations scenario"
+run_rwpm "1.4"

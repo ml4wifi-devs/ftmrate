@@ -13,7 +13,7 @@ SHIFT=0
 SEED_SHIFT=100
 BASE_MEMPOOL=3000
 
-run_static() {
+run_equal_distance() {
   N_REP=10
   N_POINTS=13
   DISTANCE=$1
@@ -33,7 +33,7 @@ run_static() {
       MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
       ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
 
-      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/static/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME" "$MEMPOOL_SHIFT"
+      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/distance/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME" "$MEMPOOL_SHIFT"
     done
 
     SHIFT=$(( SHIFT + N_POINTS * N_REP ))
@@ -44,6 +44,7 @@ run_rwpm() {
   N_REP=40
   N_WIFI=10
   SIM_TIME=1000
+  NODE_SPEED=$1
 
   START=0
   END=$(( N_REP - 1 ))
@@ -54,7 +55,7 @@ run_rwpm() {
 
     MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
 
-    sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/rwpm/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$SIM_TIME" "$MEMPOOL_SHIFT"
+    sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/rwpm/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$SIM_TIME" "$NODE_SPEED" "$MEMPOOL_SHIFT"
 
     SHIFT=$(( SHIFT + N_REP ))
   done
@@ -64,7 +65,7 @@ run_rwpm() {
 run_moving() {
   N_REP=15
   VELOCITIES=(1 2)
-  SIM_TIMES=("56" "27")
+  SIM_TIMES=("56" "28")
   INTERVALS=("1" "0.5")
   VELOCITIES_LEN=${#VELOCITIES[@]}
 
@@ -91,14 +92,17 @@ run_moving() {
   done
 }
 
-echo -e "\nQueue Static (d=0) scenario"
-run_static 0
+echo -e "\nQueue equal distance (d=0) scenario"
+run_equal_distance 0
 
-echo -e "\nQueue Static (d=20) scenario"
-run_static 20
+echo -e "\nQueue equal distance (d=20) scenario"
+run_equal_distance 20
 
-echo -e "\nQueue Moving scenario"
+echo -e "\nQueue moving station scenario"
 run_moving
 
-echo -e "\nQueue RWPM scenario"
-run_rwpm
+echo -e "\nQueue static stations scenario"
+run_rwpm 0
+
+echo -e "\nQueue mobile stations scenario"
+run_rwpm "1.4"
