@@ -340,8 +340,10 @@ main (int argc, char *argv[])
             << std::endl;
 
   // Gather results in CSV format
+  double velocity = mobilityModel == "Distance" ? 0. : nodeSpeed;
+
   std::ostringstream csvOutput;
-  csvOutput << mobilityModel << ',' << wifiManagerName << ",0," << distance << ',' << nWifi << ','
+  csvOutput << mobilityModel << ',' << wifiManagerName << ',' << velocity << ',' << distance << ',' << nWifi << ','
             << nWifiReal << ',' << RngSeedManager::GetRun () << ',' << totalThr << std::endl;
 
   // Print results to std output

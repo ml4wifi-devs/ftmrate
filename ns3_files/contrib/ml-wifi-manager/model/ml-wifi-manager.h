@@ -21,12 +21,12 @@ struct sEnv
 struct sAct
 {
   uint32_t station_id;
-  double last_sample;
   uint8_t mode;
 } Packed;
 
 struct MlWifiRemoteStation : public WifiRemoteStation
 {
+  double last_sample;
   uint32_t m_station_id;
   uint8_t m_mode;
 };
