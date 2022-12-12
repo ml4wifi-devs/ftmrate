@@ -74,18 +74,18 @@ success_probability = tfb.NormalCDF()(tfb.Invert(success_probability_dist.biject
 
 # Based on simulation with LogDistance channel model
 wifi_modes_snrs = jnp.array([
-    -0.0105,
-    2.92567,
-    6.04673,
-    8.98308,
-    12.5948,
-    16.4275,
-    17.9046,
-    19.6119,
-    23.5752,
-    24.8097,
-    31.2291,
-    33.1907,
+    10.613624240405125,
+    10.647249582547907,
+    10.660723984151614,
+    10.682584060100158,
+    11.151267538857537,
+    15.413200906170632,
+    16.735812667249125,
+    18.09117593040658,
+    21.80629059204096,
+    23.33182497361092,
+    29.78890607654747,
+    31.750234694079595
 ])
 
 # success_probability = tfd.Normal(wifi_modes_snrs, 1 / (2 * sqrt(2)).cdf(snr)
