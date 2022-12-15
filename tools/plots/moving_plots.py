@@ -28,7 +28,7 @@ def plot_results(ax: plt.Axes, velocity: float) -> None:
     ax.set_ylim((0, 125))
 
     ax.set_ylabel('Station throughput [Mb/s]')
-    ax.set_title(fr'$v$ = {velocity} m/s')
+    ax.set_title(fr'$\nu$ = {velocity} m/s')
 
     ax.grid()
 

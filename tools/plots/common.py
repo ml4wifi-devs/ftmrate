@@ -11,7 +11,7 @@ DATA_FILE = os.path.join(TOOLS_DIR, 'outputs', 'all_results.csv')
 
 ALL_MANAGERS = {
     'Minstrel': 'Minstrel',
-    'TS': 'Thompson Sampling',
+    'TS': 'Thompson sampling',
     'ES': 'FTMRate w/ ES',
     'KF': 'FTMRate w/ KF',
     'PF': 'FTMRate w/ PF',
