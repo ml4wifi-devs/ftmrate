@@ -14,9 +14,9 @@ NS_LOG_COMPONENT_DEFINE ("OracleWifiManager");
 
 NS_OBJECT_ENSURE_REGISTERED (OracleWifiManager);
 
-double lookupTable[] = {7.84, 7.92, 15.86, 17.47,
-                        24.48, 28.31, 32.94, 96.90,
-                        96.90, 96.90, 3906., std::numeric_limits<double>::infinity()};
+double lookupTable[] = {7.85, 7.91, 15.79, 17.49,
+                        24.76, 28.21, 32.94, 84.21,
+                        84.21, 4106., 4106., std::numeric_limits<double>::infinity()};
 
 TypeId
 OracleWifiManager::GetTypeId (void)

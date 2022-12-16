@@ -477,5 +477,10 @@ UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode)
                    "$ns3::MlWifiManager/Distance",
                DoubleValue (d));
 
+    Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::OracleWifiManager/Distance",
+               DoubleValue (d));
+
   Simulator::Schedule (Seconds (DISTANCE_UPDATE_INTERVAL), &UpdateDistance, staNode, apNode);
 }
