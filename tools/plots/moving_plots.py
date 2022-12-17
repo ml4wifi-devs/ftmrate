@@ -6,14 +6,14 @@ import pandas as pd
 from tools.plots.common import *
 
 
-MAX_DISTANCE = 50
+MAX_DISTANCE = 55
 
 
 def plot_results(ax: plt.Axes, velocity: float) -> None:
     colors = pl.cm.viridis(np.linspace(0., 1., len(ALL_MANAGERS) - 1))
 
     df = pd.read_csv(DATA_FILE)
-    df = df[(df.mobility == 'Moving') & (df.velocity == velocity) & (df.distance <= MAX_DISTANCE)]
+    df = df[(df.mobility == 'Moving') & (df.velocity == velocity)]
 
     for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'distance')
