@@ -23,19 +23,30 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ### ns-3 network simulator
 
-To fully benefit from FTMRate, the ns-3 network simulator needs to be installed on your machine. You read how to install ns-3 in the [official installation notes](https://www.nsnam.org/wiki/Installation), but we recommend to install it by cloning a git repository:
+To fully benefit from FTMRate, the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by clonning the official gitlab repository and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
+[official installation notes](https://www.nsnam.org/wiki/Installation).
 
 1. Clone the ns-3-dev repository:
 	```
 	git clone https://gitlab.com/nsnam/ns-3-dev.git
 	```
-2. Change directory to the newly created `ns-3-dev/` and build ns-3:
+2. Reset ns-3 to the 3.36.1 version:
+	```
+	cd $YOUR_NS3_PATH
+	git reset --hard 7004d1a6
+	```
+3. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
+	```
+	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/contrib/* $YOUR_NS3_PATH/contrib/
+	cp $YOUR_PATH_TO_FTMRATE_ROOT/scratch/* $YOUR_NS3_PATH/scratch/
+	```
+4. Build the ns-3:
 	```
 	cd $YOUR_NS3_PATH
 	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
 	./ns3 build
 	```
-3. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
+5. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
 	```
 	./ns3 run wifi-simple-adhoc
 	```
@@ -69,6 +80,9 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 	```
 
 ## Reproducing results
+
+We provide 2 ways of generating article results. One requires the Slurm workload manager to parallelize and accelerate this process. The other does not, but we treat this option as a proof of concept. To reproduce plots from the article with the `generate-plots.sh` script, you need a working TeX installation on your machine. To reed how to enable LaTeX rendering in matplotlib see 
+[this guide](https://matplotlib.org/stable/tutorials/text/usetex.html).
 
 ### Using the Slurm workload manager
 
