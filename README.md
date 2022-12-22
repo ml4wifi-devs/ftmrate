@@ -30,7 +30,7 @@ To fully benefit from FTMRate, the ns-3 network simulator needs to be installed 
 	```
 	git clone https://gitlab.com/nsnam/ns-3-dev.git
 	```
-2. Reset ns-3 to the 3.36.1 version:
+2. Set the repository to the 3.36.1 version:
 	```
 	cd $YOUR_NS3_PATH
 	git reset --hard 7004d1a6
@@ -40,7 +40,7 @@ To fully benefit from FTMRate, the ns-3 network simulator needs to be installed 
 	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/contrib/* $YOUR_NS3_PATH/contrib/
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/scratch/* $YOUR_NS3_PATH/scratch/
 	```
-4. Build the ns-3:
+4. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
 	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
@@ -55,7 +55,7 @@ To fully benefit from FTMRate, the ns-3 network simulator needs to be installed 
 
 The ns3-ai module interconnects ns-3 and FTMRate (or any other python-writen software) by transferring data through a shared memory pool. 
 The memory can be accessed by both sides, thus making the connection. Read more about ns3-ai at the
-[official repository](https://github.com/hust-diangroup/ns3-ai).  **Attention!** The ns3-ai (as of 2022-10-25) is not compatible with ns-3.36 or later. We have forked and modified the official ns3-ai repository to make it compatible with the 3.36 version. In order to install our compatible version folow the steps below.
+[official repository](https://github.com/hust-diangroup/ns3-ai).  **Attention!** ns3-ai (as of 2022-10-25) is not compatible with ns-3.36 or later. We have forked and modified the official ns3-ai repository to make it compatible with the 3.36 version. In order to install our compatible version folow the steps below.
 
 1.  Clone our ns3-ai fork into ns-3's `contrib` directory
 	```
@@ -81,7 +81,7 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 
 ## Reproducing results
 
-We provide 2 ways of generating article results. One requires the Slurm workload manager to parallelize and accelerate this process. The other does not, but we treat this option as a proof of concept. To reproduce plots from the article with the `generate-plots.sh` script, you need a working TeX installation on your machine. To reed how to enable LaTeX rendering in matplotlib see 
+We provide two ways of generating article results. One requires the Slurm workload manager to parallelize and accelerate this process. The other does not, but we treat this option as a proof of concept. To reproduce plots from the article with the `generate-plots.sh` script, you need a working TeX installation on your machine. To read how to enable LaTeX rendering in matplotlib see 
 [this guide](https://matplotlib.org/stable/tutorials/text/usetex.html).
 
 ### Using the Slurm workload manager
