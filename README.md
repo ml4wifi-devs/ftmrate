@@ -37,8 +37,8 @@ To fully benefit from FTMRate, the ns-3 network simulator needs to be installed 
 	```
 3. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
 	```
-	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/contrib/* $YOUR_NS3_PATH/contrib/
-	cp $YOUR_PATH_TO_FTMRATE_ROOT/scratch/* $YOUR_NS3_PATH/scratch/
+	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib/* $YOUR_NS3_PATH/contrib/
+	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
 	```
 4. Build ns-3:
 	```
