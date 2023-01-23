@@ -8,7 +8,7 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 1. Clone the repository:
 	```
-	git clone https://github.com/ml4wifi-devs/ftmrate.git
+	git clone https://github.com/ml4wifi-devs/ftmrate_internal.git
 	```
 
 2. Go to project root directory and install requirements:
@@ -51,6 +51,26 @@ To fully benefit from FTMRate, the ns-3 network simulator needs to be installed 
 	./ns3 run wifi-simple-adhoc
 	```
 
+### FTMRate and ns-3 synchronization
+
+To flawlessly synchronize files between the FTMRate repository and the ns-3 installation, you can create symbolic links to the corresponding folders.
+**Attention!** backup of all files in the `contrib` and `scratch` directories as creating symbolic links will require deleting these folders!
+
+1. Remove `contrib` and `scratch` folders:
+	```
+    cd $YOUR_NS3_PATH
+    rm -rf contrib
+    rm -rf scratch
+    ```
+ 
+2. Create symbolic links:
+    ```
+    ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib contrib
+    ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch scratch
+    ```
+   
+3. Clone ns3-ai fork into ns-3's `contrib` directory - see [next section](#ns3-ai).
+
 ### ns3-ai
 
 The ns3-ai module interconnects ns-3 and FTMRate (or any other python-writen software) by transferring data through a shared memory pool. 
@@ -78,6 +98,15 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
 	./ns3 build
 	```
+ 
+Using our fork of ns3-ai, use can run ns-3 simulations in optimized or debug mode. To select mode change `debug` flag in ns3-ai `Experiment` declaration:
+```python
+exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=False)
+```
+
+```python
+exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=True)
+```
 
 ## Reproducing results
 
