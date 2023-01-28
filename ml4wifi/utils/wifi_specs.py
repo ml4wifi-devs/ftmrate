@@ -115,6 +115,14 @@ expected_rates = tfb.Chain([success_probability_to_rate, success_probability, di
 expected_rates_log_distance = tfb.Chain([success_probability_to_rate, success_probability_log_distance, distance_to_snr])
 
 
+def expected_rates_bijector(tx_power: Scalar):
+    return tfb.Chain([
+        success_probability_to_rate,
+        success_probability,
+        tfb.Shift(tx_power - DEFAULT_NOISE - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / jnp.log(10.))(tfb.Log()))
+    ])
+
+
 @jax.jit
 def ideal_mcs(distance: Scalar) -> jnp.int32:
     return jnp.argmax(expected_rates(distance))

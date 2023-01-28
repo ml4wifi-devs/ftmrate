@@ -31,6 +31,10 @@ MlWifiManager::GetTypeId (void)
                    DoubleValue (0.),
                    MakeDoubleAccessor (&MlWifiManager::m_distance),
                    MakeDoubleChecker<double_t> ())
+    .AddAttribute ("Power", "Current transmission power [dBm]",
+                   DoubleValue (16.0206),
+                   MakeDoubleAccessor (&MlWifiManager::m_power),
+                   MakeDoubleChecker<double_t> ())
   ;
   return tid;
 }
@@ -59,6 +63,7 @@ MlWifiManager::DoCreateStation (void) const
 
   auto env = m_env->EnvSetterCond ();
   env->time = Simulator::Now ().GetSeconds ();
+  env->power = GetPhy ()->GetPowerDbm (GetDefaultTxPowerLevel ());
   env->mode = 0;
   env->type = 0;
   m_env->SetCompleted ();
@@ -174,6 +179,7 @@ void
 MlWifiManager::SampleMode(MlWifiRemoteStation *st)
 {
   auto env = m_env->EnvSetterCond ();
+  env->power = m_power;
   env->time = Simulator::Now ().GetSeconds ();
   env->distance = m_distance;
   env->station_id = st->m_station_id;

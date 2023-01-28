@@ -22,14 +22,16 @@ NS_LOG_COMPONENT_DEFINE ("moving");
 
 /***** Functions declarations *****/
 
+void ChangePower (NodeContainer wifiStaNode, uint8_t powerLevel);
 uint64_t GetReceivedBits (Ptr<Node> sinkNode, Ptr<Node> sourceNode);
 void GetWarmupFlows ();
 void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
                               DataRate offeredLoad, uint32_t packetSize, double warmupTime,
                               double simulationTime, double fuzzTime);
 void MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double nextPoint,
-                       std::string wifiManagerName);
+                       double warmupTime, std::string wifiManagerName);
 void PopulateARPcache ();
+void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
 void StartMovement (Ptr<Node> staNode, double velocity);
 void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 
@@ -43,6 +45,8 @@ uint64_t warmupFlowsSum;
 FlowMonitorHelper flowmon;
 Ptr<FlowMonitor> monitor;
 std::ostringstream csvOutput;
+
+u_int8_t globalPowerLevel = 0;
 
 /***** Main with scenario definition *****/
 
@@ -58,7 +62,9 @@ main (int argc, char *argv[])
   double fuzzTime = 1.;
   double warmupTime = 5.;
   double simulationTime = 56.;
-  double measurementsInterval = 1.;
+  double measurementsInterval = 2.;
+  double delta = 15;      // difference between 2 power levels in dB
+  double interval = 2.;   // mean (exponential) interval between power change
 
   std::string pcapName = "";
   std::string csvPath = "results.csv";
@@ -77,7 +83,9 @@ main (int argc, char *argv[])
   cmd.AddValue ("channelWidth", "Channel width (MHz)", channelWidth);
   cmd.AddValue ("csvPath", "Path to output CSV file", csvPath);
   cmd.AddValue ("dataRate", "Traffic generator data rate (Mb/s)", dataRate);
+  cmd.AddValue ("delta", "Power change (dBm)", delta);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
+  cmd.AddValue ("interval", "Interval between power change (s)", interval);
   cmd.AddValue ("lossModel", "Propagation loss model to use (LogDistance, Nakagami)", lossModel);
   cmd.AddValue ("measurementsInterval", "Interval between successive measurement points (s)",measurementsInterval);
   cmd.AddValue ("manager", "Rate adaptation manager", rateAdaptationManager);
@@ -110,6 +118,8 @@ main (int argc, char *argv[])
             << "- simulation time: " << simulationTime << " s" << std::endl
             << "- warmup time: " << warmupTime << " s" << std::endl
             << "- max fuzz time: " << fuzzTime << " s" << std::endl
+            << "- delta: " << delta << " dBm" << std::endl
+            << "- interval: " << interval << " s" << std::endl
             << "- loss model: " << lossModel << std::endl
             << "- mobility model: Moving" << std::endl
             << "- velocity: " << velocity << " m/s" << std::endl
@@ -160,6 +170,11 @@ main (int argc, char *argv[])
       return 1;
     }
   phy.SetChannel (channelHelper.Create ());
+
+  // Configure two power levels
+  phy.Set ("TxPowerLevels", UintegerValue (2));
+  phy.Set ("TxPowerStart", DoubleValue (21.0 - delta));
+  phy.Set ("TxPowerEnd", DoubleValue (21.0));
 
   // Configure MAC layer
   WifiMacHelper mac;
@@ -227,12 +242,31 @@ main (int argc, char *argv[])
       phy.EnablePcap (pcapName, apDevice);
     }
 
+  // Register callback for power change
+  Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyTxBegin",
+                   MakeCallback (PowerCallback));
+  
+  // Schedule all power changes
+  double time = warmupTime;
+  bool maxPower = false;
+
+  // The interval between each change follows the exponential distribution
+  Ptr<ExponentialRandomVariable> x = CreateObject<ExponentialRandomVariable> ();
+  x->SetAttribute ("Mean", DoubleValue (interval));
+
+  while (time < simulationTime)
+    {
+      time += x->GetValue ();
+      Simulator::Schedule (Seconds (time), &ChangePower, wifiStaNode, maxPower);
+      maxPower = !maxPower;
+    }
+
   // Register distance measurements
   Simulator::ScheduleNow (&UpdateDistance, wifiStaNode.Get (0), wifiApNode.Get (0));
 
   // Schedule station movement and first measurement point
   Simulator::Schedule (Seconds (warmupTime), &MeasurementPoint, wifiStaNode.Get (0),
-                       wifiApNode.Get (0), velocity, measurementsInterval, wifiManagerName);
+                       wifiApNode.Get (0), velocity, measurementsInterval, warmupTime, wifiManagerName);
   Simulator::Schedule (Seconds (warmupTime), &StartMovement, wifiStaNode.Get (0), velocity);
 
   // Define simulation stop time
@@ -275,7 +309,7 @@ main (int argc, char *argv[])
             << std::endl;
 
   // Print results to std output
-  std::cout << "mobility,manager,velocity,distance,nWifi,nWifiReal,seed,throughput"
+  std::cout << "mobility,manager,velocity,time,distance,nWifi,nWifiReal,seed,throughput,powerLvl"
             << std::endl
             << csvOutput.str ();
 
@@ -291,6 +325,23 @@ main (int argc, char *argv[])
 }
 
 /***** Function definitions *****/
+
+void
+ChangePower (NodeContainer wifiStaNodes, uint8_t powerLevel)
+{
+  // Override global variable with new power level
+  globalPowerLevel = powerLevel;
+
+  // Iter through STA nodes and change power for each
+  for (auto node = wifiStaNodes.Begin (); node != wifiStaNodes.End (); ++node)
+    {
+      std::stringstream devicePath;
+      devicePath << "/NodeList/" 
+                 << (*node)->GetId () 
+                 << "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/DefaultTxPowerLevel";
+      Config::Set (devicePath.str(), UintegerValue (powerLevel));
+    }
+}
 
 uint64_t
 GetReceivedBits (Ptr<Node> sinkNode, Ptr<Node> sourceNode)
@@ -372,7 +423,7 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
 
 void
 MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double nextPoint,
-                  std::string wifiManagerName)
+                  double warmupTime, std::string wifiManagerName)
 {
   // Calculate metrics since last measurement
   static double lastTime = -1.;
@@ -383,7 +434,7 @@ MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double n
     {
       lastTime = currentTime;
       Simulator::Schedule (Seconds (nextPoint), &MeasurementPoint, staNode, apNode, velocity,
-                           nextPoint, wifiManagerName);
+                           nextPoint, warmupTime, wifiManagerName);
       return;
     }
 
@@ -398,12 +449,12 @@ MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double n
   Vector pos = mobility->GetPosition ();
 
   // Add current state to CSV
-  csvOutput << "Moving," << wifiManagerName << ',' << velocity << ',' << pos.x << ",1,1,"
-            << RngSeedManager::GetRun () << ',' << throughput << std::endl;
+  csvOutput << "Moving," << wifiManagerName << ',' << velocity << ',' << currentTime - warmupTime << ',' << pos.x << ",1,1,"
+            << RngSeedManager::GetRun () << ',' << throughput << ',' << unsigned(globalPowerLevel) << std::endl;
 
   // Schedule next measurement
   Simulator::Schedule (Seconds (nextPoint), &MeasurementPoint, staNode, apNode, velocity, nextPoint,
-                       wifiManagerName);
+                       warmupTime, wifiManagerName);
 }
 
 void
@@ -455,6 +506,24 @@ PopulateARPcache ()
           ipIface->SetAttribute ("ArpCache", PointerValue (arp));
         }
     }
+}
+
+void
+PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW)
+{
+  size_t start = 10; // length of "/NodeList/" string
+  size_t end = path.find ("/DeviceList/");
+  std::string nodeId = path.substr (start, end - start);
+
+  Config::Set ("/NodeList/" + nodeId +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/Power",
+               DoubleValue (10 * (3 + log10 (txPowerW))));
+
+  Config::Set ("/NodeList/" + nodeId +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::OracleWifiManager/Power",
+               DoubleValue (10 * (3 + log10 (txPowerW))));
 }
 
 void

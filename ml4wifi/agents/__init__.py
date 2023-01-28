@@ -8,7 +8,7 @@ from tensorflow_probability.substrates import jax as tfp
 
 from ml4wifi.envs.ns3_ai_structures import Env, Act
 from ml4wifi.utils.measurement_manager import *
-from ml4wifi.utils.wifi_specs import expected_rates
+from ml4wifi.utils.wifi_specs import expected_rates, expected_rates_bijector
 
 tfb = tfp.bijectors
 
@@ -45,6 +45,8 @@ class BaseManagersContainer:
             state: Any,
             m_state: MeasurementState,
             distance: Scalar,
+            tx_power: Scalar,
+            adapt_power: bool,
             time: Scalar,
             agent: BaseAgent,
             measurements_manager: MeasurementManager
@@ -60,11 +62,16 @@ class BaseManagersContainer:
 
         distance_dist = agent.sample(state, sample_key, time)
         distance_dist = tfb.Softplus()(distance_dist)
-        rates_mean = jnp.mean(expected_rates(distance_dist).sample(N_SAMPLES, rate_key), axis=0)
+
+        rates_mean = jax.lax.cond(
+            adapt_power,
+            lambda: jnp.mean(expected_rates_bijector(tx_power)(distance_dist).sample(N_SAMPLES, rate_key), axis=0),
+            lambda: jnp.mean(expected_rates(distance_dist).sample(N_SAMPLES, rate_key), axis=0)
+        )
 
         return key, state, m_state, jnp.argmax(rates_mean)
 
-    def do(self, env: Env, act: Act) -> Act:
+    def do(self, env: Env, act: Act, adapt_power: bool) -> Act:
         if env.type == 0:       # New station created
             act.station_id = sta_id = len(self.states)
             self.key, init_key = jax.random.split(self.key)
@@ -74,7 +81,15 @@ class BaseManagersContainer:
         elif env.type == 1:     # Sample new MCS
             sta_id = env.station_id
             self.key, self.states[sta_id], self.measurements[sta_id], mode = \
-                self.select_mcs(self.key, self.states[sta_id], self.measurements[sta_id], env.distance, env.time)
+                self.select_mcs(
+                    self.key, 
+                    self.states[sta_id], 
+                    self.measurements[sta_id], 
+                    env.distance, 
+                    env.power, 
+                    adapt_power, 
+                    env.time
+                )
 
             act.mode = mode
             act.station_id = sta_id     # Only for check
