@@ -51,7 +51,7 @@ To fully benefit from FTMRate, the ns-3 network simulator needs to be installed 
 	./ns3 run wifi-simple-adhoc
 	```
 
-### FTMRate and ns-3 synchronization
+### FTMRate and ns-3 synchronization (optional)
 
 To flawlessly synchronize files between the FTMRate repository and the ns-3 installation, you can create symbolic links to the corresponding folders.
 **Attention!** backup of all files in the `contrib` and `scratch` directories as creating symbolic links will require deleting these folders!
