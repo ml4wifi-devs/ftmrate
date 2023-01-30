@@ -29,7 +29,7 @@ void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, ui
                               DataRate offeredLoad, uint32_t packetSize, double warmupTime,
                               double simulationTime, double fuzzTime);
 void MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double nextPoint,
-                       double warmupTime, std::string wifiManagerName, bool compatibleOutput);
+                       double warmupTime, std::string wifiManagerName);
 void PopulateARPcache ();
 void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
 void StartMovement (Ptr<Node> staNode, double velocity);
@@ -45,6 +45,7 @@ uint64_t warmupFlowsSum;
 FlowMonitorHelper flowmon;
 Ptr<FlowMonitor> monitor;
 std::ostringstream csvOutput;
+bool compatibleOutput = false;
 
 u_int8_t globalPowerLevel = 0;
 
@@ -66,7 +67,6 @@ main (int argc, char *argv[])
   double delta = 15;      // difference between 2 power levels in dB
   double interval = 2.;   // mean (exponential) interval between power change
 
-  bool compatibleOutput = false;
   std::string pcapName = "";
   std::string csvPath = "results.csv";
 
@@ -269,7 +269,7 @@ main (int argc, char *argv[])
 
   // Schedule station movement and first measurement point
   Simulator::Schedule (Seconds (warmupTime), &MeasurementPoint, wifiStaNode.Get (0), wifiApNode.Get (0),
-                       velocity, measurementsInterval, warmupTime, wifiManagerName, compatibleOutput);
+                       velocity, measurementsInterval, warmupTime, wifiManagerName);
   Simulator::Schedule (Seconds (warmupTime), &StartMovement, wifiStaNode.Get (0), velocity);
 
   // Define simulation stop time
@@ -313,10 +313,10 @@ main (int argc, char *argv[])
 
   // Print results to std output
   if (compatibleOutput) {
-    std::cout << "mobility,manager,velocity,time,distance,nWifi,nWifiReal,seed,throughput,powerLvl";
+    std::cout << "mobility,manager,velocity,distance,nWifi,nWifiReal,seed,throughput";
   }
   else {
-    std::cout << "mobility,manager,velocity,distance,nWifi,nWifiReal,seed,throughput";
+    std::cout << "mobility,manager,velocity,time,distance,nWifi,nWifiReal,seed,throughput,powerLvl";
   }
   std::cout << std::endl << csvOutput.str ();
 
@@ -431,7 +431,7 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
 
 void
 MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double nextPoint,
-                  double warmupTime, std::string wifiManagerName, bool compatibleOutput)
+                  double warmupTime, std::string wifiManagerName)
 {
   // Calculate metrics since last measurement
   static double lastTime = -1.;
@@ -442,7 +442,7 @@ MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double n
     {
       lastTime = currentTime;
       Simulator::Schedule (Seconds (nextPoint), &MeasurementPoint, staNode, apNode, velocity,
-                           nextPoint, warmupTime, wifiManagerName, compatibleOutput);
+                           nextPoint, warmupTime, wifiManagerName);
       return;
     }
 
@@ -468,7 +468,7 @@ MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode, double velocity, double n
   
   // Schedule next measurement
   Simulator::Schedule (Seconds (nextPoint), &MeasurementPoint, staNode, apNode, velocity, nextPoint,
-                       warmupTime, wifiManagerName, compatibleOutput);
+                       warmupTime, wifiManagerName);
 }
 
 void
