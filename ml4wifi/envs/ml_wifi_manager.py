@@ -61,6 +61,7 @@ def main() -> None:
     parser.add_argument('--nWifi', default=1, type=int)
     parser.add_argument('--packetSize', default=1500, type=int)
     parser.add_argument('--pcapName', type=str)
+    parser.add_argument('--sameOut', default=False, action='store_true')
     parser.add_argument('--scenario', required=True, type=str)
     parser.add_argument('--simulationTime', default=20., type=float)
     parser.add_argument('--startPosition', default=0., type=float)
@@ -90,7 +91,9 @@ def main() -> None:
     NS3_ARGS['channelWidth'] = args.channelWidth
     NS3_ARGS['csvPath'] = args.csvPath
     NS3_ARGS['dataRate'] = args.dataRate
+    NS3_ARGS['delta'] = args.delta
     NS3_ARGS['fuzzTime'] = args.fuzzTime
+    NS3_ARGS['interval'] = args.interval
     NS3_ARGS['lossModel'] = args.lossModel
     NS3_ARGS['managerName'] = args.managerName if args.managerName else args.ml_manager
     NS3_ARGS['minGI'] = args.minGI
@@ -119,9 +122,8 @@ def main() -> None:
 
     elif args.scenario == 'moving':
         pname = 'moving'
-        NS3_ARGS['delta'] = args.delta
-        NS3_ARGS['interval'] = args.interval
         NS3_ARGS['measurementsInterval'] = args.measurementsInterval
+        NS3_ARGS['sameOut'] = args.sameOut
         NS3_ARGS['startPosition'] = args.startPosition
         NS3_ARGS['velocity'] = args.velocity
 
