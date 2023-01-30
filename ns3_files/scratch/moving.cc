@@ -255,7 +255,7 @@ main (int argc, char *argv[])
   // The interval between each change follows the exponential distribution
   Ptr<ExponentialRandomVariable> x = CreateObject<ExponentialRandomVariable> ();
   x->SetAttribute ("Mean", DoubleValue (interval));
-  x->SetStream (-1);
+  x->SetStream (1);
 
   while (time < simulationTime)
     {
@@ -408,7 +408,7 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
   Ptr<UniformRandomVariable> fuzz = CreateObject<UniformRandomVariable> ();
   fuzz->SetAttribute ("Min", DoubleValue (0.));
   fuzz->SetAttribute ("Max", DoubleValue (fuzzTime));
-  fuzz->SetStream(-1);
+  fuzz->SetStream (0);
   double applicationsStart = fuzz->GetValue ();
 
   // Configure source and sink
