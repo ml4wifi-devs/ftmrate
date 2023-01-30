@@ -159,18 +159,18 @@ main (int argc, char *argv[])
       ObjectFactory pos;
       pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
       std::stringstream ssArea;
-      ssArea << "ns3::UniformRandomVariable[Min=0.0|Max=" << area << "|Stream=42]";
-      pos.Set ("X", StringValue (ssArea.str ()));
-      pos.Set ("Y", StringValue (ssArea.str ()));
+      ssArea << "ns3::UniformRandomVariable[Min=0.0|Max=" << area;
+      pos.Set ("X", StringValue (ssArea.str () + "|Stream=2]"));
+      pos.Set ("Y", StringValue (ssArea.str () + "|Stream=3]"));
 
       Ptr<PositionAllocator> taPositionAlloc = pos.Create ()->GetObject<PositionAllocator> ();
       mobility.SetPositionAllocator (taPositionAlloc);
 
       // Set random pause (from 0 to nodePause [s]) and speed (from 0 to nodeSpeed [m/s])
       std::stringstream ssSpeed;
-      ssSpeed << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodeSpeed << "|Stream=42]";
+      ssSpeed << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodeSpeed << "|Stream=4]";
       std::stringstream ssPause;
-      ssPause << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodePause << "|Stream=42]";
+      ssPause << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodePause << "|Stream=5]";
 
       mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
                                  "Speed", StringValue (ssSpeed.str ()),
@@ -305,7 +305,7 @@ main (int argc, char *argv[])
   // The interval between each change follows the exponential distribution
   Ptr<ExponentialRandomVariable> x = CreateObject<ExponentialRandomVariable> ();
   x->SetAttribute ("Mean", DoubleValue (interval));
-  x->SetStream(-1);
+  x->SetStream (1);
 
   for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
   {
@@ -442,7 +442,7 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
   Ptr<UniformRandomVariable> fuzz = CreateObject<UniformRandomVariable> ();
   fuzz->SetAttribute ("Min", DoubleValue (0.));
   fuzz->SetAttribute ("Max", DoubleValue (fuzzTime));
-  fuzz->SetStream(-1);
+  fuzz->SetStream (0);
   double applicationsStart = fuzz->GetValue ();
 
   // Configure source and sink
