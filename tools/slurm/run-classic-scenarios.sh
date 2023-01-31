@@ -147,17 +147,17 @@ run_power_moving() {
 # echo -e "\nQueue mobile stations scenario"
 # run_rwpm "1.4"
 
-echo -e "\nQueue power with moving station (delta=5, interval=5) scenario"
-run_power_moving 5 5
+echo -e "\nQueue power with moving station (delta=5, interval=4) scenario"
+run_power_moving 5 4
 
-echo -e "\nQueue power with moving station (delta=15, interval=5) scenario"
-run_power_moving 15 5
+echo -e "\nQueue power with moving station (delta=15, interval=4) scenario"
+run_power_moving 15 4
 
-echo -e "\nQueue power with moving station (delta=5, interval=1) scenario"
-run_power_moving 5 1
+echo -e "\nQueue power with moving station (delta=5, interval=10) scenario"
+run_power_moving 5 10
 
-echo -e "\nQueue power with moving station (delta=15, interval=1) scenario"
-run_power_moving 15 1
+echo -e "\nQueue power with moving station (delta=15, interval=10) scenario"
+run_power_moving 15 10
 
 echo -e "\nQueue power with single static station (nWiFi=1, delta=15) scenario"
 run_power_static 1 15

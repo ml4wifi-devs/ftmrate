@@ -249,17 +249,17 @@ main (int argc, char *argv[])
                    MakeCallback (PowerCallback));
   
   // Schedule all power changes
+  // The interval between each change follows the exponential distribution
   double time = warmupTime;
   bool maxPower = false;
 
-  // The interval between each change follows the exponential distribution
-  Ptr<ExponentialRandomVariable> x = CreateObject<ExponentialRandomVariable> ();
-  x->SetAttribute ("Mean", DoubleValue (interval));
-  x->SetStream (1);
+  // Create random number generator with parameters: seed = global seed, stream = 2^63 + 1, substream/run = 1
+  RngStream rng (RngSeedManager::GetSeed (), ((1ULL) << 63) + 1, 1);
 
-  while (time < simulationTime)
+  while (time < warmupTime + simulationTime)
     {
-      time += x->GetValue ();
+      // Draw from the exponential distribution ( [ -1/lambda * ln(x) ] ~ Exp[lambda] where x ~ Uniform[0, 1] )
+      time += -interval * std::log (rng.RandU01 ());
       Simulator::Schedule (Seconds (time), &ChangePower, wifiStaNode, maxPower);
       maxPower = !maxPower;
     }
