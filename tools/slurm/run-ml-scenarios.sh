@@ -64,31 +64,42 @@ run_rwpm() {
 
 run_moving() {
   N_REP=15
-  VELOCITIES=(1 2)
-  SIM_TIMES=("56" "28")
-  INTERVALS=("1" "0.5")
-  VELOCITIES_LEN=${#VELOCITIES[@]}
+  VELOCITY=$1
+  SIM_TIME=$2
+  INTERVAL=$3
+
+  START=0
+  END=$(( N_REP - 1 ))
 
   for (( i = 0; i < MANAGERS_LEN; i++ )); do
     MANAGER=${MANAGERS[$i]}
     MANAGER_NAME=${MANAGERS_NAMES[$i]}
-    ARRAY_SHIFT=0
 
-    for (( j = 0; j < VELOCITIES_LEN; j++)); do
-      VELOCITY=${VELOCITIES[$j]}
-      SIM_TIME=${SIM_TIMES[$j]}
-      INTERVAL=${INTERVALS[$j]}
+    MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
 
-      START=$ARRAY_SHIFT
-      END=$(( ARRAY_SHIFT + N_REP - 1 ))
+    sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$MEMPOOL_SHIFT"
 
-      MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
-      ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
+    SHIFT=$(( SHIFT + N_REP ))
+  done
+}
 
-      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$MEMPOOL_SHIFT"
-    done
+run_power_moving() {
+  N_REP=15
+  DELTA=$1
+  INTERVAL=$2
 
-    SHIFT=$(( SHIFT + VELOCITIES_LEN * N_REP ))
+  START=0
+  END=$(( N_REP - 1 ))
+
+  for (( i = 0; i < MANAGERS_LEN; i++ )); do
+    MANAGER=${MANAGERS[$i]}
+    MANAGER_NAME=${MANAGERS_NAMES[$i]}
+
+    MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
+
+    sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/power_moving/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$DELTA" "$INTERVAL" "$MEMPOOL_SHIFT"
+
+    SHIFT=$(( SHIFT + N_REP ))
   done
 }
 
@@ -98,11 +109,26 @@ run_equal_distance 0
 echo -e "\nQueue equal distance (d=20) scenario"
 run_equal_distance 20
 
-echo -e "\nQueue moving station scenario"
-run_moving
+echo -e "\nQueue moving station (v=1) scenario"
+run_moving 1 56 1
+
+echo -e "\nQueue moving station (v=2) scenario"
+run_moving 2 28 "0.5"
 
 echo -e "\nQueue static stations scenario"
 run_rwpm 0
 
 echo -e "\nQueue mobile stations scenario"
 run_rwpm "1.4"
+
+echo -e "\nQueue power with moving station (delta=5, interval=5) scenario"
+run_power_moving 5 5
+
+echo -e "\nQueue power with moving station (delta=15, interval=5) scenario"
+run_power_moving 15 5
+
+echo -e "\nQueue power with moving station (delta=5, interval=1) scenario"
+run_power_moving 5 1
+
+echo -e "\nQueue power with moving station (delta=15, interval=1) scenario"
+run_power_moving 15 1
