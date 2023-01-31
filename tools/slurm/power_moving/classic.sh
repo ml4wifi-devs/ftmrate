@@ -15,7 +15,7 @@ INTERVAL=$5
 
 SEED=$(( SEED_SHIFT + SLURM_ARRAY_TASK_ID ))
 
-CSV_PATH="$TOOLS_DIR/outputs/power_moving_${MANAGER_NAME}_d${DELTA}_i${INTERVAL}.csv"
+CSV_PATH="$TOOLS_DIR/outputs/power_moving_${MANAGER_NAME}_d${DELTA}_i${INTERVAL}_s${SEED}.csv"
 
 WARMUP_TIME=5
 FUZZ_TIME=1
