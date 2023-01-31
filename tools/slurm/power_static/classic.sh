@@ -18,7 +18,7 @@ SIM_TIME=$8
 
 SEED=$(( SEED_SHIFT + SLURM_ARRAY_TASK_ID ))
 
-CSV_PATH="$VAR_POWER_DIR/data/${MANAGER_NAME}_adopt_nwifi${N_WIFI}_dist${DISTANCE}_delta${DELTA}_interval${INTERVAL}_seed${SEED}"
+CSV_PATH="$TOOLS_DIR/outputs/${MANAGER_NAME}_adopt_nwifi${N_WIFI}_dist${DISTANCE}_delta${DELTA}_interval${INTERVAL}_seed${SEED}.csv"
 
 WARMUP_TIME=$(( N_WIFI + 4))
 FUZZ_TIME=$(( N_WIFI / 2 + 2 ))
