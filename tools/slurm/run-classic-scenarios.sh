@@ -75,7 +75,7 @@ run_moving() {
 }
 
 run_power_moving() {
-  N_REP=2
+  N_REP=15
   DELTA=$1
   INTERVAL=$2
 
@@ -91,24 +91,24 @@ run_power_moving() {
     SHIFT=$(( SHIFT + N_REP ))
   done
 }
-#
-#echo -e "\nQueue equal distance (d=0) scenario"
-#run_equal_distance 0
-#
-#echo -e "\nQueue equal distance (d=20) scenario"
-#run_equal_distance 20
-#
-#echo -e "\nQueue moving station (v=1) scenario"
-#run_moving 1 56 1
-#
-#echo -e "\nQueue moving station (v=2) scenario"
-#run_moving 2 28 "0.5"
-#
-#echo -e "\nQueue static stations scenario"
-#run_rwpm 0
-#
-#echo -e "\nQueue mobile stations scenario"
-#run_rwpm "1.4"
+
+echo -e "\nQueue equal distance (d=0) scenario"
+run_equal_distance 0
+
+echo -e "\nQueue equal distance (d=20) scenario"
+run_equal_distance 20
+
+echo -e "\nQueue moving station (v=1) scenario"
+run_moving 1 56 1
+
+echo -e "\nQueue moving station (v=2) scenario"
+run_moving 2 28 "0.5"
+
+echo -e "\nQueue static stations scenario"
+run_rwpm 0
+
+echo -e "\nQueue mobile stations scenario"
+run_rwpm "1.4"
 
 echo -e "\nQueue power with moving station (delta=5, interval=5) scenario"
 run_power_moving 5 5
