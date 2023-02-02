@@ -19,7 +19,7 @@ MEMPOOL_SHIFT=$9
 SEED=$(( SEED_SHIFT + SLURM_ARRAY_TASK_ID ))
 MEMPOOL_KEY=$(( MEMPOOL_SHIFT + SLURM_ARRAY_TASK_ID ))
 
-CSV_PATH="$TOOLS_DIR/outputs/${MANAGER_NAME}_adopt_nwifi${N_WIFI}_dist${DISTANCE}_delta${DELTA}_interval${INTERVAL}_seed${SEED}.csv"
+CSV_PATH="$TOOLS_DIR/outputs/power_static_${MANAGER_NAME}_dist${DISTANCE}_n${N_WIFI}_delta${DELTA}_i${INTERVAL}_s${SEED}.csv"
 
 WARMUP_TIME=$(( N_WIFI + 4))
 FUZZ_TIME=$(( N_WIFI / 2 + 2 ))

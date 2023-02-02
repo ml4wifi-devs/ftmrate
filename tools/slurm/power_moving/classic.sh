@@ -12,13 +12,14 @@ MANAGER=$2
 MANAGER_NAME=$3
 DELTA=$4
 INTERVAL=$5
+VELOCITY=$6
 
 SEED=$(( SEED_SHIFT + SLURM_ARRAY_TASK_ID ))
 
-CSV_PATH="$TOOLS_DIR/outputs/power_moving_${MANAGER_NAME}_d${DELTA}_i${INTERVAL}_s${SEED}.csv"
+CSV_PATH="$TOOLS_DIR/outputs/power_moving_${MANAGER_NAME}_v${VELOCITY}_d${DELTA}_i${INTERVAL}_s${SEED}.csv"
 
 WARMUP_TIME=5
 FUZZ_TIME=1
 LOSS_MODEL="Nakagami"
 
-./ns3.36.1-moving-optimized --manager="$MANAGER" --managerName="$MANAGER_NAME" --delta="$DELTA" --interval="$INTERVAL" --velocity=1 --simulationTime=56 --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --measurementsInterval="0.5" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"
+./ns3.36.1-moving-optimized --manager="$MANAGER" --managerName="$MANAGER_NAME" --delta="$DELTA" --interval="$INTERVAL" --velocity="$VELOCITY" --simulationTime="56" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --measurementsInterval="0.5" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"

@@ -123,6 +123,7 @@ run_power_moving() {
   N_REP=15
   DELTA=$1
   INTERVAL=$2
+  VELOCITY=$3
 
   START=0
   END=$(( N_REP - 1 ))
@@ -133,7 +134,7 @@ run_power_moving() {
 
     MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
 
-    sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/power_moving/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$DELTA" "$INTERVAL" "$MEMPOOL_SHIFT"
+    sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/power_moving/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$DELTA" "$INTERVAL" "$VELOCITY" "$MEMPOOL_SHIFT"
 
     SHIFT=$(( SHIFT + N_REP ))
   done
@@ -141,35 +142,35 @@ run_power_moving() {
 
 ### Run section
 
-# echo -e "\nQueue equal distance (d=0) scenario"
-# run_equal_distance 0
+echo -e "\nQueue equal distance (d=0) scenario"
+run_equal_distance 0
 
-# echo -e "\nQueue equal distance (d=20) scenario"
-# run_equal_distance 20
+echo -e "\nQueue equal distance (d=20) scenario"
+run_equal_distance 20
 
-# echo -e "\nQueue moving station (v=1) scenario"
-# run_moving 1 56 1
+echo -e "\nQueue moving station (v=1) scenario"
+run_moving 1 56 1
 
-# echo -e "\nQueue moving station (v=2) scenario"
-# run_moving 2 28 "0.5"
+echo -e "\nQueue moving station (v=2) scenario"
+run_moving 2 28 "0.5"
 
-# echo -e "\nQueue static stations scenario"
-# run_rwpm 0
+echo -e "\nQueue static stations scenario"
+run_rwpm 0
 
-# echo -e "\nQueue mobile stations scenario"
-# run_rwpm "1.4"
+echo -e "\nQueue mobile stations scenario"
+run_rwpm "1.4"
 
-echo -e "\nQueue power with moving station (delta=5, interval=4) scenario"
-run_power_moving 5 4
+echo -e "\nQueue power with moving station (delta=5, interval=4, v=1) scenario"
+run_power_moving 5 4 1
 
-echo -e "\nQueue power with moving station (delta=15, interval=4) scenario"
-run_power_moving 15 4
+echo -e "\nQueue power with moving station (delta=15, interval=4, v=1) scenario"
+run_power_moving 15 4 1
 
-echo -e "\nQueue power with moving station (delta=5, interval=10) scenario"
-run_power_moving 5 10
+echo -e "\nQueue power with moving station (delta=5, interval=10, v=1) scenario"
+run_power_moving 5 10 1
 
-echo -e "\nQueue power with moving station (delta=15, interval=10) scenario"
-run_power_moving 15 10
+echo -e "\nQueue power with moving station (delta=15, interval=10, v=1) scenario"
+run_power_moving 15 10 1
 
 echo -e "\nQueue power with single static station (nWiFi=1, delta=15) scenario"
 run_power_static 1 15

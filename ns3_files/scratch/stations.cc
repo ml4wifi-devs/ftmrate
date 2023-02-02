@@ -24,8 +24,7 @@ NS_LOG_COMPONENT_DEFINE ("stations");
 void ChangePower (Ptr<Node> staNode, uint8_t powerLevel);
 void GetWarmupFlows (Ptr<FlowMonitor> monitor);
 void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
-                              DataRate offeredLoad, uint32_t packetSize, double warmupTime,
-                              double simulationTime, double fuzzTime);
+                              DataRate offeredLoad, uint32_t packetSize);
 void PopulateARPcache ();
 void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
 void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
@@ -35,7 +34,10 @@ void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 #define DISTANCE_UPDATE_INTERVAL 0.005
 
 std::map<uint32_t, uint64_t> warmupFlows;
-u_int8_t globalPowerLevel = 0;
+
+double fuzzTime = 5.;
+double warmupTime = 10.;
+double simulationTime = 50.;
 
 /***** Main with scenario definition *****/
 
@@ -48,11 +50,8 @@ main (int argc, char *argv[])
 
   uint32_t nWifi = 1;
   double distance = 0.;
-  double fuzzTime = 5.;
-  double warmupTime = 10.;
-  double simulationTime = 50.;
-  double delta = 15;      // difference between 2 power levels in dB
-  double interval = 2.;   // mean (exponential) interval between power change
+  double delta = 0.;      // difference between 2 power levels in dB
+  double interval = 4.;   // mean (exponential) interval between power change
 
   std::string pcapName = "";
   std::string csvPath = "results.csv";
@@ -279,7 +278,7 @@ main (int argc, char *argv[])
   for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
     {
       InstallTrafficGenerator (wifiStaNodes.Get (j), wifiApNode.Get (0), portNumber++,
-                               applicationDataRate, packetSize, simulationTime, warmupTime, fuzzTime);
+                               applicationDataRate, packetSize);
     }
 
   // Install FlowMonitor
@@ -382,11 +381,12 @@ main (int argc, char *argv[])
   double velocity = mobilityModel == "Distance" ? 0. : nodeSpeed;
 
   std::ostringstream csvOutput;
-  csvOutput << mobilityModel << ',' << wifiManagerName << ',' << velocity << ',' << distance << ',' << nWifi << ','
-            << nWifiReal << ',' << RngSeedManager::GetRun () << ',' << totalThr << std::endl;
+  csvOutput << mobilityModel << ',' << wifiManagerName << ',' << delta << ',' << interval << ','
+            << velocity << ',' << distance << ',' << nWifi << ',' << nWifiReal << ','
+            << RngSeedManager::GetRun () << ',' << totalThr << std::endl;
 
   // Print results to std output
-  std::cout << "mobility,manager,velocity,distance,nWifi,nWifiReal,seed,throughput"
+  std::cout << "mobility,manager,delta,interval,velocity,distance,nWifi,nWifiReal,seed,throughput"
             << std::endl
             << csvOutput.str ();
 
@@ -406,9 +406,6 @@ main (int argc, char *argv[])
 void
 ChangePower (Ptr<Node> staNode, uint8_t powerLevel)
 {
-  // Override global variable with new power level
-  globalPowerLevel = powerLevel;
-
   // Change power in STA
   std::stringstream devicePath;
   devicePath  << "/NodeList/" 
@@ -428,8 +425,7 @@ GetWarmupFlows (Ptr<FlowMonitor> monitor)
 
 void
 InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
-                         DataRate offeredLoad, uint32_t packetSize, double warmupTime,
-                         double simulationTime, double fuzzTime)
+                         DataRate offeredLoad, uint32_t packetSize)
 {
   // Get sink address
   Ptr<Ipv4> ipv4 = toNode->GetObject<Ipv4> ();
