@@ -111,9 +111,11 @@ run_power_static() {
 
 run_power_moving() {
   N_REP=15
+
   DELTA=$1
   INTERVAL=$2
   VELOCITY=$3
+  START_POS=$4
 
   START=0
   END=$(( N_REP - 1 ))
@@ -122,7 +124,7 @@ run_power_moving() {
     MANAGER=${MANAGERS[$i]}
     MANAGER_NAME=${MANAGERS_NAMES[$i]}
 
-    sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/power_moving/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$DELTA" "$INTERVAL" "$VELOCITY"
+    sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/power_moving/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$DELTA" "$INTERVAL" "$VELOCITY" "$START_POS"
 
     SHIFT=$(( SHIFT + N_REP ))
   done
@@ -148,17 +150,17 @@ run_rwpm 0
 echo -e "\nQueue mobile stations scenario"
 run_rwpm "1.4"
 
-echo -e "\nQueue power with moving station (delta=5, interval=4, v=1) scenario"
-run_power_moving 5 4 1
+echo -e "\nQueue power with moving station (delta=5, interval=4, v=1, start=0) scenario"
+run_power_moving 5 4 1 0
 
-echo -e "\nQueue power with moving station (delta=15, interval=4, v=1) scenario"
-run_power_moving 15 4 1
+echo -e "\nQueue power with moving station (delta=15, interval=4, v=1, start=0) scenario"
+run_power_moving 15 4 1 0
 
-echo -e "\nQueue power with moving station (delta=5, interval=10, v=1) scenario"
-run_power_moving 5 10 1
+echo -e "\nQueue power with moving station (delta=5, interval=8, v=0, start=7) scenario"
+run_power_moving 5 8 0 7
 
-echo -e "\nQueue power with moving station (delta=15, interval=10, v=1) scenario"
-run_power_moving 15 10 1
+echo -e "\nQueue power with moving station (delta=15, interval=8, v=0, start=7) scenario"
+run_power_moving 15 8 0 7
 
 echo -e "\nQueue power with single static station (nWiFi=1, delta=15) scenario"
 run_power_static 1 15

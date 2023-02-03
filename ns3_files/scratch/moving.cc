@@ -303,7 +303,7 @@ main (int argc, char *argv[])
             << std::endl;
 
   // Print results to std output
-  std::cout << "mobility,manager,delta,interval,velocity,distance,nWifi,nWifiReal,seed,throughput"
+  std::cout << "mobility,manager,delta,interval,velocity,distance,time,nWifi,nWifiReal,seed,throughput"
             << std::endl
             << csvOutput.str ();
 
@@ -439,7 +439,8 @@ MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode)
 
   // Add current state to CSV
   csvOutput << "Moving," << wifiManagerName << ',' << delta << ',' << interval << ',' << velocity
-            << ',' << pos.x << ",1,1," << RngSeedManager::GetRun () << ',' << throughput << std::endl;
+            << ',' << pos.x << ',' << Simulator::Now ().GetSeconds () - warmupTime << ",1,1,"
+            << RngSeedManager::GetRun () << ',' << throughput << std::endl;
   
   // Schedule next measurement
   Simulator::Schedule (Seconds (measurementsInterval), &MeasurementPoint, staNode, apNode);

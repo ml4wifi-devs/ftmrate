@@ -382,11 +382,11 @@ main (int argc, char *argv[])
 
   std::ostringstream csvOutput;
   csvOutput << mobilityModel << ',' << wifiManagerName << ',' << delta << ',' << interval << ','
-            << velocity << ',' << distance << ',' << nWifi << ',' << nWifiReal << ','
+            << velocity << ',' << distance << ",," << nWifi << ',' << nWifiReal << ','
             << RngSeedManager::GetRun () << ',' << totalThr << std::endl;
 
   // Print results to std output
-  std::cout << "mobility,manager,delta,interval,velocity,distance,nWifi,nWifiReal,seed,throughput"
+  std::cout << "mobility,manager,delta,interval,velocity,distance,time,nWifi,nWifiReal,seed,throughput"
             << std::endl
             << csvOutput.str ();
 
