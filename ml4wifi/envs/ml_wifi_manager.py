@@ -36,7 +36,6 @@ def main() -> None:
     # Environment parameters
     parser.add_argument('--ml_manager', required=True, type=str)
     parser.add_argument('--seed', default=100, type=int)
-    parser.add_argument('--adaptPower', default=False, action='store_true')
     parser.add_argument('--mempoolKey', default=1234, type=int)
     parser.add_argument('--ns3Path', default=f'{pathlib.Path.home()}/ns-3-dev/', type=str)
 
@@ -61,7 +60,6 @@ def main() -> None:
     parser.add_argument('--nWifi', default=1, type=int)
     parser.add_argument('--packetSize', default=1500, type=int)
     parser.add_argument('--pcapName', type=str)
-    parser.add_argument('--sameOut', default=False, action='store_true')
     parser.add_argument('--scenario', required=True, type=str)
     parser.add_argument('--simulationTime', default=20., type=float)
     parser.add_argument('--startPosition', default=0., type=float)
@@ -123,7 +121,6 @@ def main() -> None:
     elif args.scenario == 'moving':
         pname = 'moving'
         NS3_ARGS['measurementsInterval'] = args.measurementsInterval
-        NS3_ARGS['sameOut'] = args.sameOut
         NS3_ARGS['startPosition'] = args.startPosition
         NS3_ARGS['velocity'] = args.velocity
 
@@ -170,11 +167,11 @@ def main() -> None:
                         f'{data.env.distance},'
                         f'{data.env.station_id},'
                         f'{data.env.mode},'
-                        f'{ideal_mcs(data.env.distance)},'
+                        f'{ideal_mcs(data.env.power)(data.env.distance)},'
                         f'{data.env.power}\n'
                     )
 
-                data.act = managers_container.do(data.env, data.act, args.adaptPower)
+                data.act = managers_container.do(data.env, data.act)
 
         ns3_process.wait()
     finally:
