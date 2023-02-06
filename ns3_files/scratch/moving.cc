@@ -26,8 +26,6 @@ NS_LOG_COMPONENT_DEFINE ("moving");
 /***** Functions declarations *****/
 
 void ChangePower (Ptr<Node> staNode, uint8_t powerLevel);
-void FtmBurst (Ptr<WifiNetDevice> sta, Mac48Address apAddr);
-void FtmSessionOver (FtmSession session);
 uint64_t GetReceivedBits (Ptr<Node> sinkNode, Ptr<Node> sourceNode);
 void GetWarmupFlows ();
 void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
@@ -41,7 +39,6 @@ void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 /***** Global variables and constants *****/
 
 #define DISTANCE_UPDATE_INTERVAL 0.005
-#define RTT_TO_DISTANCE 0.00015
 
 std::map<uint32_t, uint64_t> warmupFlows;
 uint64_t warmupFlowsSum;
@@ -184,10 +181,8 @@ main (int argc, char *argv[])
 
   Time::SetResolution (Time::PS);
   Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
-
-  std::stringstream bandwidthStr;
-  bandwidthStr << "Channel_" << channelWidth << "_MHz";
-  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth", StringValue (bandwidthStr.str ()));
+  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth",
+                      StringValue ("Channel_" + std::to_string (channelWidth) + "_MHz"));
 
   // Configure two power levels
   phy.Set ("TxPowerLevels", UintegerValue (2));
@@ -215,6 +210,16 @@ main (int argc, char *argv[])
   NetDeviceContainer apDevice;
   apDevice = wifi.Install (phy, mac, wifiApNode);
 
+  // Setup FTM parameters in MlWifiManager
+  Config::Set ("/NodeList/" + std::to_string (wifiStaNode.Get (0)->GetId ()) +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/WifiNetDevice",
+               PointerValue (staDevice.Get (0)->GetObject<WifiNetDevice>()));
+
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/ApAddress",
+               Mac48AddressValue (Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ())));
+
   // Manage AMPDU aggregation
   if (!ampdu)
     {
@@ -228,12 +233,6 @@ main (int argc, char *argv[])
 
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
                TimeValue (NanoSeconds (minGI)));
-
-  // Schedule first FTM burst
-  Simulator::Schedule (Seconds (warmupTime),
-                       &FtmBurst,
-                       staDevice.Get (0)->GetObject<WifiNetDevice>(),
-                       Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ()));
 
   // Install an Internet stack
   InternetStackHelper stack;
@@ -357,40 +356,6 @@ ChangePower (Ptr<Node> staNode, uint8_t powerLevel)
   Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
                    "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/DefaultTxPowerLevel",
                UintegerValue (powerLevel));
-}
-
-void
-FtmBurst (Ptr<WifiNetDevice> sta, Mac48Address apAddr)
-{
-  Ptr<RegularWifiMac> staMac = sta->GetMac ()->GetObject<RegularWifiMac> ();
-  Ptr<FtmSession> session = staMac->NewFtmSession (apAddr);
-
-  if (session != NULL)
-    {
-      Ptr<WirelessSigStrFtmErrorModel> errorModel = CreateObject<WirelessSigStrFtmErrorModel> (RngSeedManager::GetRun ());
-      errorModel->SetNode (sta->GetNode ());
-
-      session->SetFtmErrorModel (errorModel);
-      session->SetSessionOverCallback (MakeCallback (&FtmSessionOver));
-      session->SessionBegin ();
-    }
-
-  Simulator::Schedule (Seconds (1), &FtmBurst, sta, apAddr);
-}
-
-void
-FtmSessionOver (FtmSession session)
-{
-  std::cout << "t = " << Simulator::Now ().GetSeconds () << '\t';
-
-  if (session.GetIndividualRTT ().size () > 0)
-    {
-      std::cout << "d = " << session.GetMeanRTT () * RTT_TO_DISTANCE << std::endl;
-    }
-  else
-    {
-      std::cout << "FTM exchange failed" << std::endl;
-    }
 }
 
 uint64_t
@@ -590,11 +555,6 @@ UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode)
   double d = staMobility->GetDistanceFrom (apMobility);
 
   Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
-                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
-                   "$ns3::MlWifiManager/Distance",
-               DoubleValue (d));
-
-    Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
                    "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
                    "$ns3::OracleWifiManager/Distance",
                DoubleValue (d));

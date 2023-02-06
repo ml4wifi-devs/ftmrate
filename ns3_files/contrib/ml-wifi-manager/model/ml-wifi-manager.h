@@ -3,8 +3,9 @@
 #ifndef ML_WIFI_MANAGER_H
 #define ML_WIFI_MANAGER_H
 
-#include "ns3/wifi-remote-station-manager.h"
+#include "ns3/ftm-session.h"
 #include "ns3/ns3-ai-module.h"
+#include "ns3/wifi-remote-station-manager.h"
 
 namespace ns3 {
 
@@ -17,12 +18,14 @@ struct sEnv
   uint32_t station_id;
   uint8_t mode;
   uint8_t type;
+  bool ftm_completed;
 } Packed;
 
 struct sAct
 {
   uint32_t station_id;
   uint8_t mode;
+  bool ftm_request;
 } Packed;
 
 struct MlWifiRemoteStation : public WifiRemoteStation
@@ -56,11 +59,21 @@ private:
   WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
   WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
 
+  void SetWifiNetDevice (Ptr<WifiNetDevice> device);
+  Ptr<WifiNetDevice> GetWifiNetDevice (void) const;
+
   void SampleMode(MlWifiRemoteStation *station);
+  void FtmBurst ();
+  void FtmSessionOver (FtmSession session);
 
   WifiMode m_ctlMode;   // Wi-Fi mode for RTS frames
-  double m_distance;    // current distance between STA and AP
   double m_power;       // current tx power
+  double m_distance;    // current distance between STA and AP
+  bool m_ftmCompleted;  // has the FTM measurement been completed
+
+  Ptr<WifiNetDevice> m_device;  // device where the manager is installed
+  Mac48Address m_apAddr;        // MAC address of the AP
+
   Ns3AIRL<sEnv, sAct> *m_env;
 };
 

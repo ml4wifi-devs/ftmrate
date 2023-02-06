@@ -1,14 +1,20 @@
 /* -*- Mode:C++; c-file-style:"gnu"; indent-tabs-mode:nil; -*- */
 
-#include "ns3/double.h"
-#include "ns3/log.h"
-#include "ns3/string.h"
+#include "ns3/ap-wifi-mac.h"
+#include "ns3/core-module.h"
+#include "ns3/ftm-error-model.h"
+#include "ns3/ftm-header.h"
+#include "ns3/ftm-manager.h"
+#include "ns3/ftm-session.h"
+#include "ns3/mac48-address.h"
+#include "ns3/wifi-net-device.h"
 #include "ns3/wifi-phy.h"
 #include "ns3/wifi-tx-vector.h"
 #include "ns3/wifi-utils.h"
 #include "ml-wifi-manager.h"
 
 #define SAMPLE_INTERVAL 0.01
+#define RTT_TO_DISTANCE 0.00015
 
 namespace ns3 {
 
@@ -23,18 +29,22 @@ MlWifiManager::GetTypeId (void)
     .SetParent<WifiRemoteStationManager> ()
     .SetGroupName ("Wifi")
     .AddConstructor<MlWifiManager> ()
-    .AddAttribute ("ControlMode", "The transmission mode to use for every RTS packet transmission.",
+    .AddAttribute ("ControlMode", "The transmission mode to use for every RTS packet transmission",
                    StringValue ("OfdmRate6Mbps"),
                    MakeWifiModeAccessor (&MlWifiManager::m_ctlMode),
                    MakeWifiModeChecker ())
-    .AddAttribute ("Distance", "Current distance between STA and AP [m]",
-                   DoubleValue (0.),
-                   MakeDoubleAccessor (&MlWifiManager::m_distance),
-                   MakeDoubleChecker<double_t> ())
     .AddAttribute ("Power", "Current transmission power [dBm]",
                    DoubleValue (16.0206),
                    MakeDoubleAccessor (&MlWifiManager::m_power),
                    MakeDoubleChecker<double_t> ())
+    .AddAttribute ("WifiNetDevice", "WifiNetDevice of the device where the manager is installed",
+                   PointerValue (),
+                   MakePointerAccessor (&MlWifiManager::SetWifiNetDevice, &MlWifiManager::GetWifiNetDevice),
+                   MakePointerChecker<WifiNetDevice> ())
+    .AddAttribute ("ApAddress", "A MAC address of the access point",
+                   Mac48AddressValue (Mac48Address ("ff:ff:ff:ff:ff:ff")),
+                   MakeMac48AddressAccessor (&MlWifiManager::m_apAddr),
+                   MakeMac48AddressChecker ())
   ;
   return tid;
 }
@@ -45,6 +55,8 @@ MlWifiManager::MlWifiManager ()
 
   m_env = new Ns3AIRL<sEnv, sAct> (2333);
   m_env->SetCond (2, 0);
+
+  m_device = 0;
 }
 
 MlWifiManager::~MlWifiManager ()
@@ -62,10 +74,12 @@ MlWifiManager::DoCreateStation (void) const
   st->m_mode = 0;
 
   auto env = m_env->EnvSetterCond ();
-  env->time = Simulator::Now ().GetSeconds ();
   env->power = GetPhy ()->GetPowerDbm (GetDefaultTxPowerLevel ());
+  env->time = Simulator::Now ().GetSeconds ();
+  env->distance = 0.;
   env->mode = 0;
   env->type = 0;
+  env->ftm_completed = false;
   m_env->SetCompleted ();
 
   auto act = m_env->ActionGetterCond ();
@@ -176,6 +190,18 @@ MlWifiManager::DoGetRtsTxVector (WifiRemoteStation *station)
 }
 
 void
+MlWifiManager::SetWifiNetDevice(Ptr <WifiNetDevice> device)
+{
+  m_device = device;
+}
+
+Ptr<WifiNetDevice>
+MlWifiManager::GetWifiNetDevice() const
+{
+  return m_device;
+}
+
+void
 MlWifiManager::SampleMode(MlWifiRemoteStation *st)
 {
   auto env = m_env->EnvSetterCond ();
@@ -185,20 +211,60 @@ MlWifiManager::SampleMode(MlWifiRemoteStation *st)
   env->station_id = st->m_station_id;
   env->mode = st->m_mode;
   env->type = 1;
+  env->ftm_completed = m_ftmCompleted;
   m_env->SetCompleted ();
 
   auto act = m_env->ActionGetterCond ();
   if (act->station_id != st->m_station_id)
     {
       std::cout << "Env sid: " << st->m_station_id << " Act sid: " << act->station_id << std::endl;
-      NS_ASSERT_MSG (
-          act->station_id == st->m_station_id,
-          "Error! Difference between station_id in ns3-ai action and remote station structures!");
+      NS_ASSERT_MSG (act->station_id == st->m_station_id,
+                     "Error! Difference between station_id in ns3-ai action and remote station structures!");
     }
+
   st->m_mode = act->mode;
+  bool ftmRequest = act->ftm_request;
+
   m_env->GetCompleted ();
 
+  if (ftmRequest)
+    {
+      Simulator::ScheduleNow (&MlWifiManager::FtmBurst, this);
+    }
+
   st->last_sample = Simulator::Now ().GetSeconds ();
+  m_ftmCompleted = false;
+}
+
+void
+MlWifiManager::FtmBurst ()
+{
+  Ptr<RegularWifiMac> staMac = m_device->GetMac ()->GetObject<RegularWifiMac> ();
+  Ptr<FtmSession> session = staMac->NewFtmSession (m_apAddr);
+
+  if (session != NULL)
+    {
+      Ptr<WirelessSigStrFtmErrorModel> errorModel = CreateObject<WirelessSigStrFtmErrorModel> (RngSeedManager::GetRun ());
+      errorModel->SetNode (m_device->GetNode ());
+
+      session->SetFtmErrorModel (errorModel);
+      session->SetSessionOverCallback (MakeCallback (&MlWifiManager::FtmSessionOver, this));
+      session->SessionBegin ();
+    }
+}
+
+void
+MlWifiManager::FtmSessionOver (FtmSession session)
+{
+  if (session.GetIndividualRTT ().size () > 0)
+    {
+      m_distance = session.GetMeanRTT () * RTT_TO_DISTANCE;
+      m_ftmCompleted = true;
+    }
+  else
+    {
+      Simulator::ScheduleNow (&MlWifiManager::FtmBurst, this);
+    }
 }
 
 } //namespace ns3

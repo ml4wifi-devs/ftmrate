@@ -3,5 +3,6 @@
 
 # Include specific files that should be tracked by Git
 !.gitignore
+!wscript
 !ml-wifi-manager/
 !oracle-wifi-manager/
