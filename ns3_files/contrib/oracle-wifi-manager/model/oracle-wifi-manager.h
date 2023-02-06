@@ -15,21 +15,21 @@ public:
   virtual ~OracleWifiManager ();
 
 private:
-  WifiRemoteStation *DoCreateStation (void) const override;
-  void DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiMode txMode) override;
-  void DoReportAmpduTxStatus (WifiRemoteStation *station, uint16_t nSuccessfulMpdus,
-                              uint16_t nFailedMpdus, double rxSnr, double dataSnr,
-                              uint16_t dataChannelWidth, uint8_t dataNss) override;
-  void DoReportRtsFailed (WifiRemoteStation *station) override;
-  void DoReportDataFailed (WifiRemoteStation *station) override;
+  WifiRemoteStation *DoCreateStation (void) const;
+  void DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiMode txMode);
+  void DoReportAmpduTxStatus (WifiRemoteStation *station, uint8_t nSuccessfulMpdus,
+                              uint8_t nFailedMpdus, double rxSnr, double dataSnr,
+                              uint16_t dataChannelWidth, uint8_t dataNss);
+  void DoReportRtsFailed (WifiRemoteStation *station);
+  void DoReportDataFailed (WifiRemoteStation *station);
   void DoReportRtsOk (WifiRemoteStation *station, double ctsSnr, WifiMode ctsMode,
-                      double rtsSnr) override;
+                      double rtsSnr);
   void DoReportDataOk (WifiRemoteStation *station, double ackSnr, WifiMode ackMode, double dataSnr,
-                       uint16_t dataChannelWidth, uint8_t dataNss) override;
-  void DoReportFinalRtsFailed (WifiRemoteStation *station) override;
-  void DoReportFinalDataFailed (WifiRemoteStation *station) override;
-  WifiTxVector DoGetDataTxVector (WifiRemoteStation *station) override;
-  WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station) override;
+                       uint16_t dataChannelWidth, uint8_t dataNss);
+  void DoReportFinalRtsFailed (WifiRemoteStation *station);
+  void DoReportFinalDataFailed (WifiRemoteStation *station);
+  WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
+  WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
 
   static double DistanceToSnr (double distance, double power);
   uint8_t GetBestMcs ();

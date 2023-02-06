@@ -82,8 +82,8 @@ MlWifiManager::DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiMode 
 }
 
 void
-MlWifiManager::DoReportAmpduTxStatus (WifiRemoteStation *station, uint16_t nSuccessfulMpdus,
-                                      uint16_t nFailedMpdus, double rxSnr, double dataSnr,
+MlWifiManager::DoReportAmpduTxStatus (WifiRemoteStation *station, uint8_t nSuccessfulMpdus,
+                                      uint8_t nFailedMpdus, double rxSnr, double dataSnr,
                                       uint16_t dataChannelWidth, uint8_t dataNss)
 {
   NS_LOG_FUNCTION (this << station << nSuccessfulMpdus << nFailedMpdus << rxSnr << dataSnr
@@ -149,7 +149,7 @@ MlWifiManager::DoGetDataTxVector (WifiRemoteStation *station)
   return WifiTxVector (
       mode,
       GetDefaultTxPowerLevel (),
-      GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled ()),
+      GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (station))),
       ConvertGuardIntervalToNanoSeconds (mode, GetShortGuardIntervalSupported (st), NanoSeconds (GetGuardInterval (st))),
       GetNumberOfAntennas (),
       1,
@@ -166,7 +166,7 @@ MlWifiManager::DoGetRtsTxVector (WifiRemoteStation *station)
   return WifiTxVector (
       m_ctlMode,
       GetDefaultTxPowerLevel (),
-      GetPreambleForTransmission (m_ctlMode.GetModulationClass (), GetShortPreambleEnabled ()),
+      GetPreambleForTransmission (m_ctlMode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (station))),
       ConvertGuardIntervalToNanoSeconds (m_ctlMode, GetShortGuardIntervalSupported (station), NanoSeconds (GetGuardInterval (station))),
       1,
       1,

@@ -4,8 +4,11 @@
 #include <string>
 
 #include "ns3/applications-module.h"
+#include "ns3/ap-wifi-mac.h"
 #include "ns3/core-module.h"
 #include "ns3/flow-monitor-module.h"
+#include "ns3/ftm-header.h"
+#include "ns3/ftm-error-model.h"
 #include "ns3/internet-module.h"
 #include "ns3/mobility-helper.h"
 #include "ns3/mobility-model.h"
@@ -22,16 +25,19 @@ NS_LOG_COMPONENT_DEFINE ("stations");
 /***** Functions declarations *****/
 
 void ChangePower (Ptr<Node> staNode, uint8_t powerLevel);
+void FtmBurst (Ptr<WifiNetDevice> sta, Mac48Address apAddr);
+void FtmSessionOver (FtmSession session);
 void GetWarmupFlows (Ptr<FlowMonitor> monitor);
 void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
                               DataRate offeredLoad, uint32_t packetSize);
-void PopulateARPcache ();
+void PopulateArpCache ();
 void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
 void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 
 /***** Global variables and constants *****/
 
 #define DISTANCE_UPDATE_INTERVAL 0.005
+#define RTT_TO_DISTANCE 0.00015
 
 std::map<uint32_t, uint64_t> warmupFlows;
 
@@ -45,6 +51,11 @@ int
 main (int argc, char *argv[])
 {
   // Initialize default simulation parameters
+  std::string csvPath = "results.csv";
+  std::string ftmMapPath = "";
+  std::string lossModel = "Nakagami";
+  std::string mobilityModel = "Distance";
+  std::string pcapName = "";
   std::string rateAdaptationManager = "ns3::MlWifiManager";
   std::string wifiManagerName = "";
 
@@ -53,17 +64,12 @@ main (int argc, char *argv[])
   double delta = 0.;      // difference between 2 power levels in dB
   double interval = 4.;   // mean (exponential) interval between power change
 
-  std::string pcapName = "";
-  std::string csvPath = "results.csv";
-
   bool ampdu = true;
   uint32_t packetSize = 1500;
   uint32_t dataRate = 125;
   uint32_t channelWidth = 20;
   uint32_t minGI = 3200;
 
-  std::string lossModel = "Nakagami";
-  std::string mobilityModel = "Distance";
   double area = 40.;
   double nodeSpeed = 1.4;
   double nodePause = 20.;
@@ -77,6 +83,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("dataRate", "Traffic generator data rate (Mb/s)", dataRate);
   cmd.AddValue ("delta", "Power change (dBm)", delta);
   cmd.AddValue ("distance", "Distance between AP and STAs (m) - only for Distance mobility type",distance);
+  cmd.AddValue ("ftmMap", "Path to FTM wireless error map", ftmMapPath);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
   cmd.AddValue ("interval", "Interval between power change (s)", interval);
   cmd.AddValue ("lossModel", "Propagation loss model (LogDistance, Nakagami)", lossModel);
@@ -103,6 +110,7 @@ main (int argc, char *argv[])
             << "Simulating an IEEE 802.11ax devices with the following settings:" << std::endl
             << "- frequency band: 5 GHz" << std::endl
             << "- max data rate: " << dataRate << " Mb/s" << std::endl
+            << "- FTM error map: " << !ftmMapPath.empty () << std::endl
             << "- delta: " << delta << " dBm" << std::endl
             << "- interval: " << interval << " s" << std::endl
             << "- channel width: " << channelWidth << " Mhz" << std::endl
@@ -218,16 +226,31 @@ main (int argc, char *argv[])
     }
   phy.SetChannel (channelHelper.Create ());
 
+  // Load FTM map and configure FTM
+  if (!ftmMapPath.empty ())
+    {
+      Ptr<WirelessFtmErrorModel::FtmMap> ftmMap = CreateObject<WirelessFtmErrorModel::FtmMap> ();
+      ftmMap->LoadMap (ftmMapPath);
+      Config::SetDefault ("ns3::WirelessFtmErrorModel::FtmMap", PointerValue (ftmMap));
+    }
+
+  Time::SetResolution (Time::PS);
+  Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
+
+  std::stringstream bandwidthStr;
+  bandwidthStr << "Channel_" << channelWidth << "_MHz";
+  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth", StringValue (bandwidthStr.str ()));
+
   // Configure two power levels
   phy.Set ("TxPowerLevels", UintegerValue (2));
-  phy.Set ("TxPowerStart", DoubleValue (21.0 - delta));
-  phy.Set ("TxPowerEnd", DoubleValue (21.0));
+  phy.Set ("TxPowerStart", DoubleValue (21. - delta));
+  phy.Set ("TxPowerEnd", DoubleValue (21.));
 
   // Configure MAC layer
   WifiMacHelper mac;
   WifiHelper wifi;
 
-  wifi.SetStandard (WIFI_STANDARD_80211ax);
+  wifi.SetStandard (WIFI_STANDARD_80211ax_5GHZ);
   wifi.SetRemoteStationManager (rateAdaptationManager);
 
   //Set SSID
@@ -252,11 +275,17 @@ main (int argc, char *argv[])
     }
 
   // Set channel width and shortest GI
-  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelSettings",
-               StringValue ("{0, " + std::to_string (channelWidth) + ", BAND_5GHZ, 0}"));
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelWidth",
+               UintegerValue (channelWidth));
 
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
                TimeValue (NanoSeconds (minGI)));
+
+  // Schedule first FTM burst
+  Simulator::Schedule (Seconds (warmupTime),
+                       &FtmBurst,
+                       staDevice.Get (0)->GetObject<WifiNetDevice>(),
+                       Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ()));
 
   // Install an Internet stack
   InternetStackHelper stack;
@@ -269,7 +298,7 @@ main (int argc, char *argv[])
   Ipv4InterfaceContainer apNodeInterface = address.Assign (apDevice);
 
   // PopulateArpCache
-  PopulateARPcache ();
+  PopulateArpCache ();
 
   // Configure applications
   DataRate applicationDataRate = DataRate (dataRate * 1e6);
@@ -310,6 +339,7 @@ main (int argc, char *argv[])
   {
     time = warmupTime;
     maxPower = false;
+
     while (time < simulationTime)
     {
       time += x->GetValue ();
@@ -407,11 +437,43 @@ void
 ChangePower (Ptr<Node> staNode, uint8_t powerLevel)
 {
   // Change power in STA
-  std::stringstream devicePath;
-  devicePath  << "/NodeList/" 
-              << staNode->GetId () 
-              << "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/DefaultTxPowerLevel";
-  Config::Set (devicePath.str(), UintegerValue (powerLevel));
+  Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/DefaultTxPowerLevel",
+               UintegerValue (powerLevel));
+}
+
+void
+FtmBurst (Ptr<WifiNetDevice> sta, Mac48Address apAddr)
+{
+  Ptr<RegularWifiMac> staMac = sta->GetMac ()->GetObject<RegularWifiMac> ();
+  Ptr<FtmSession> session = staMac->NewFtmSession (apAddr);
+
+  if (session != NULL)
+    {
+      Ptr<WirelessSigStrFtmErrorModel> errorModel = CreateObject<WirelessSigStrFtmErrorModel> (RngSeedManager::GetRun ());
+      errorModel->SetNode (sta->GetNode ());
+
+      session->SetFtmErrorModel (errorModel);
+      session->SetSessionOverCallback (MakeCallback (&FtmSessionOver));
+      session->SessionBegin ();
+    }
+
+  Simulator::Schedule (Seconds (1), &FtmBurst, sta, apAddr);
+}
+
+void
+FtmSessionOver (FtmSession session)
+{
+  std::cout << "t = " << Simulator::Now ().GetSeconds () << '\t';
+
+  if (session.GetIndividualRTT ().size () > 0)
+    {
+      std::cout << "d = " << session.GetMeanRTT () * RTT_TO_DISTANCE << std::endl;
+    }
+  else
+    {
+      std::cout << "FTM exchange failed" << std::endl;
+    }
 }
 
 void
@@ -460,10 +522,10 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
 }
 
 void
-PopulateARPcache ()
+PopulateArpCache ()
 {
   Ptr<ArpCache> arp = CreateObject<ArpCache> ();
-  arp->SetAliveTimeout (Seconds (3600 * 24 * 365));
+  arp->SetAliveTimeout (Seconds (3600 * 24));
 
   for (auto i = NodeList::Begin (); i != NodeList::End (); ++i)
     {

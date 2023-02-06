@@ -69,9 +69,9 @@ OracleWifiManager::DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiM
 }
 
 void
-OracleWifiManager::DoReportAmpduTxStatus (WifiRemoteStation *station, uint16_t nSuccessfulMpdus,
-                                      uint16_t nFailedMpdus, double rxSnr, double dataSnr,
-                                      uint16_t dataChannelWidth, uint8_t dataNss)
+OracleWifiManager::DoReportAmpduTxStatus (WifiRemoteStation *station, uint8_t nSuccessfulMpdus,
+                                          uint8_t nFailedMpdus, double rxSnr, double dataSnr,
+                                          uint16_t dataChannelWidth, uint8_t dataNss)
 {
   NS_LOG_FUNCTION (this << station << nSuccessfulMpdus << nFailedMpdus << rxSnr << dataSnr
                         << dataChannelWidth << dataNss);
@@ -91,14 +91,14 @@ OracleWifiManager::DoReportDataFailed (WifiRemoteStation *station)
 
 void
 OracleWifiManager::DoReportRtsOk (WifiRemoteStation *station, double ctsSnr, WifiMode ctsMode,
-                              double rtsSnr)
+                                  double rtsSnr)
 {
   NS_LOG_FUNCTION (this << station << ctsSnr << ctsMode << rtsSnr);
 }
 
 void
 OracleWifiManager::DoReportDataOk (WifiRemoteStation *station, double ackSnr, WifiMode ackMode,
-                               double dataSnr, uint16_t dataChannelWidth, uint8_t dataNss)
+                                   double dataSnr, uint16_t dataChannelWidth, uint8_t dataNss)
 {
   NS_LOG_FUNCTION (this << station << ackSnr << ackMode << dataSnr << dataChannelWidth << +dataNss);
 }
@@ -143,7 +143,7 @@ OracleWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
   return WifiTxVector (
       mode,
       GetDefaultTxPowerLevel (),
-      GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled ()),
+      GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (st))),
       ConvertGuardIntervalToNanoSeconds (mode, GetShortGuardIntervalSupported (st), NanoSeconds (GetGuardInterval (st))),
       GetNumberOfAntennas (),
       1,
@@ -160,7 +160,7 @@ OracleWifiManager::DoGetRtsTxVector (WifiRemoteStation *station)
   return WifiTxVector (
       m_ctlMode,
       GetDefaultTxPowerLevel (),
-      GetPreambleForTransmission (m_ctlMode.GetModulationClass (), GetShortPreambleEnabled ()),
+      GetPreambleForTransmission (m_ctlMode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (station))),
       ConvertGuardIntervalToNanoSeconds (m_ctlMode, GetShortGuardIntervalSupported (station), NanoSeconds (GetGuardInterval (station))),
       1,
       1,

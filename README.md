@@ -23,32 +23,27 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ### ns-3 network simulator
 
-To fully benefit from FTMRate, the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by clonning the official gitlab repository and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
+To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by cloning the official [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3) repository and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
 [official installation notes](https://www.nsnam.org/wiki/Installation).
 
-1. Clone the ns-3-dev repository:
+1. Clone the wifi-ftm-ns3 repository:
 	```
-	git clone https://gitlab.com/nsnam/ns-3-dev.git
+	git clone git@github.com:tkn-tub/wifi-ftm-ns3.git
 	```
-2. Set the repository to the 3.36.1 version:
-	```
-	cd $YOUR_NS3_PATH
-	git reset --hard 7004d1a6
-	```
-3. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
+2. Copy FTMRate contrib modules and simulation scenarios to the ns-3.33 directory of wifi-ftm-ns3:
 	```
 	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib/* $YOUR_NS3_PATH/contrib/
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
 	```
-4. Build ns-3:
+3. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
-	./ns3 build
+	./waf configure -d optimized --enable-examples --enable-tests
+	./waf
 	```
-5. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
+4. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
 	```
-	./ns3 run wifi-simple-adhoc
+	./waf --run "wifi-simple-adhoc"
 	```
 
 ### FTMRate and ns-3 synchronization (optional)
@@ -75,38 +70,24 @@ To flawlessly synchronize files between the FTMRate repository and the ns-3 inst
 
 The ns3-ai module interconnects ns-3 and FTMRate (or any other python-writen software) by transferring data through a shared memory pool. 
 The memory can be accessed by both sides, thus making the connection. Read more about ns3-ai at the
-[official repository](https://github.com/hust-diangroup/ns3-ai).  **Attention!** ns3-ai (as of 2022-10-25) is not compatible with ns-3.36 or later. We have forked and modified the official ns3-ai repository to make it compatible with the 3.36 version. In order to install our compatible version folow the steps below.
+[official repository](https://github.com/hust-diangroup/ns3-ai).
 
-1.  Clone our ns3-ai fork into ns-3's `contrib` directory
+1.  Clone ns3-ai into ns-3's `contrib` directory
 	```
 	cd $YOUR_NS3_PATH/contrib/
-	git clone https://github.com/m-wojnar/ns3-ai.git
+	git clone git@github.com:hust-diangroup/ns3-ai.git
 	```
-
-2. Go to ns3-ai directory and checkout the *ml4wifi* branch:
+2. Install the ns3-ai python interface:
 	```
 	cd "$YOUR_NS3_PATH/contrib/ns3-ai/"
-	git checkout ml4wifi
-	```
-3. Install the ns3-ai python interface:
-	```
 	pip install --user "$YOUR_NS3_PATH/contrib/ns3-ai/py_interface"
 	```
-4. Rebuild ns-3:
+3. Rebuild ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
-	./ns3 build
+	./waf configure -d optimized --enable-examples --enable-tests
+	./waf
 	```
- 
-Using our fork of ns3-ai, use can run ns-3 simulations in optimized or debug mode. To select mode change `debug` flag in ns3-ai `Experiment` declaration:
-```python
-exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=False)
-```
-
-```python
-exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=True)
-```
 
 ## Reproducing results
 
@@ -115,8 +96,8 @@ We provide two ways of generating article results. One requires the Slurm worklo
 
 ### Using the Slurm workload manager
 
-To produce reliable results, many independant simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate_internal/tools/slurm/` directory.  
-To collect results from multiple WiFi scenarios so to reproduce our results presented in our [article](LINK_TO_OUR_ARTICLE), you need to run
+To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate_internal/tools/slurm/` directory.  
+To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our [article](LINK_TO_OUR_ARTICLE), you need to run
 ```
 sbatch ftmrate_internal/tools/slurm/run-classic-scenarios.sh
 sbatch ftmrate_internal/tools/slurm/run-ml-scenarios.sh
@@ -130,7 +111,7 @@ to aggregate results into matplotlib plots.
 #### Tuning hardware
 
 When using GPU in slurm, you need to empirically determine the optimal number of tasks running per node. We store this value in
-`TASKS_PER_NODE` variable in *run-ml-scenarios.sh* file. If set to high - a lack of memory might be encountered, if set to low - the computation efficiency would be suboptimal. The variable value is passed directly to the `sbatch` command as the `--ntasks-per-node` parameter. While working with our machines, the optimal number turned out to be about 5, so we suggest to start searching from that value.
+`TASKS_PER_NODE` variable in *run-ml-scenarios.sh* file. If set too high - a lack of memory might be encountered, if set too low - the computation efficiency would be suboptimal. The variable value is passed directly to the `sbatch` command as the `--ntasks-per-node` parameter. While working with our machines, the optimal number turned out to be about 5, so we suggest to start searching from that value.
 
 ### Without slurm
 
@@ -152,7 +133,7 @@ In case you don't have access to a slurm-managed cluster, we provide a slurm-les
 	./tools/extras/sbatch ./tools/slurm/run-ml-scenarios.sh
 	./tools/extras/sbatch ./tools/slurm/run-classic-scenarios.sh
 	```
-3. Agregate results:
+3. Aggregate results:
 	```
 	tools/slurm/generate-plots.sh
 	```
