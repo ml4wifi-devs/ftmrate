@@ -31,8 +31,12 @@ private:
   WifiTxVector DoGetDataTxVector (WifiRemoteStation *station) override;
   WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station) override;
 
+  static double DistanceToSnr (double distance, double power);
+  uint8_t GetBestMcs ();
+
   WifiMode m_ctlMode;   // Wi-Fi mode for RTS frames
   double m_distance;    // current distance between STA and AP
+  double m_power;       // current tx power
 };
 
 } //namespace ns3

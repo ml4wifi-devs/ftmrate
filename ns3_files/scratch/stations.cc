@@ -21,11 +21,12 @@ NS_LOG_COMPONENT_DEFINE ("stations");
 
 /***** Functions declarations *****/
 
+void ChangePower (Ptr<Node> staNode, uint8_t powerLevel);
 void GetWarmupFlows (Ptr<FlowMonitor> monitor);
 void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
-                              DataRate offeredLoad, uint32_t packetSize, double warmupTime,
-                              double simulationTime, double fuzzTime);
+                              DataRate offeredLoad, uint32_t packetSize);
 void PopulateARPcache ();
+void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
 void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 
 /***** Global variables and constants *****/
@@ -33,6 +34,10 @@ void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 #define DISTANCE_UPDATE_INTERVAL 0.005
 
 std::map<uint32_t, uint64_t> warmupFlows;
+
+double fuzzTime = 5.;
+double warmupTime = 10.;
+double simulationTime = 50.;
 
 /***** Main with scenario definition *****/
 
@@ -45,9 +50,8 @@ main (int argc, char *argv[])
 
   uint32_t nWifi = 1;
   double distance = 0.;
-  double fuzzTime = 5.;
-  double warmupTime = 10.;
-  double simulationTime = 50.;
+  double delta = 0.;      // difference between 2 power levels in dB
+  double interval = 4.;   // mean (exponential) interval between power change
 
   std::string pcapName = "";
   std::string csvPath = "results.csv";
@@ -71,8 +75,10 @@ main (int argc, char *argv[])
   cmd.AddValue ("channelWidth", "Channel width (MHz)", channelWidth);
   cmd.AddValue ("csvPath", "Path to output CSV file", csvPath);
   cmd.AddValue ("dataRate", "Traffic generator data rate (Mb/s)", dataRate);
+  cmd.AddValue ("delta", "Power change (dBm)", delta);
   cmd.AddValue ("distance", "Distance between AP and STAs (m) - only for Distance mobility type",distance);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
+  cmd.AddValue ("interval", "Interval between power change (s)", interval);
   cmd.AddValue ("lossModel", "Propagation loss model (LogDistance, Nakagami)", lossModel);
   cmd.AddValue ("manager", "Rate adaptation manager", rateAdaptationManager);
   cmd.AddValue ("managerName", "Name of the Wi-Fi manager in CSV", wifiManagerName);
@@ -97,6 +103,8 @@ main (int argc, char *argv[])
             << "Simulating an IEEE 802.11ax devices with the following settings:" << std::endl
             << "- frequency band: 5 GHz" << std::endl
             << "- max data rate: " << dataRate << " Mb/s" << std::endl
+            << "- delta: " << delta << " dBm" << std::endl
+            << "- interval: " << interval << " s" << std::endl
             << "- channel width: " << channelWidth << " Mhz" << std::endl
             << "- shortest guard interval: " << minGI << " ns" << std::endl
             << "- packets size: " << packetSize << " B" << std::endl
@@ -150,18 +158,18 @@ main (int argc, char *argv[])
       ObjectFactory pos;
       pos.SetTypeId ("ns3::RandomRectanglePositionAllocator");
       std::stringstream ssArea;
-      ssArea << "ns3::UniformRandomVariable[Min=0.0|Max=" << area << "]";
-      pos.Set ("X", StringValue (ssArea.str ()));
-      pos.Set ("Y", StringValue (ssArea.str ()));
+      ssArea << "ns3::UniformRandomVariable[Min=0.0|Max=" << area;
+      pos.Set ("X", StringValue (ssArea.str () + "|Stream=2]"));
+      pos.Set ("Y", StringValue (ssArea.str () + "|Stream=3]"));
 
       Ptr<PositionAllocator> taPositionAlloc = pos.Create ()->GetObject<PositionAllocator> ();
       mobility.SetPositionAllocator (taPositionAlloc);
 
       // Set random pause (from 0 to nodePause [s]) and speed (from 0 to nodeSpeed [m/s])
       std::stringstream ssSpeed;
-      ssSpeed << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodeSpeed << "]";
+      ssSpeed << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodeSpeed << "|Stream=4]";
       std::stringstream ssPause;
-      ssPause << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodePause << "]";
+      ssPause << "ns3::UniformRandomVariable[Min=0.0|Max=" << nodePause << "|Stream=5]";
 
       mobility.SetMobilityModel ("ns3::RandomWaypointMobilityModel",
                                  "Speed", StringValue (ssSpeed.str ()),
@@ -209,6 +217,11 @@ main (int argc, char *argv[])
       return 1;
     }
   phy.SetChannel (channelHelper.Create ());
+
+  // Configure two power levels
+  phy.Set ("TxPowerLevels", UintegerValue (2));
+  phy.Set ("TxPowerStart", DoubleValue (21.0 - delta));
+  phy.Set ("TxPowerEnd", DoubleValue (21.0));
 
   // Configure MAC layer
   WifiMacHelper mac;
@@ -265,7 +278,7 @@ main (int argc, char *argv[])
   for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
     {
       InstallTrafficGenerator (wifiStaNodes.Get (j), wifiApNode.Get (0), portNumber++,
-                               applicationDataRate, packetSize, simulationTime, warmupTime, fuzzTime);
+                               applicationDataRate, packetSize);
     }
 
   // Install FlowMonitor
@@ -279,6 +292,31 @@ main (int argc, char *argv[])
       phy.SetPcapDataLinkType (WifiPhyHelper::DLT_IEEE802_11_RADIO);
       phy.EnablePcap (pcapName, apDevice);
     }
+  
+  // Register callback for power change
+  Config::Connect ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/PhyTxBegin",
+                   MakeCallback (PowerCallback));
+  
+  // Schedule all power changes
+  double time;
+  bool maxPower;
+
+  // The interval between each change follows the exponential distribution
+  Ptr<ExponentialRandomVariable> x = CreateObject<ExponentialRandomVariable> ();
+  x->SetAttribute ("Mean", DoubleValue (interval));
+  x->SetStream (1);
+
+  for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
+  {
+    time = warmupTime;
+    maxPower = false;
+    while (time < simulationTime)
+    {
+      time += x->GetValue ();
+      Simulator::Schedule (Seconds (time), &ChangePower, wifiStaNodes.Get (j), maxPower);
+      maxPower = !maxPower;
+    }
+  }
 
   // Register distance measurements
   for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
@@ -343,11 +381,12 @@ main (int argc, char *argv[])
   double velocity = mobilityModel == "Distance" ? 0. : nodeSpeed;
 
   std::ostringstream csvOutput;
-  csvOutput << mobilityModel << ',' << wifiManagerName << ',' << velocity << ',' << distance << ',' << nWifi << ','
-            << nWifiReal << ',' << RngSeedManager::GetRun () << ',' << totalThr << std::endl;
+  csvOutput << mobilityModel << ',' << wifiManagerName << ',' << delta << ',' << interval << ','
+            << velocity << ',' << distance << ",," << nWifi << ',' << nWifiReal << ','
+            << RngSeedManager::GetRun () << ',' << totalThr << std::endl;
 
   // Print results to std output
-  std::cout << "mobility,manager,velocity,distance,nWifi,nWifiReal,seed,throughput"
+  std::cout << "mobility,manager,delta,interval,velocity,distance,time,nWifi,nWifiReal,seed,throughput"
             << std::endl
             << csvOutput.str ();
 
@@ -365,6 +404,17 @@ main (int argc, char *argv[])
 /***** Function definitions *****/
 
 void
+ChangePower (Ptr<Node> staNode, uint8_t powerLevel)
+{
+  // Change power in STA
+  std::stringstream devicePath;
+  devicePath  << "/NodeList/" 
+              << staNode->GetId () 
+              << "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/DefaultTxPowerLevel";
+  Config::Set (devicePath.str(), UintegerValue (powerLevel));
+}
+
+void
 GetWarmupFlows (Ptr<FlowMonitor> monitor)
 {
   for (auto &stat : monitor->GetFlowStats ())
@@ -375,8 +425,7 @@ GetWarmupFlows (Ptr<FlowMonitor> monitor)
 
 void
 InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
-                         DataRate offeredLoad, uint32_t packetSize, double warmupTime,
-                         double simulationTime, double fuzzTime)
+                         DataRate offeredLoad, uint32_t packetSize)
 {
   // Get sink address
   Ptr<Ipv4> ipv4 = toNode->GetObject<Ipv4> ();
@@ -389,6 +438,7 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
   Ptr<UniformRandomVariable> fuzz = CreateObject<UniformRandomVariable> ();
   fuzz->SetAttribute ("Min", DoubleValue (0.));
   fuzz->SetAttribute ("Max", DoubleValue (fuzzTime));
+  fuzz->SetStream (0);
   double applicationsStart = fuzz->GetValue ();
 
   // Configure source and sink
@@ -458,6 +508,24 @@ PopulateARPcache ()
           ipIface->SetAttribute ("ArpCache", PointerValue (arp));
         }
     }
+}
+
+void
+PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW)
+{
+  size_t start = 10; // length of "/NodeList/" string
+  size_t end = path.find ("/DeviceList/");
+  std::string nodeId = path.substr (start, end - start);
+
+  Config::Set ("/NodeList/" + nodeId +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/Power",
+               DoubleValue (10 * (3 + log10 (txPowerW))));
+
+  Config::Set ("/NodeList/" + nodeId +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::OracleWifiManager/Power",
+               DoubleValue (10 * (3 + log10 (txPowerW))));
 }
 
 void

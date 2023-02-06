@@ -45,8 +45,10 @@ def main() -> None:
     parser.add_argument('--channelWidth', default=20, type=int)
     parser.add_argument('--csvPath', default='results.csv', type=str)
     parser.add_argument('--dataRate', default=125, type=int)
+    parser.add_argument('--delta', default=15, type=float)
     parser.add_argument('--distance', default=0., type=float)
     parser.add_argument('--fuzzTime', default=5., type=float)
+    parser.add_argument('--interval', default=2, type=float)
     parser.add_argument('--logsPath', type=str)
     parser.add_argument('--lossModel', default='Nakagami', type=str)
     parser.add_argument('--managerName', type=str)
@@ -87,7 +89,9 @@ def main() -> None:
     NS3_ARGS['channelWidth'] = args.channelWidth
     NS3_ARGS['csvPath'] = args.csvPath
     NS3_ARGS['dataRate'] = args.dataRate
+    NS3_ARGS['delta'] = args.delta
     NS3_ARGS['fuzzTime'] = args.fuzzTime
+    NS3_ARGS['interval'] = args.interval
     NS3_ARGS['lossModel'] = args.lossModel
     NS3_ARGS['managerName'] = args.managerName if args.managerName else args.ml_manager
     NS3_ARGS['minGI'] = args.minGI
@@ -134,7 +138,7 @@ def main() -> None:
     # Save training logs to file
     if args.logsPath:
         logs_file = open(args.logsPath, 'w+')
-        logs_file.write('time,distance,station_id,last_mcs,ideal_mcs\n')
+        logs_file.write('time,distance,station_id,last_mcs,ideal_mcs,tx_power\n')
 
 
     # Shared memory settings
@@ -163,7 +167,9 @@ def main() -> None:
                         f'{data.env.distance},'
                         f'{data.env.station_id},'
                         f'{data.env.mode},'
-                        f'{ideal_mcs(data.env.distance)}\n')
+                        f'{ideal_mcs(data.env.power)(data.env.distance)},'
+                        f'{data.env.power}\n'
+                    )
 
                 data.act = managers_container.do(data.env, data.act)
 

@@ -83,7 +83,7 @@ def ftmrate_log_distance(
     alpha = 1 - confidence_level
 
     snr_dist = distance_to_snr(tfb.Softplus()(distance_dist))
-    rate_dist = expected_rates_log_distance(tfb.Softplus()(distance_dist))
+    rate_dist = expected_rates_log_distance(DEFAULT_TX_POWER)(tfb.Softplus()(distance_dist))
 
     rate_estimated = rate_dist.quantile(0.5)
     mcs_estimated = jnp.argmax(rate_estimated)
@@ -142,7 +142,7 @@ def ftmrate_log_distance_monte_carlo(
     rate_estimated = jnp.mean(rate_samples, axis=0)
     rate_uncertainty = jnp.std(rate_samples, axis=0)
 
-    mcs_estimated = ideal_mcs_log_distance(distance_estimated)
+    mcs_estimated = ideal_mcs_log_distance(DEFAULT_TX_POWER)(distance_estimated)
 
     return FTMEstimates(
         distance_estimated=distance_estimated,
@@ -211,7 +211,7 @@ def run_simulation(
     }
 
     mcs = {
-        'true': jax.vmap(ideal_mcs_log_distance)(distance['true']),
+        'true': jax.vmap(partial(ideal_mcs_log_distance, tx_power=DEFAULT_TX_POWER))(distance['true']),
         'estimated': jnp.empty(frames_total),
     }
 

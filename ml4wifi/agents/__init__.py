@@ -45,6 +45,7 @@ class BaseManagersContainer:
             state: Any,
             m_state: MeasurementState,
             distance: Scalar,
+            tx_power: Scalar,
             time: Scalar,
             agent: BaseAgent,
             measurements_manager: MeasurementManager
@@ -60,7 +61,7 @@ class BaseManagersContainer:
 
         distance_dist = agent.sample(state, sample_key, time)
         distance_dist = tfb.Softplus()(distance_dist)
-        rates_mean = jnp.mean(expected_rates(distance_dist).sample(N_SAMPLES, rate_key), axis=0)
+        rates_mean = jnp.mean(expected_rates(tx_power)(distance_dist).sample(N_SAMPLES, rate_key), axis=0)
 
         return key, state, m_state, jnp.argmax(rates_mean)
 
@@ -74,7 +75,14 @@ class BaseManagersContainer:
         elif env.type == 1:     # Sample new MCS
             sta_id = env.station_id
             self.key, self.states[sta_id], self.measurements[sta_id], mode = \
-                self.select_mcs(self.key, self.states[sta_id], self.measurements[sta_id], env.distance, env.time)
+                self.select_mcs(
+                    self.key,
+                    self.states[sta_id],
+                    self.measurements[sta_id],
+                    env.distance,
+                    env.power,
+                    env.time
+                )
 
             act.mode = mode
             act.station_id = sta_id     # Only for check
