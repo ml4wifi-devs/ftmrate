@@ -112,7 +112,7 @@ run_power_static() {
       MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
       ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
 
-      sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/power_static/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$DELTA" "$INTERVAL" "$SIM_TIME" "$MEMPOOL_SHIFT"
+      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/power_static/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$DELTA" "$INTERVAL" "$SIM_TIME" "$MEMPOOL_SHIFT"
     done
 
     SHIFT=$(( SHIFT + N_POINTS * N_REP ))
