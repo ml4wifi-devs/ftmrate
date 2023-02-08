@@ -38,7 +38,7 @@ To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network si
 3. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./waf configure -d optimized --enable-examples --enable-tests
+	./waf configure -d optimized --enable-examples --enable-tests --disable-werror
 	./waf
 	```
 4. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
@@ -85,7 +85,7 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 3. Rebuild ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./waf configure -d optimized --enable-examples --enable-tests
+	./waf configure -d optimized --enable-examples --enable-tests --disable-werror
 	./waf
 	```
 
