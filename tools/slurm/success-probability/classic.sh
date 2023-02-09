@@ -18,4 +18,4 @@ WARMUP_TIME=10
 FUZZ_TIME=5
 LOSS_MODEL="Nakagami"
 
-./ns3.36.1-success-probability-optimized --mode="$MODE" --snr="$SNR" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"
+./success-probability --mode="$MODE" --snr="$SNR" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"

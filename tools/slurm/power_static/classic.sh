@@ -24,4 +24,4 @@ WARMUP_TIME=$(( N_WIFI + 4))
 FUZZ_TIME=$(( N_WIFI / 2 + 2 ))
 LOSS_MODEL="Nakagami"
 
-./ns3.36.1-stations-optimized --manager="$MANAGER" --managerName="$MANAGER_NAME" --distance="$DISTANCE" --nWifi="$N_WIFI" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --interval="$INTERVAL" --delta="$DELTA" --csvPath="$CSV_PATH"
+./stations --manager="$MANAGER" --managerName="$MANAGER_NAME" --distance="$DISTANCE" --nWifi="$N_WIFI" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --interval="$INTERVAL" --delta="$DELTA" --csvPath="$CSV_PATH"
