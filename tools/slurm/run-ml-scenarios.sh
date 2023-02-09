@@ -162,17 +162,11 @@ run_rwpm 0
 echo -e "\nQueue mobile stations scenario"
 run_rwpm "1.4"
 
-echo -e "\nQueue power with moving station (delta=5, interval=4, v=1, start=0) scenario"
-run_power_moving 5 4 1 0
+echo -e "\nQueue power with moving station (delta=5, interval=4, v=0, start=5) scenario"
+run_power_moving 5 4 0 5
 
-echo -e "\nQueue power with moving station (delta=15, interval=4, v=1, start=0) scenario"
-run_power_moving 15 4 1 0
-
-echo -e "\nQueue power with moving station (delta=5, interval=8, v=0, start=7) scenario"
-run_power_moving 5 8 0 7
-
-echo -e "\nQueue power with moving station (delta=15, interval=8, v=0, start=7) scenario"
-run_power_moving 15 8 0 7
+echo -e "\nQueue power with moving station (delta=15, interval=8, v=0, start=5) scenario"
+run_power_moving 15 8 0 5
 
 echo -e "\nQueue power with single static station (nWiFi=1, delta=15) scenario"
 run_power_static 1 15
