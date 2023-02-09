@@ -15,7 +15,7 @@ POWER_CHANGE = {
 }
 
 
-def plot_results(ax: plt.Axes, ax_id: int, delta: float, interval: float, velocity: float) -> None:
+def plot_results(ax: plt.Axes, delta: float, interval: float, velocity: float) -> None:
     colors = pl.cm.viridis(np.linspace(0., 1., len(ALL_MANAGERS) - 1))
 
     df = pd.read_csv(DATA_FILE)
@@ -33,27 +33,25 @@ def plot_results(ax: plt.Axes, ax_id: int, delta: float, interval: float, veloci
     for i, x in enumerate(POWER_CHANGE[interval]):
         ax.axvline(x, linestyle='--', c='r', alpha=0.4, label='Power change' if i == 0 else None)
 
-    ax.set_xlim((0, MAX_DISTANCE) if ax_id != 2 else (14, 25))
+    ax.set_xlim((0, MAX_DISTANCE))
     ax.set_ylim((0, 125))
 
     ax.set_ylabel('Station throughput [Mb/s]')
-    ax.set_title(fr'$\Delta$ = {delta} dB, 1/$\lambda$ = {interval} s, $\nu$ = {velocity} m/s')
+    ax.set_title(fr'$\Delta$ = {delta} dB, 1/$\lambda$ = {interval} s')
 
     ax.grid()
 
 
 if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
-    plt.rcParams['figure.figsize'] = (2 * COLUMN_WIDTH + 2, COLUMN_HIGHT + 2)
+    fig, axes = plt.subplots(2, 1, sharex='col')
 
-    fig, axes = plt.subplots(2, 2)
+    for delta, interval, ax in zip([5, 15], [4, 8], axes.flatten()):
+        plot_results(ax, delta, interval, velocity=0)
 
-    for i, (delta, interval, v, ax) in enumerate(zip([5, 5, 15, 15], [4, 8, 4, 8], [1, 0, 1, 0], axes.flatten())):
-        plot_results(ax, i, delta, interval, v)
-
-    axes[1, 0].set_xlabel('Time [s]')
-    axes[1, 1].set_xlabel('Time [s]')
-    axes[1, 1].legend()
+    axes[0].tick_params('x', labelbottom=False, bottom=False)
+    axes[1].set_xlabel('Time [s]')
+    axes[0].legend(ncol=2)
 
     plt.savefig(f'power-moving-thr.pdf', bbox_inches='tight')
     plt.clf()

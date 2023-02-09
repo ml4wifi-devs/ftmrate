@@ -36,6 +36,7 @@ void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 /***** Global variables and constants *****/
 
 #define DISTANCE_UPDATE_INTERVAL 0.005
+#define DEFAULT_TX_POWER 16.0206
 
 std::map<uint32_t, uint64_t> warmupFlows;
 uint64_t warmupFlowsSum;
@@ -167,8 +168,8 @@ main (int argc, char *argv[])
 
   // Configure two power levels
   phy.Set ("TxPowerLevels", UintegerValue (2));
-  phy.Set ("TxPowerStart", DoubleValue (21.0 - delta));
-  phy.Set ("TxPowerEnd", DoubleValue (21.0));
+  phy.Set ("TxPowerStart", DoubleValue (DEFAULT_TX_POWER - delta));
+  phy.Set ("TxPowerEnd", DoubleValue (DEFAULT_TX_POWER));
 
   // Configure MAC layer
   WifiMacHelper mac;
