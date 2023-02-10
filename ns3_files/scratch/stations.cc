@@ -233,6 +233,7 @@ main (int argc, char *argv[])
     }
 
   Time::SetResolution (Time::PS);
+  Config::SetDefault ("ns3::RegularWifiMac::QosSupported", BooleanValue (true));
   Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
   Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth",
                       StringValue ("Channel_" + std::to_string (channelWidth) + "_MHz"));

@@ -33,15 +33,19 @@ To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network si
 2. Copy FTMRate contrib modules and simulation scenarios to the ns-3.33 directory of wifi-ftm-ns3:
 	```
 	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib/* $YOUR_NS3_PATH/contrib/
-	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
+	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
 	```
-3. Build ns-3:
+3. Copy modified `src` files to enable FTM frames transmission with higher priority (AC_VO):
+	```
+	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/src/wifi/model/* $YOUR_NS3_PATH/src/wifi/model/
+	```
+4. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
 	./waf configure -d optimized --enable-examples --enable-tests --disable-werror
 	./waf
 	```
-4. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
+5. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
 	```
 	./waf --run "wifi-simple-adhoc"
 	```
@@ -51,17 +55,19 @@ To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network si
 To flawlessly synchronize files between the FTMRate repository and the ns-3 installation, you can create symbolic links to the corresponding folders.
 **Attention!** backup of all files in the `contrib` and `scratch` directories as creating symbolic links will require deleting these folders!
 
-1. Remove `contrib` and `scratch` folders:
+1. Remove `contrib` and `scratch` folders and remove the modified files from `src`:
 	```
     cd $YOUR_NS3_PATH
     rm -rf contrib
     rm -rf scratch
+    rm src/wifi/model/ftm-manager.cc src/wifi/model/regular-wifi-mac.cc
     ```
  
 2. Create symbolic links:
     ```
     ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib contrib
     ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch scratch
+    ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/src/wifi/model/* src/wifi/model/
     ```
    
 3. Clone ns3-ai fork into ns-3's `contrib` directory - see [next section](#ns3-ai).
