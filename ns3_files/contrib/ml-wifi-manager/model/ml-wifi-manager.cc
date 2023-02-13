@@ -15,6 +15,8 @@
 
 #define SAMPLE_INTERVAL 0.01
 #define RTT_TO_DISTANCE 0.00015
+#define FTM_RETRY_TIME 0.05
+#define MAX_DISTANCE 1000.
 
 namespace ns3 {
 
@@ -256,14 +258,14 @@ MlWifiManager::FtmBurst ()
 void
 MlWifiManager::FtmSessionOver (FtmSession session)
 {
-  if (session.GetIndividualRTT ().size () > 0)
+  if (session.GetIndividualRTT ().size () > 0 && session.GetMeanRTT () * RTT_TO_DISTANCE < MAX_DISTANCE)
     {
       m_distance = session.GetMeanRTT () * RTT_TO_DISTANCE;
       m_ftmCompleted = true;
     }
   else
     {
-      Simulator::ScheduleNow (&MlWifiManager::FtmBurst, this);
+      Simulator::Schedule (Seconds (FTM_RETRY_TIME), &MlWifiManager::FtmBurst, this);
     }
 }
 
