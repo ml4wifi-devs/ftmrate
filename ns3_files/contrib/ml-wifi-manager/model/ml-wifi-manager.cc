@@ -258,9 +258,11 @@ MlWifiManager::FtmBurst ()
 void
 MlWifiManager::FtmSessionOver (FtmSession session)
 {
-  if (session.GetIndividualRTT ().size () > 0 && session.GetMeanRTT () * RTT_TO_DISTANCE < MAX_DISTANCE)
+  double distance = session.GetMeanRTT () * RTT_TO_DISTANCE;
+
+  if (distance != 0 && distance < MAX_DISTANCE)
     {
-      m_distance = session.GetMeanRTT () * RTT_TO_DISTANCE;
+      m_distance = distance;
       m_ftmCompleted = true;
     }
   else
