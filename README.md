@@ -23,29 +23,40 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ### ns-3 network simulator
 
-To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by cloning the official [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3) repository and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
+To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3.35 by cloning the official gitlab repository, apply patch to [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3), and integrate with our FTMRate solution. You can read more on ns-3 installation process in the
 [official installation notes](https://www.nsnam.org/wiki/Installation).
 
-1. Clone the wifi-ftm-ns3 repository:
+1. Clone the ns-3-dev repository:
 	```
-	git clone git@github.com:tkn-tub/wifi-ftm-ns3.git
+	git clone https://gitlab.com/nsnam/ns-3-dev.git
 	```
-2. Copy FTMRate contrib modules and simulation scenarios to the ns-3.33 directory of wifi-ftm-ns3:
+2. Set the repository to the 3.35 version:
+	```
+	cd $YOUR_NS3_PATH
+	git reset --hard 687a2745
+	```
+3. Apply patch:
+    ```
+	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/ns-3.35-to-wifi-ftm-ns3.patch $YOUR_NS3_PATH
+	cd $YOUR_NS3_PATH
+	patch -p1 -i ns-3.35-to-wifi-ftm-ns3.patch
+	```
+4. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
 	```
 	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib/* $YOUR_NS3_PATH/contrib/
-	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
+	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
 	```
-3. Copy modified `src` files to enable FTM frames transmission with higher priority (AC_VO):
+5. Copy modified `src` files to enable FTM frames transmission with higher priority (AC_VO):
 	```
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/src/wifi/model/* $YOUR_NS3_PATH/src/wifi/model/
 	```
-4. Build ns-3:
+6. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
 	./waf configure -d optimized --enable-examples --enable-tests --disable-werror
 	./waf
 	```
-5. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
+7. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
 	```
 	./waf --run "wifi-simple-adhoc"
 	```

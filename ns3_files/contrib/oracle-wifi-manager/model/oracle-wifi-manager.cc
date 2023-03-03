@@ -143,7 +143,7 @@ OracleWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
   return WifiTxVector (
       mode,
       GetDefaultTxPowerLevel (),
-      GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (st))),
+      GetPreambleForTransmission (mode.GetModulationClass (), GetShortPreambleEnabled ()),
       ConvertGuardIntervalToNanoSeconds (mode, GetShortGuardIntervalSupported (st), NanoSeconds (GetGuardInterval (st))),
       GetNumberOfAntennas (),
       1,
@@ -160,7 +160,7 @@ OracleWifiManager::DoGetRtsTxVector (WifiRemoteStation *station)
   return WifiTxVector (
       m_ctlMode,
       GetDefaultTxPowerLevel (),
-      GetPreambleForTransmission (m_ctlMode.GetModulationClass (), GetShortPreambleEnabled (), UseGreenfieldForDestination (GetAddress (station))),
+      GetPreambleForTransmission (m_ctlMode.GetModulationClass (), GetShortPreambleEnabled ()),
       ConvertGuardIntervalToNanoSeconds (m_ctlMode, GetShortGuardIntervalSupported (station), NanoSeconds (GetGuardInterval (station))),
       1,
       1,

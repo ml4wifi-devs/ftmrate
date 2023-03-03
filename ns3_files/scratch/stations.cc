@@ -222,6 +222,8 @@ main (int argc, char *argv[])
       std::cerr << "Selected incorrect loss model!";
       return 1;
     }
+  
+  phy.Set ("ChannelWidth", UintegerValue (channelWidth));
   phy.SetChannel (channelHelper.Create ());
 
   // Load FTM map and configure FTM
@@ -285,10 +287,7 @@ main (int argc, char *argv[])
                    UintegerValue (0));
     }
 
-  // Set channel width and shortest GI
-  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelWidth",
-               UintegerValue (channelWidth));
-
+  // Set shortest GI
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
                TimeValue (NanoSeconds (minGI)));
 
