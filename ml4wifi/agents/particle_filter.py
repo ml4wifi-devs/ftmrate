@@ -1,15 +1,16 @@
 from functools import partial
-from typing import Tuple
+from typing import Tuple, Dict
 
 import jax
 import jax.numpy as jnp
 from chex import Scalar, PRNGKey, dataclass, Array
 from tensorflow_probability.substrates import jax as tfp
-from tensorflow_probability.substrates.jax.experimental.mcmc import SequentialMonteCarlo, SequentialMonteCarloResults, WeightedParticles
+from tensorflow_probability.substrates.jax.experimental.mcmc import SequentialMonteCarlo, SequentialMonteCarloResults, \
+    WeightedParticles
 
 from ml4wifi.agents import BaseAgent, BaseManagersContainer
-from ml4wifi.utils.distributions import FiniteDiscreteQ
 from ml4wifi.envs import ContinuousLocalLinearTrend
+from ml4wifi.utils.distributions import FiniteDiscreteQ
 from ml4wifi.utils.wifi_specs import distance_noise
 
 tfb = tfp.bijectors
@@ -27,15 +28,44 @@ F_fn, Q_fn = ContinuousLocalLinearTrend().jaxify(cholesky=True)
 
 
 def initial_state_prior_fn(low: Array, high: Array) -> tfd.Distribution:
-    return tfd.Uniform(low, high)
+    return tfd.JointDistributionNamed(dict(x=tfd.Independent(tfd.Uniform(low, high), reinterpreted_batch_ndims=1),
+                                           y=tfd.Independent(tfd.Uniform(low, high), reinterpreted_batch_ndims=1)))
 
 
-def transition_fn(particles: Array, t_delta: Scalar) -> tfd.Distribution:
-    return tfd.MultivariateNormalTriL(particles @ F_fn(t_delta).T, Q_fn(t_delta))
+def transition_fn(particles: Dict[str, Array], t_delta: Scalar) -> tfd.Distribution:
+    # Variance is a random walk; is the same in components and independent axes.
+    F = F_fn(t_delta)
+    Q = Q_fn(t_delta)
+
+    d = dict(
+        x=tfd.MultivariateNormalTriL(particles['x'] @ F.T, Q),
+        y=tfd.MultivariateNormalTriL(particles['y'] @ F.T, Q)
+    )
+    return tfd.JointDistributionNamed(d)
 
 
-def observation_fn(particles: Array) -> tfd.Distribution:
-    return tfb.Shift(particles[:, 0])(distance_noise)
+def _dict_2r(particles: Dict[str, Array]) -> Array:
+    """
+    Computes distance from X and Y coordinates.
+
+    Parameters
+    ----------
+    particles : dict
+        Dictionary of particles with keys 'x' and 'y'
+        
+    Returns
+    -------
+    distance : Array
+        Distance to the point (0,0)
+    """
+
+    r = jnp.sqrt(jnp.square(particles['x'][..., 0]) + jnp.square(particles['y'][..., 0]))
+    return r
+
+
+def observation_fn(particles: Dict[str, Array]) -> tfd.Distribution:
+    r = _dict_2r(particles)
+    return tfb.Shift(r)(distance_noise)
 
 
 def propose_and_update_weights(
@@ -50,25 +80,26 @@ def propose_and_update_weights(
 
     return jax.lax.cond(
         measured,
-        lambda: WeightedParticles(proposed_particles, particles.log_weights + observation_fn(proposed_particles).log_prob(distance)),
+        lambda: WeightedParticles(proposed_particles,
+                                  particles.log_weights + observation_fn(proposed_particles).log_prob(distance)),
         lambda: WeightedParticles(proposed_particles, particles.log_weights)
     )
 
 
 def particle_filter(
-        min_d: Scalar = 0.0,
-        max_d: Scalar = 50.0,
+        min_xy: Scalar = -50.0,
+        max_xy: Scalar = 50.0,
         min_v: Scalar = -4.0,
         max_v: Scalar = 4.0,
-        particles_num: jnp.int32 = 1000
+        particles_num: jnp.int32 = 1024
 ) -> BaseAgent:
     """
     Parameters
     ----------
-    min_d : float, default=0.0
-        Minimal particle position corresponding to distance
-    max_d : float, default=50.0
-        Maximal particle position corresponding to distance
+    min_xy : float, default=0.0
+        Minimal particle position corresponding to X and Y coordinates
+    max_xy : float, default=50.0
+        Maximal particle position corresponding to X and Y coordinates
     min_v : float, default=-4.0
         Minimal particle position corresponding to velocity
     max_v : float, default=4.0
@@ -99,7 +130,7 @@ def particle_filter(
 
         kernel = SequentialMonteCarlo(propose_and_update_weights)
         initial_state = WeightedParticles(
-            particles=initial_state_prior_fn([min_d, min_v], [max_d, max_v]).sample(particles_num, seed=key),
+            particles=initial_state_prior_fn([min_xy, min_v], [max_xy, max_v]).sample(particles_num, seed=key),
             log_weights=jnp.zeros(particles_num)
         )
 
@@ -108,7 +139,7 @@ def particle_filter(
             results=kernel.bootstrap_results(initial_state),
             time=0.0
         )
-    
+
     def _one_step(
             state: ParticleFilterState,
             key: PRNGKey,
@@ -181,9 +212,10 @@ def particle_filter(
         """
 
         particles, _ = _one_step(state, key, jnp.nan, False, time)
+        r = _dict_2r(particles.particles)
 
-        sorted_idxs = jnp.argsort(particles.particles[:, 0])
-        outcomes, logits = particles.particles[sorted_idxs, 0], particles.log_weights[sorted_idxs]
+        sorted_idxs = jnp.argsort(r)
+        outcomes, logits = r[sorted_idxs], particles.log_weights[sorted_idxs]
 
         return FiniteDiscreteQ(outcomes, logits)
 
