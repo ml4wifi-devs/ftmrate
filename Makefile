@@ -1,4 +1,6 @@
-PLG_PATH = plgkrusek@ares.cyfronet.pl:/net/ascratch/people/plgkrusek/ftmrate_internal
+#PLG_PATH = plgkrusek@ares.cyfronet.pl:/net/ascratch/people/plgkrusek/ftmrate_internal
+PLG_PATH = plgkrusek@ares.cyfronet.pl:/net/pr2/projects/plgrid/plggml4wifi/ftmrate_internal
+
 LABSIM_PATH = labsim:/home/rusek/ml4wifi
 
 .PHONY: to_plg from_plg
