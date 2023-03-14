@@ -9,14 +9,19 @@ import chex
 import jax
 import jax.numpy as jnp
 import matplotlib.pyplot as plt
+import numpy as np
 import optax
 import seaborn as sns
 import tensorflow_probability.substrates.jax as tfp
 from tensorflow_probability.substrates.jax import distributions as tfd
 from tensorflow_probability.substrates.jax import bijectors as tfb
 from chex import Array, Scalar, PRNGKey
+from jax.scipy.optimize import minimize
+from jax.flatten_util import ravel_pytree
+import jax.tree_util as tree
 
 from ml4wifi.params_fit import generate_rwpm, load_parameters_file, CSV_FILES_DIR
+from ml4wifi.params_fit.sde_sigma import generate_run_fn
 from ml4wifi.utils.measurement_manager import DEFAULT_INTERVAL
 from ml4wifi.envs import sde
 import ml4wifi.agents.particle_filter as pf
@@ -79,10 +84,46 @@ def log_prob(params:Params,observations:Array)->chex.Numeric:
 
 if __name__ == '__main__':
 
+    n_datasets=8
+    n_frames=128
 
-    p = Params(sigma_r=0.1, sigma_v=0.2)
-    d=jnp.asarray([1.,2,3,4])
-    l=log_prob(p,d)
-    dl = jax.jit(jax.grad(log_prob))(p,d)
+    data = jnp.empty((n_datasets, n_frames, 1))
+    key = jax.random.PRNGKey(42)
+
+    for i in range(n_datasets):
+        data, key = generate_run_fn(data, key, i, n_frames)
+
+    p = Params(sigma_r=1.3, sigma_v=0.015)
+    p = tree.tree_map(jnp.asarray,p)
+    #ap, unravel_fn = ravel_pytree(p)
+
+    #@jax.jit
+    def loss(theta:Params)->Scalar:
+        theta = tree.tree_map(jax.nn.softplus, theta)
+        ll = jax.vmap(log_prob,in_axes=(None,0))(theta,data[...,0])
+        return -ll.mean()
+
+    opt = optax.adam(learning_rate=0.01)
+
+    opt_state = opt.init(p)
+
+    @jax.jit
+    def update(params, opt_state):
+        l, grads = jax.value_and_grad(loss)(params)
+        updates, new_opt_state = opt.update(grads, opt_state)
+        new_params = optax.apply_updates(params, updates)
+        return l,new_params, new_opt_state
+
+    losses=[]
+    params = p
+    for _ in range(100):
+        l, params, opt_state = update(params,opt_state)
+        losses.append(np.asarray(l))
+
+    print(tree.tree_map(jax.nn.softplus, params))
+
+
+    #hat = minimize(loss,ap,method="BFGS",options=dict(maxiter=8000))
+
 
     pass
