@@ -1,10 +1,10 @@
-PLG_PATH = plgkrusek@prometheus.cyfronet.pl:/net/scratch/people/plgkrusek/ml4wifi
+PLG_PATH = plgkrusek@ares.cyfronet.pl:/net/ascratch/people/plgkrusek/ftmrate_internal
 LABSIM_PATH = labsim:/home/rusek/ml4wifi
 
 .PHONY: to_plg from_plg
 
 to_plg_code:
-	rsync -av python *.sh *.txt Makefile python epsilon-ts $(PLG_PATH)
+	rsync -av setup.py *.sh  Makefile ml4wifi $(PLG_PATH)
 
 to_plg: to_plg_code
 
