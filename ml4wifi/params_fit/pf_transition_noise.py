@@ -93,7 +93,7 @@ class TrainState:
 
 if __name__ == '__main__':
 
-
+    logging.info(str(jax.devices()))
     args = ArgumentParser()
     args.add_argument('--lr', default=0.15, type=float)
     #args.add_argument('--decay', default=0.95, type=float)

@@ -3,7 +3,7 @@ PLG_PATH = plgkrusek@ares.cyfronet.pl:/net/pr2/projects/plgrid/plggml4wifi/ftmra
 
 LABSIM_PATH = labsim:/home/rusek/ml4wifi
 
-.PHONY: to_plg from_plg
+.PHONY: to_plg from_plg fit_pf
 
 to_plg_code:
 	rsync -av setup.py *.sh  Makefile ml4wifi $(PLG_PATH)
