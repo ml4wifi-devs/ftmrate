@@ -1,35 +1,34 @@
 import dataclasses
+import logging
 from argparse import ArgumentParser
-from functools import partial
-from typing import Tuple, Dict, Union
-
-import os.path
+from typing import Dict, Union
 
 import chex
 import jax
 import jax.numpy as jnp
-import matplotlib.pyplot as plt
+import jax.tree_util as tree
 import numpy as np
 import optax
-import seaborn as sns
 import tensorflow_probability.substrates.jax as tfp
+from chex import Array, Scalar
 from tensorflow_probability.substrates.jax import distributions as tfd
-from tensorflow_probability.substrates.jax import bijectors as tfb
-from chex import Array, Scalar, PRNGKey
-from jax.scipy.optimize import minimize
-from jax.flatten_util import ravel_pytree
-import jax.tree_util as tree
 
-from ml4wifi.params_fit import generate_rwpm, load_parameters_file, CSV_FILES_DIR
+import ml4wifi.agents.particle_filter as pf
+from ml4wifi.envs import sde
+from ml4wifi.params_fit import generate_rwpm
 from ml4wifi.params_fit.sde_sigma import generate_run_fn
 from ml4wifi.utils.measurement_manager import DEFAULT_INTERVAL
-from ml4wifi.envs import sde
-import ml4wifi.agents.particle_filter as pf
+
 
 @chex.dataclass
 class Params:
-    sigma_r:Union[Array,Scalar]
-    sigma_v:Union[Array,Scalar]
+    sigma_r: Union[Array, Scalar]
+    sigma_v: Union[Array, Scalar]
+
+    @property
+    def constrained(self):
+        return tree.tree_map(jax.nn.softplus,self)
+
 
 @dataclasses.dataclass
 class HParams:
@@ -39,8 +38,11 @@ class HParams:
     max_v: Scalar = 4.0
     particles_num: jnp.int32 = 1024
 
-HP=HParams()
-def log_prob(params:Params,observations:Array)->chex.Numeric:
+
+HP = HParams()
+
+
+def log_prob(params: Params, observations: Array) -> chex.Numeric:
     """
 
       Returns:
@@ -56,12 +58,12 @@ def log_prob(params:Params,observations:Array)->chex.Numeric:
     llt = sde.ContinuousLocalLinearTrend()
     # Restore default `jaxify` behavoiur for `ContinuousLocalLinearTrend`
     # symbls _ [\sigma_v, \sigma_x, t]
-    transition_fn, transition_cov_fn,_ = sde.OrnsteinUhlenbeckProcess.jaxify(llt, cholesky=True)
+    transition_fn, transition_cov_fn, _ = sde.OrnsteinUhlenbeckProcess.jaxify(llt, cholesky=True)
 
     def pf_transition_fn(particles: Dict[str, Array], t_delta: Scalar) -> tfd.Distribution:
         # Variance is a random walk; is the same in components and independent axes.
-        F = transition_fn(params.sigma_v,params.sigma_r, t_delta)
-        Q = transition_cov_fn(params.sigma_v,params.sigma_r, t_delta)
+        F = transition_fn(params.sigma_v, params.sigma_r, t_delta)
+        Q = transition_cov_fn(params.sigma_v, params.sigma_r, t_delta)
 
         d = dict(
             x=tfd.MultivariateNormalTriL(particles['x'] @ F.T, Q),
@@ -82,48 +84,77 @@ def log_prob(params:Params,observations:Array)->chex.Numeric:
     return jnp.sum(lps)
 
 
+@chex.dataclass
+class TrainState:
+    params: Params
+    opt_state: optax.OptState
+    key: chex.PRNGKey
+
+
 if __name__ == '__main__':
 
-    n_datasets=8
-    n_frames=128
 
-    data = jnp.empty((n_datasets, n_frames, 1))
-    key = jax.random.PRNGKey(42)
+    args = ArgumentParser()
+    args.add_argument('--lr', default=0.15, type=float)
+    #args.add_argument('--decay', default=0.95, type=float)
+    args.add_argument('--n_datasets', default=8, type=int)
+    args.add_argument('--n_frames', default=2001, type=int)
+    #args.add_argument('--n_samples', default=2000, type=int)
+    args.add_argument('--n_steps', default=800, type=int)
+    #args.add_argument('--output_name', default='parameters.csv', type=str)
+    args.add_argument('--plot', action='store_true', default=False)
+    args.add_argument('--seed', default=42, type=int)
+    args = args.parse_args()
 
-    for i in range(n_datasets):
-        data, key = generate_run_fn(data, key, i, n_frames)
+    n_datasets = args.n_datasets
+    n_frames = args.n_frames
+
+    logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.INFO)
+
+    logging.info(args)
+
+
 
     p = Params(sigma_r=1.3, sigma_v=0.015)
-    p = tree.tree_map(jnp.asarray,p)
-    #ap, unravel_fn = ravel_pytree(p)
+    p = tree.tree_map(jnp.asarray, p)
 
-    #@jax.jit
-    def loss(theta:Params)->Scalar:
+    opt = optax.adam(learning_rate=args.lr)
+
+    ts = TrainState(
+        params=p,
+        opt_state=opt.init(p),
+        key=jax.random.PRNGKey(args.seed)
+    )
+
+
+    def loss(theta: Params, data: chex.Array) -> Scalar:
         theta = tree.tree_map(jax.nn.softplus, theta)
-        ll = jax.vmap(log_prob,in_axes=(None,0))(theta,data[...,0])
+        ll = jax.vmap(log_prob, in_axes=(None, 0))(theta, data)
         return -ll.mean()
 
-    opt = optax.adam(learning_rate=0.01)
-
-    opt_state = opt.init(p)
 
     @jax.jit
-    def update(params, opt_state):
-        l, grads = jax.value_and_grad(loss)(params)
-        updates, new_opt_state = opt.update(grads, opt_state)
-        new_params = optax.apply_updates(params, updates)
-        return l,new_params, new_opt_state
+    def update(train_state: TrainState, data: Array):
+        del data
+        k1, k2 = jax.random.split(train_state.key)
 
-    losses=[]
-    params = p
-    for _ in range(100):
-        l, params, opt_state = update(params,opt_state)
-        losses.append(np.asarray(l))
+        k = jax.random.split(k2, n_datasets)
+        gen = lambda key: generate_rwpm(key,
+                                        time_total=int((n_frames - 1) * DEFAULT_INTERVAL),
+                                        measurement_interval=DEFAULT_INTERVAL,
+                                        frames_total=n_frames
+                                        )
+        _, distance_measurement, *_ = jax.vmap(gen)(k)
 
-    print(tree.tree_map(jax.nn.softplus, params))
+        l, grads = jax.value_and_grad(loss)(train_state.params, distance_measurement)
+        updates, new_opt_state = opt.update(grads, train_state.opt_state)
+        new_params = optax.apply_updates(train_state.params, updates)
+        return train_state.replace(params=new_params, opt_state=new_opt_state, key=k1), l
 
+    logging.info('scan')
+    ts, losses = jax.lax.scan(update, ts, xs=None, length=args.n_steps)
 
-    #hat = minimize(loss,ap,method="BFGS",options=dict(maxiter=8000))
+    logging.info(str(ts.params.constrained))
 
 
     pass

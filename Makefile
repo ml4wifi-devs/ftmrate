@@ -14,3 +14,5 @@ from_plg:
 	rsync -av --inplace --exclude '*.out' --exclude '*.err' '$(PLG_PATH)/log/*' log/plg
 
 
+fit_pf:
+	JAX_PLATFORM_NAME=cpu python3 ml4wifi/params_fit/pf_transition_noise.py --lr=0.05 --n_steps=2000
