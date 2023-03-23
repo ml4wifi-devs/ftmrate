@@ -16,3 +16,6 @@ from_plg:
 
 fit_pf:
 	JAX_PLATFORM_NAME=cpu python3 ml4wifi/params_fit/pf_transition_noise.py --lr=0.05 --n_steps=2000
+
+fit_pf_gpu:
+	python3 ml4wifi/params_fit/pf_transition_noise.py --lr=0.05 --n_steps=2000

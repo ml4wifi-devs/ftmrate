@@ -1,5 +1,6 @@
 import dataclasses
 import logging
+import pickle
 from argparse import ArgumentParser
 from typing import Dict, Union
 
@@ -7,7 +8,6 @@ import chex
 import jax
 import jax.numpy as jnp
 import jax.tree_util as tree
-import numpy as np
 import optax
 import tensorflow_probability.substrates.jax as tfp
 from chex import Array, Scalar
@@ -16,7 +16,6 @@ from tensorflow_probability.substrates.jax import distributions as tfd
 import ml4wifi.agents.particle_filter as pf
 from ml4wifi.envs import sde
 from ml4wifi.params_fit import generate_rwpm
-from ml4wifi.params_fit.sde_sigma import generate_run_fn
 from ml4wifi.utils.measurement_manager import DEFAULT_INTERVAL
 
 
@@ -27,7 +26,7 @@ class Params:
 
     @property
     def constrained(self):
-        return tree.tree_map(jax.nn.softplus,self)
+        return tree.tree_map(jax.nn.softplus, self)
 
 
 @dataclasses.dataclass
@@ -92,16 +91,17 @@ class TrainState:
 
 
 if __name__ == '__main__':
+    logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.INFO)
 
     logging.info(str(jax.devices()))
     args = ArgumentParser()
     args.add_argument('--lr', default=0.15, type=float)
-    #args.add_argument('--decay', default=0.95, type=float)
+    # args.add_argument('--decay', default=0.95, type=float)
     args.add_argument('--n_datasets', default=8, type=int)
     args.add_argument('--n_frames', default=2001, type=int)
-    #args.add_argument('--n_samples', default=2000, type=int)
+    # args.add_argument('--n_samples', default=2000, type=int)
     args.add_argument('--n_steps', default=800, type=int)
-    #args.add_argument('--output_name', default='parameters.csv', type=str)
+    # args.add_argument('--output_name', default='parameters.csv', type=str)
     args.add_argument('--plot', action='store_true', default=False)
     args.add_argument('--seed', default=42, type=int)
     args = args.parse_args()
@@ -109,11 +109,9 @@ if __name__ == '__main__':
     n_datasets = args.n_datasets
     n_frames = args.n_frames
 
-    logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.INFO)
+
 
     logging.info(args)
-
-
 
     p = Params(sigma_r=1.3, sigma_v=0.015)
     p = tree.tree_map(jnp.asarray, p)
@@ -151,10 +149,10 @@ if __name__ == '__main__':
         new_params = optax.apply_updates(train_state.params, updates)
         return train_state.replace(params=new_params, opt_state=new_opt_state, key=k1), l
 
+
     logging.info('scan')
     ts, losses = jax.lax.scan(update, ts, xs=None, length=args.n_steps)
+    with open('params.pickle', 'wb') as handle:
+        pickle.dump(ts.params, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     logging.info(str(ts.params.constrained))
-
-
-    pass
