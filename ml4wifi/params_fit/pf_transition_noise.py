@@ -153,6 +153,6 @@ if __name__ == '__main__':
     logging.info('scan')
     ts, losses = jax.lax.scan(update, ts, xs=None, length=args.n_steps)
     with open('params.pickle', 'wb') as handle:
-        pickle.dump(ts.params, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump((ts.params,losses), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     logging.info(str(ts.params.constrained))
