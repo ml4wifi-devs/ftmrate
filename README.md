@@ -157,3 +157,11 @@ In case you don't have access to a slurm-managed cluster, we provide a slurm-les
 	tools/slurm/generate-plots.sh
 	```
 
+
+# Ares
+
+Shared repository on ares is located in group space:
+`/net/pr2/projects/plgrid/plggml4wifi/ftmrate_internal`
+
+In order to run your experiment you can schedule your script or add makefile entry and use `plgrunmake.sh`
+In this case use the name of your target as job name (`-J`)
