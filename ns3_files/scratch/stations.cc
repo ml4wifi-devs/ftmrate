@@ -84,7 +84,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("manager", "Rate adaptation manager", rateAdaptationManager);
   cmd.AddValue ("managerName", "Name of the Wi-Fi manager in CSV", wifiManagerName);
   cmd.AddValue ("minGI", "Shortest guard interval (ns)", minGI);
-  cmd.AddValue ("mobilityModel", "Mobility model (Distance, RWPM)", mobilityModel);
+  cmd.AddValue ("mobilityModel", "Mobility model (Distance, RWPM, Hidden)", mobilityModel);
   cmd.AddValue ("nodeSpeed", "Maximum station speed (m/s) - only for RWPM mobility type",nodeSpeed);
   cmd.AddValue ("nodePause","Maximum time station waits in newly selected position (s) - only for RWPM mobility type",nodePause);
   cmd.AddValue ("nWifi", "Number of stations", nWifi);
@@ -117,7 +117,7 @@ main (int argc, char *argv[])
             << "- max fuzz time: " << fuzzTime << " s" << std::endl
             << "- loss model: " << lossModel << std::endl;
 
-  if (mobilityModel == "Distance")
+  if (mobilityModel == "Distance" || mobilityModel == "Hidden")
     {
       std::cout << "- mobility model: " << mobilityModel << std::endl
                 << "- distance: " << distance << " m" << std::endl
@@ -148,6 +148,26 @@ main (int argc, char *argv[])
       // Place AP at (distance, 0)
       Ptr<MobilityModel> mobilityAp = wifiApNode.Get (0)->GetObject<MobilityModel> ();
       mobilityAp->SetPosition (Vector3D (distance, 0., 0.));
+    }
+  else if (mobilityModel == "Hidden")
+    {
+      mobility.SetMobilityModel ("ns3::ConstantPositionMobilityModel");
+      mobility.Install (wifiApNode);
+      mobility.Install (wifiStaNodes);
+
+      // Place AP at (0, 0)
+      Ptr<MobilityModel> mobilityAp = wifiApNode.Get (0)->GetObject<MobilityModel> ();
+      mobilityAp->SetPosition (Vector3D (0., 0., 0.));
+
+      // Place Stations on both sides of AP, in (-distance, 0) and (distance, 0)
+      int orientation;
+      Ptr<MobilityModel> mobilityStation;
+      for (int i = 0; i < nWifi; i++)
+        {
+          orientation = i % 2 == 0 ? 1 : -1;
+          mobilityStation = wifiStaNodes.Get (i)->GetObject<MobilityModel> ();
+          mobilityStation->SetPosition (Vector3D (orientation * distance, 0., 0.));
+        }
     }
   else if (mobilityModel == "RWPM")
     {
@@ -379,7 +399,7 @@ main (int argc, char *argv[])
             << std::endl;
 
   // Gather results in CSV format
-  double velocity = mobilityModel == "Distance" ? 0. : nodeSpeed;
+  double velocity = mobilityModel == "RWPM" ? nodeSpeed : 0.;
 
   std::ostringstream csvOutput;
   csvOutput << mobilityModel << ',' << wifiManagerName << ',' << delta << ',' << interval << ','

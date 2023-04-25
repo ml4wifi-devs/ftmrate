@@ -37,6 +37,32 @@ run_equal_distance() {
   done
 }
 
+run_hidden_node() {
+  N_REP=10
+  N_POINTS=10
+  N_WIFI=2
+
+  for (( i = 0; i < MANAGERS_LEN; i++ )); do
+    MANAGER=${MANAGERS[$i]}
+    MANAGER_NAME=${MANAGERS_NAMES[$i]}
+    ARRAY_SHIFT=0
+
+    for (( j = 1; j <= N_POINTS; j++)); do
+      DISTANCE=$(( j * j / 2))
+      SIM_TIME=$(( 10 * N_WIFI + 50 ))
+
+      START=$ARRAY_SHIFT
+      END=$(( ARRAY_SHIFT + N_REP - 1 ))
+
+      ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
+
+      sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/hidden_node/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME"
+    done
+
+    SHIFT=$(( SHIFT + N_POINTS * N_REP ))
+  done
+}
+
 run_rwpm() {
   N_REP=40
   N_WIFI=10
@@ -161,3 +187,6 @@ run_power_static 1 15
 
 echo -e "\nQueue power with multiple static stations (nWiFi=10, delta=15) scenario"
 run_power_static 10 15
+
+echo -e "\nQueue hidden node scenario"
+run_hidden_node
