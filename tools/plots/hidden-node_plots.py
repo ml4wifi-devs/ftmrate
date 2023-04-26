@@ -13,7 +13,7 @@ def plot_results(ax: plt.Axes, n_wifi: int) -> None:
     colors = pl.cm.viridis(np.linspace(0., 1., len(ALL_MANAGERS) - 1))
 
     df = pd.read_csv(DATA_FILE)
-    df = df[(df.mobility == 'Hidden') & (df.nWifi == n_wifi)]
+    df = df[(df.mobility == 'Hidden') & (df.nWifiReal == n_wifi)]
 
     for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'distance')
