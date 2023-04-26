@@ -27,7 +27,7 @@ NS_LOG_COMPONENT_DEFINE ("stations");
 void ChangePower (Ptr<Node> staNode, uint8_t powerLevel);
 void GetWarmupFlows (Ptr<FlowMonitor> monitor);
 void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
-                              DataRate offeredLoad, uint32_t packetSize);
+                              DataRate offeredLoad, uint32_t packetSize, double startTime, double stopTime);
 void PopulateArpCache ();
 void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
 void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
@@ -305,13 +305,21 @@ main (int argc, char *argv[])
   PopulateArpCache ();
 
   // Configure applications
-  DataRate applicationDataRate = DataRate (dataRate * 1e6);
+  DataRate applicationDataRate = DataRate (0.1 * 1e6);
   uint32_t portNumber = 9;
 
   for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
     {
       InstallTrafficGenerator (wifiStaNodes.Get (j), wifiApNode.Get (0), portNumber++,
-                               applicationDataRate, packetSize);
+                               applicationDataRate, packetSize, 0., warmupTime);
+    }
+
+  applicationDataRate = DataRate (dataRate * 1e6);
+
+  for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
+    {
+      InstallTrafficGenerator (wifiStaNodes.Get (j), wifiApNode.Get (0), portNumber++,
+                               applicationDataRate, packetSize, warmupTime, warmupTime + simulationTime);
     }
 
   // Install FlowMonitor
@@ -387,17 +395,22 @@ main (int argc, char *argv[])
 
   for (auto &stat : stats)
     {
-      double flow = (8 * stat.second.rxBytes - warmupFlows[stat.first]) / (1e6 * simulationTime);
+      Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (stat.first);
 
-      if (flow > 0)
+      if (t.destinationPort < 9 + wifiStaNodes.GetN ())
         {
-          nWifiReal += 1;
+          continue;
         }
 
-      jainsIndexN += flow;
-      jainsIndexD += flow * flow;
+      double flow = (8 * stat.second.rxBytes - warmupFlows[stat.first]) / (1e6 * simulationTime);
 
-      Ipv4FlowClassifier::FiveTuple t = classifier->FindFlow (stat.first);
+      if (flow > dataRate / (50 * nWifi))
+        {
+          nWifiReal += 1;
+          jainsIndexN += flow;
+          jainsIndexD += flow * flow;
+        }
+
       std::cout << "Flow " << stat.first << " (" << t.sourceAddress << " -> "
                 << t.destinationAddress << ")\tThroughput: " << flow << " Mb/s" << std::endl;
     }
@@ -457,7 +470,7 @@ GetWarmupFlows (Ptr<FlowMonitor> monitor)
 
 void
 InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
-                         DataRate offeredLoad, uint32_t packetSize)
+                         DataRate offeredLoad, uint32_t packetSize, double startTime, double stopTime)
 {
   // Get sink address
   Ptr<Ipv4> ipv4 = toNode->GetObject<Ipv4> ();
@@ -467,11 +480,14 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
   uint8_t tosValue = 0x70; //AC_BE
 
   // Add random fuzz to app start time
-  Ptr<UniformRandomVariable> fuzz = CreateObject<UniformRandomVariable> ();
-  fuzz->SetAttribute ("Min", DoubleValue (0.));
-  fuzz->SetAttribute ("Max", DoubleValue (fuzzTime));
-  fuzz->SetStream (0);
-  double applicationsStart = fuzz->GetValue ();
+  if (startTime == 0.)
+    {
+      Ptr<UniformRandomVariable> fuzz = CreateObject<UniformRandomVariable> ();
+      fuzz->SetAttribute ("Min", DoubleValue (0.));
+      fuzz->SetAttribute ("Max", DoubleValue (fuzzTime));
+      fuzz->SetStream (0);
+      startTime += fuzz->GetValue ();
+    }
 
   // Configure source and sink
   InetSocketAddress sinkSocket (addr, port);
@@ -485,10 +501,10 @@ InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_
   ApplicationContainer sinkApplications (packetSinkHelper.Install (toNode));
   ApplicationContainer sourceApplications (onOffHelper.Install (fromNode));
 
-  sinkApplications.Start (Seconds (applicationsStart));
-  sinkApplications.Stop (Seconds (warmupTime + simulationTime));
-  sourceApplications.Start (Seconds (applicationsStart));
-  sourceApplications.Stop (Seconds (warmupTime + simulationTime));
+  sinkApplications.Start (Seconds (startTime));
+  sinkApplications.Stop (Seconds (stopTime));
+  sourceApplications.Start (Seconds (startTime));
+  sourceApplications.Stop (Seconds (stopTime));
 }
 
 void
