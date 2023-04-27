@@ -2,7 +2,9 @@
 
 [![DOI](https://zenodo.org/badge/555271892.svg)](https://zenodo.org/badge/latestdoi/555271892)
 
-FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM to improve the per-frame selection of modulation and coding schemes.
+FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM to improve the per-frame selection of modulation and coding schemes. Its detailed operation and a performance analysis can be found in:
+
+- Wojciech Ciezobka, Maksymilian Wojnar, Katarzyna Kosek-Szott, Szymon Szott, and Krzysztof Rusek. "FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks." 24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM), 2023. [[preprint](https://arxiv.org/pdf/2304.10140.pdf)]
 
 ## Installation
 
@@ -130,3 +132,14 @@ In case you don't have access to a slurm-managed cluster, we provide a slurm-les
 	tools/slurm/generate-plots.sh
 	```
 
+# How to reference FTMRate?
+
+```
+@article{ciezobka2023ftmrate,
+  title={FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks},
+  author={Ciezobka, Wojciech and Wojnar, Maksymilian and Kosek-Szott, Katarzyna and Szott, Szymon and Rusek, Krzysztof},
+  booktitle={24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM)},
+  year={2023},
+  organization={IEEE}
+}
+```
