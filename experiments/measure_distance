@@ -1,6 +1,0 @@
-import os
-import time
-while True:
-	cmd = 'sudo iw dev wlp1s0 measurement ftm_request conf'
-	time.sleep(0.5)
-	os.system(cmd) 
