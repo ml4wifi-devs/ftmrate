@@ -1,7 +1,5 @@
-import jax
-import jax.numpy as jnp
-import tensorflow_probability.substrates.jax as tfp
-from chex import Scalar
+import numpy as np
+import tensorflow_probability.substrates.numpy as tfp
 
 tfb = tfp.bijectors
 tfd = tfp.distributions
@@ -16,15 +14,14 @@ REFERENCE_SNR = DEFAULT_TX_POWER - DEFAULT_NOISE
 REFERENCE_LOSS = 46.6777
 EXPONENT = 3.0
 
-distance_to_snr_scalar = lambda distance: REFERENCE_SNR - (REFERENCE_LOSS + 10 * EXPONENT * jnp.log10(distance))
-distance_to_snr = tfb.Shift(REFERENCE_SNR - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / jnp.log(10.))(tfb.Log()))
+distance_to_snr_float = lambda distance: REFERENCE_SNR - (REFERENCE_LOSS + 10 * EXPONENT * np.log10(distance))
+distance_to_snr = tfb.Shift(REFERENCE_SNR - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / np.log(10.))(tfb.Log()))
 
 # Calculation of SNR uncertainty
-SNR_UNCERTAINTY_CONSTANT = 10 * EXPONENT / jnp.log(10.)
+SNR_UNCERTAINTY_CONSTANT = 10 * EXPONENT / np.log(10.)
 
 
-@jax.jit
-def snr_uncertainty(distance_estimated: Scalar, distance_uncertainty: Scalar) -> Scalar:
+def snr_uncertainty(distance_estimated: float, distance_uncertainty: float) -> float:
     """
     Calculates uncertainty of an estimated SNR. Based on the rule of propagation of uncertainty:
     https://en.wikipedia.org/wiki/Propagation_of_uncertainty#Simplification
@@ -46,7 +43,7 @@ def snr_uncertainty(distance_estimated: Scalar, distance_uncertainty: Scalar) ->
 
 
 # Based on simulation with Nakagami channel model and curve fitting
-success_probability_curve_params = jnp.array([
+success_probability_curve_params = np.array([
     [11.65393785513402, 3.8775077976047094, 0.3602975522720451, 1.0966422191036909],
     [11.752459670140652, 3.9483719829596446, 0.33749276122801675, 1.114881614980944],
     [11.91869022606955, 4.1289157328863935, 0.28645357503283975, 1.1992382547701346],
@@ -73,7 +70,7 @@ success_probability = tfb.NormalCDF()(tfb.Invert(success_probability_dist.biject
 
 
 # Based on simulation with LogDistance channel model
-wifi_modes_snrs = jnp.array([
+wifi_modes_snrs = np.array([
     10.613624240405125,
     10.647249582547907,
     10.660723984151614,
@@ -89,10 +86,10 @@ wifi_modes_snrs = jnp.array([
 ])
 
 # success_probability = tfd.Normal(wifi_modes_snrs, 1 / (2 * sqrt(2)).cdf(snr)
-success_probability_log_distance = tfb.NormalCDF()(tfb.Scale(1 / (2 * jnp.sqrt(2)))(tfb.Shift(-wifi_modes_snrs)))
+success_probability_log_distance = tfb.NormalCDF()(tfb.Scale(1 / (2 * np.sqrt(2)))(tfb.Shift(-wifi_modes_snrs)))
 
 
-wifi_modes_rates = jnp.array([
+wifi_modes_rates = np.array([
     7.3,
     14.6,
     21.9,
@@ -111,30 +108,28 @@ wifi_modes_rates = jnp.array([
 success_probability_to_rate = tfb.Scale(wifi_modes_rates)
 
 
-def expected_rates(tx_power: Scalar):
+def expected_rates(tx_power: float):
     return tfb.Chain([
         success_probability_to_rate,
         success_probability,
-        tfb.Shift(tx_power - DEFAULT_NOISE - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / jnp.log(10.))(tfb.Log()))
+        tfb.Shift(tx_power - DEFAULT_NOISE - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / np.log(10.))(tfb.Log()))
     ])
 
 
-def expected_rates_log_distance(tx_power: Scalar):
+def expected_rates_log_distance(tx_power: float):
     return tfb.Chain([
         success_probability_to_rate,
         success_probability_log_distance,
-        tfb.Shift(tx_power - DEFAULT_NOISE - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / jnp.log(10.))(tfb.Log()))
+        tfb.Shift(tx_power - DEFAULT_NOISE - REFERENCE_LOSS)(tfb.Scale(-10 * EXPONENT / np.log(10.))(tfb.Log()))
     ])
 
 
-@jax.jit
-def ideal_mcs(distance: Scalar, tx_power: Scalar) -> jnp.int32:
-    return jnp.argmax(expected_rates(tx_power)(distance))
+def ideal_mcs(distance: float, tx_power: float) -> np.int32:
+    return np.argmax(expected_rates(tx_power)(distance))
 
 
-@jax.jit
-def ideal_mcs_log_distance(distance: Scalar, tx_power: Scalar) -> jnp.int32:
-    return jnp.argmax(expected_rates_log_distance(tx_power)(distance))
+def ideal_mcs_log_distance(distance: float, tx_power: float) -> np.int32:
+    return np.argmax(expected_rates_log_distance(tx_power)(distance))
 
 
 # FTM distance measurement noise model (fig. 3):

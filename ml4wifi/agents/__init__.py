@@ -1,10 +1,8 @@
 from functools import partial
 from typing import Callable, Any, Tuple
 
-import jax
-import jax.numpy as jnp
-from chex import dataclass, Scalar, PRNGKey
-from tensorflow_probability.substrates import jax as tfp
+import numpy as np
+import tensorflow_probability as tfp
 
 from ml4wifi.envs.ns3_ai_structures import Env, Act
 from ml4wifi.utils.measurement_manager import *
@@ -25,58 +23,50 @@ class BaseAgent:
 
 class BaseManagersContainer:
     def __init__(self, seed: int, agent: Callable) -> None:
-        self.key = jax.random.PRNGKey(seed)
-
         self.agent = agent()
         self.states = {}
 
         self.measurements_manager = measurement_manager()
         self.measurements = {}
 
-        self.select_mcs = jax.jit(partial(
+        self.select_mcs = partial(
             self.select_mcs,
             agent=self.agent,
             measurements_manager=self.measurements_manager
-        ))
+        )
 
     @staticmethod
     def select_mcs(
-            key: PRNGKey,
+            key,
             state: Any,
             m_state: MeasurementState,
-            distance: Scalar,
-            tx_power: Scalar,
-            time: Scalar,
+            distance: float,
+            tx_power: float,
+            time: float,
             agent: BaseAgent,
             measurements_manager: MeasurementManager
-    ) -> Tuple[PRNGKey, Any, MeasurementState, jnp.int32]:
-        key, update_key, sample_key, noise_key, rate_key = jax.random.split(key, 5)
+    ) -> Tuple[Any, Any, MeasurementState, np.int32]:
 
-        m_state, measured = measurements_manager.update(m_state, distance, time, noise_key)
-        state = jax.lax.cond(
-            measured,
-            lambda: agent.update(state, update_key, m_state.distance, time),
-            lambda: state
-        )
+        m_state, measured = measurements_manager.update(m_state, distance, time, None)
+        state = agent.update(state, None, m_state.distance, time) if measured else state
 
-        distance_dist = agent.sample(state, sample_key, time)
+        distance_dist = agent.sample(state, None, time)
         distance_dist = tfb.Softplus()(distance_dist)
-        rates_mean = jnp.mean(expected_rates(tx_power)(distance_dist).sample(N_SAMPLES, rate_key), axis=0)
+        rates_mean = np.mean(expected_rates(tx_power)(distance_dist).sample(N_SAMPLES, None), axis=0)
 
-        return key, state, m_state, jnp.argmax(rates_mean)
+        return key, state, m_state, np.argmax(rates_mean)
 
     def do(self, env: Env, act: Act) -> Act:
         if env.type == 0:       # New station created
             act.station_id = sta_id = len(self.states)
-            self.key, init_key = jax.random.split(self.key)
-            self.states[sta_id] = self.agent.init(init_key)
+            self.states[sta_id] = self.agent.init(None)
             self.measurements[sta_id] = self.measurements_manager.init()
 
         elif env.type == 1:     # Sample new MCS
             sta_id = env.station_id
             self.key, self.states[sta_id], self.measurements[sta_id], mode = \
                 self.select_mcs(
-                    self.key,
+                    None,
                     self.states[sta_id],
                     self.measurements[sta_id],
                     env.distance,

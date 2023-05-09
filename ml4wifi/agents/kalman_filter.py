@@ -1,7 +1,7 @@
-import jax
-import jax.numpy as jnp
-from chex import Array, Scalar, dataclass, PRNGKey
-from tensorflow_probability.substrates import jax as tfp
+from dataclasses import dataclass
+
+import numpy as np
+from tensorflow_probability.substrates import numpy as tfp
 
 from ml4wifi.agents import BaseAgent, BaseManagersContainer
 from ml4wifi.envs import ContinuousLocalLinearTrend
@@ -12,9 +12,9 @@ tfd = tfp.distributions
 
 @dataclass
 class KalmanFilterState:
-    state: Array
-    uncertainty: Array
-    time: Scalar
+    state: np.ndarray
+    uncertainty: np.ndarray
+    time: float
 
 
 def kalman_filter() -> BaseAgent:
@@ -28,16 +28,16 @@ def kalman_filter() -> BaseAgent:
     """
 
     F_fn, Q_fn = ContinuousLocalLinearTrend().jaxify(cholesky=False)
-    H = jnp.array([[1., 0.]])
-    R = jnp.array([[KF_SENSOR_NOISE]])  # calculated as the variance of normal distribution witch is most
+    H = np.array([[1., 0.]])
+    R = np.array([[KF_SENSOR_NOISE]])  # calculated as the variance of normal distribution witch is most
                                         # similar to distance_noise distribution in terms of KL divergence
     
     def init(
-            key: PRNGKey,
-            distance_init: Scalar = 0.0,
-            drift_init: Scalar = 0.0,
-            distance_init_noise: Scalar = 50.0,
-            drift_init_noise: Scalar = 4.0,
+            key,
+            distance_init: float = 0.0,
+            drift_init: float = 0.0,
+            distance_init_noise: float = 50.0,
+            drift_init_noise: float = 4.0,
             timestamp: float = 0.0
     ) -> KalmanFilterState:
         """
@@ -47,13 +47,13 @@ def kalman_filter() -> BaseAgent:
         ----------
         key : PRNGKey
             JAX random generator key
-        distance_init : Scalar, optional
+        distance_init : float, optional
             Initial distance mean, by default 0
-        drift_init : Scalar, optional
+        drift_init : float, optional
             Initial drift mean, by default 0
-        distance_init_noise : Scalar, optional
+        distance_init_noise : float, optional
             Initial distance variance, by default 50 (The approximate range of modern AP)
-        drift_init_noise : Scalar, optional
+        drift_init_noise : float, optional
             Initial drift variance, by default 4 (Humans usually don't run while on WiFi)
         timestamp : float, optional
             Initialization timestamp, by default 0
@@ -65,8 +65,8 @@ def kalman_filter() -> BaseAgent:
         """
 
         return KalmanFilterState(
-            state=jnp.array([[distance_init], [drift_init]]),
-            uncertainty=jnp.array([
+            state=np.array([[distance_init], [drift_init]]),
+            uncertainty=np.array([
                 [distance_init_noise ** 2, 0.],
                 [0., drift_init_noise ** 2]
             ]),
@@ -75,9 +75,9 @@ def kalman_filter() -> BaseAgent:
 
     def update(
             state: KalmanFilterState,
-            key: PRNGKey,
-            distance: Scalar,
-            time: Scalar
+            key,
+            distance: float,
+            time: float
     ) -> KalmanFilterState:
         """
         Performs one step of the Kalman filter algorithm, thus returns the updated state of the agent.
@@ -106,8 +106,8 @@ def kalman_filter() -> BaseAgent:
         P = F @ state.uncertainty @ F.T + Q_fn(t_delta)
 
         # update
-        z = jnp.array([distance])
-        K = P @ H.T @ jnp.linalg.inv(H @ P @ H.T + R)
+        z = np.array([distance])
+        K = P @ H.T @ np.linalg.inv(H @ P @ H.T + R)
         x = x + K @ (z - H @ x)
         P = P - K @ H @ P
 
@@ -119,8 +119,8 @@ def kalman_filter() -> BaseAgent:
 
     def sample(
             state: KalmanFilterState,
-            key: PRNGKey,
-            time: Scalar
+            key,
+            time: float
     ) -> tfd.Distribution:
         """
         Estimates distance distribution from current Kalman filter state.
@@ -145,12 +145,12 @@ def kalman_filter() -> BaseAgent:
         x = F @ state.state
         P = F @ state.uncertainty @ F.T + Q_fn(t_delta)
 
-        return tfd.Normal(loc=x[0, 0], scale=jnp.sqrt(P[0, 0]))
+        return tfd.Normal(loc=x[0, 0], scale=np.sqrt(P[0, 0]))
 
     return BaseAgent(
-        init=jax.jit(init),
-        update=jax.jit(update),
-        sample=jax.jit(sample)
+        init=init,
+        update=update,
+        sample=sample
     )
 
 

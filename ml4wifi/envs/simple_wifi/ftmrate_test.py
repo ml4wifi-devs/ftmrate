@@ -2,13 +2,10 @@ from argparse import ArgumentParser
 from functools import partial
 from typing import Callable
 
-from chex import Scalar, Array
-import jax.numpy as jnp
+import numpy as np
 import matplotlib.pyplot as plt
 
 from ml4wifi.agents.kalman_filter import kalman_filter
-from ml4wifi.agents.particle_filter import particle_filter
-from ml4wifi.agents.exponential_smoothing import exponential_smoothing
 from ml4wifi.envs.simple_wifi.ftmrate_sim import *
 from ml4wifi.utils.measurement_manager import DEFAULT_INTERVAL
 from ml4wifi.utils.wifi_specs import wifi_modes_snrs
@@ -19,8 +16,8 @@ def run_test(
         agent: Callable,
         agent_name: str,
         *,
-        confidence_level: Scalar,
-        warmup_time: Scalar,
+        confidence_level: float,
+        warmup_time: float,
         plots_hide: bool,
         plots_ext: str,
         **_
@@ -33,36 +30,36 @@ def run_test(
 
 def validate_results(
     results: SimulationResults,
-    confidence_level: Scalar,
-    warmup_time: Scalar,
+    confidence_level: float,
+    warmup_time: float,
     name: str
 ) -> None:
 
     def calculate_confidence(true, ci_low, ci_high):
 
-        return jnp.logical_and(true >= ci_low, true <= ci_high).mean()
+        return np.logical_and(true >= ci_low, true <= ci_high).mean()
 
     print(f'\n{name} (confidence_level={confidence_level})')
 
     idx_filter = results.time > warmup_time
 
     distance_confidence = calculate_confidence(
-        jnp.array(results.distance['true'])[idx_filter],
-        jnp.array(results.distance['ci_low'])[idx_filter],
-        jnp.array(results.distance['ci_high'])[idx_filter],
+        np.array(results.distance['true'])[idx_filter],
+        np.array(results.distance['ci_low'])[idx_filter],
+        np.array(results.distance['ci_high'])[idx_filter],
     )
     print(f'  Distance confidence: {distance_confidence}')
 
     snr_confidence = calculate_confidence(
-        jnp.array(results.snr['true'])[idx_filter],
-        jnp.array(results.snr['ci_low'])[idx_filter],
-        jnp.array(results.snr['ci_high'])[idx_filter],
+        np.array(results.snr['true'])[idx_filter],
+        np.array(results.snr['ci_low'])[idx_filter],
+        np.array(results.snr['ci_high'])[idx_filter],
     )
     print(f'  SNR confidence:      {snr_confidence}')
 
 
-def inf_to_val(array: Array, value: Scalar = 2 ** 7) -> Array:
-    return jnp.where(array == jnp.inf, value, array)
+def inf_to_val(array: np.ndarray, value: float = 2 ** 7) -> np.ndarray:
+    return np.where(array == np.inf, value, array)
 
 
 def plot_results(results: SimulationResults, name: str, extension: str = '.svg', hide: bool = False) -> None:
@@ -89,7 +86,7 @@ def plot_results(results: SimulationResults, name: str, extension: str = '.svg',
         color='tab:orange'
     )
 
-    if jnp.any(results.distance['uncertainty']):
+    if np.any(results.distance['uncertainty']):
         ax2 = ax1.twinx()
         ax2.set_ylabel('Distance uncertainty')
         ax2.set_ylim((0, 6))
@@ -115,7 +112,7 @@ def plot_results(results: SimulationResults, name: str, extension: str = '.svg',
         color='tab:orange'
     )
 
-    if jnp.any(results.snr['uncertainty']):
+    if np.any(results.snr['uncertainty']):
         ax2 = ax1.twinx()
         ax2.set_ylabel('SNR uncertainty')
         ax2.set_ylim((0, 15))
@@ -181,7 +178,4 @@ if __name__ == '__main__':
         total_frames=int(FRAMES_PER_SECOND * args.simulation_time)
     )
 
-    run_test(params, partial(exponential_smoothing, alpha=1.0, beta=1.0), 'Raw data', **vars(args))
-    run_test(params, exponential_smoothing, 'LT', **vars(args))
     run_test(params, kalman_filter, 'KFD', **vars(args))
-    run_test(params, particle_filter, 'PFD', **vars(args))

@@ -8,10 +8,10 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 import optax
 import seaborn as sns
-import tensorflow_probability.substrates.jax as tfp
+import tensorflow_probability.substrates.numpy as tfp
 from chex import Array, Scalar, PRNGKey
 
-from ml4wifi.params_fit import generate_rwpm, load_parameters_file, CSV_FILES_DIR
+from ml4wifi.params_fit import load_parameters_file, CSV_FILES_DIR
 from ml4wifi.utils.measurement_manager import DEFAULT_INTERVAL
 
 

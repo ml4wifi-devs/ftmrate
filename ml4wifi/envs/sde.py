@@ -2,13 +2,13 @@ import dataclasses
 import functools as ft
 from typing import Tuple, Callable, List
 
-import chex
+import numpy as np
 import sympy as sm
 from sympy.abc import tau, t
 
 from ml4wifi.params_fit import SIGMA_V, SIGMA_X
 
-DynamicArray = Callable[[chex.Scalar], chex.Array]
+DynamicArray = Callable[[float], np.ndarray]
 Params = List[sm.Symbol]
 StateSpaceSpec = Tuple[DynamicArray, DynamicArray, Params]
 
@@ -62,8 +62,8 @@ class OrnsteinUhlenbeckProcess:
         cov = self.transition_covariance
         cov = cov.cholesky(hermitian=False) if cholesky else cov
         inputs = self.free_symbols
-        transition_fn = sm.lambdify(inputs, F, modules='jax')
-        transition_cov_fn = sm.lambdify(inputs, cov, modules='jax')
+        transition_fn = sm.lambdify(inputs, F, modules='numpy')
+        transition_cov_fn = sm.lambdify(inputs, cov, modules='numpy')
         return transition_fn, transition_cov_fn, inputs
 
 
