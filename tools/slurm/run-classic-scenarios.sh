@@ -39,7 +39,7 @@ run_equal_distance() {
 
 run_hidden_node() {
   N_REP=10
-  N_POINTS=10
+  N_POINTS=17
   N_WIFI=2
 
   for (( i = 0; i < MANAGERS_LEN; i++ )); do
@@ -48,7 +48,7 @@ run_hidden_node() {
     ARRAY_SHIFT=0
 
     for (( j = 1; j <= N_POINTS; j++)); do
-      DISTANCE=$(( j * j / 2))
+      DISTANCE=$(( 5 * j + 20))
       SIM_TIME=$(( 10 * N_WIFI + 50 ))
 
       START=$ARRAY_SHIFT
