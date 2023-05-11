@@ -127,6 +127,20 @@ main (int argc, char *argv[])
             << "- startPosition: " << startPosition << " m" << std::endl
             << std::endl;
 
+  // Load FTM map and configure FTM
+  if (!ftmMapPath.empty ())
+    {
+      Ptr<WirelessFtmErrorModel::FtmMap> ftmMap = CreateObject<WirelessFtmErrorModel::FtmMap> ();
+      ftmMap->LoadMap (ftmMapPath);
+      Config::SetDefault ("ns3::WirelessFtmErrorModel::FtmMap", PointerValue (ftmMap));
+    }
+
+  Time::SetResolution (Time::PS);
+  Config::SetDefault ("ns3::RegularWifiMac::QosSupported", BooleanValue (true));
+  Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
+  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth",
+                      StringValue ("Channel_" + std::to_string (channelWidth) + "_MHz"));
+
   // Create AP and station
   NodeContainer wifiApNode (1);
   NodeContainer wifiStaNode (1);
@@ -173,20 +187,6 @@ main (int argc, char *argv[])
   
   phy.Set ("ChannelWidth", UintegerValue (channelWidth));
   phy.SetChannel (channelHelper.Create ());
-
-  // Load FTM map and configure FTM
-  if (!ftmMapPath.empty ())
-    {
-      Ptr<WirelessFtmErrorModel::FtmMap> ftmMap = CreateObject<WirelessFtmErrorModel::FtmMap> ();
-      ftmMap->LoadMap (ftmMapPath);
-      Config::SetDefault ("ns3::WirelessFtmErrorModel::FtmMap", PointerValue (ftmMap));
-    }
-
-  Time::SetResolution (Time::PS);
-  Config::SetDefault ("ns3::RegularWifiMac::QosSupported", BooleanValue (true));
-  Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
-  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth",
-                      StringValue ("Channel_" + std::to_string (channelWidth) + "_MHz"));
 
   // Configure two power levels
   phy.Set ("TxPowerLevels", UintegerValue (2));

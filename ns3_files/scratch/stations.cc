@@ -30,6 +30,7 @@ void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, ui
                               DataRate offeredLoad, uint32_t packetSize, double startTime, double stopTime);
 void PopulateArpCache ();
 void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
+void SetPosition (Ptr<MobilityModel> mobilityModel, Vector3D pos);
 void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 
 /***** Global variables and constants *****/
@@ -137,6 +138,20 @@ main (int argc, char *argv[])
                 << std::endl;
     }
 
+  // Load FTM map and configure FTM
+  if (!ftmMapPath.empty ())
+    {
+      Ptr<WirelessFtmErrorModel::FtmMap> ftmMap = CreateObject<WirelessFtmErrorModel::FtmMap> ();
+      ftmMap->LoadMap (ftmMapPath);
+      Config::SetDefault ("ns3::WirelessFtmErrorModel::FtmMap", PointerValue (ftmMap));
+    }
+
+  Time::SetResolution (Time::PS);
+  Config::SetDefault ("ns3::RegularWifiMac::QosSupported", BooleanValue (true));
+  Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
+  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth",
+                      StringValue ("Channel_" + std::to_string (channelWidth) + "_MHz"));
+
   // Create AP and stations
   NodeContainer wifiApNode (1);
   NodeContainer wifiStaNodes (nWifi);
@@ -183,6 +198,18 @@ main (int argc, char *argv[])
                                  "PositionAllocator", PointerValue (taPositionAlloc));
 
       mobility.Install (wifiStaNodes);
+
+      for (uint32_t j = 0; j < wifiStaNodes.GetN (); ++j)
+        {      
+          Ptr<MobilityModel> mobilityModel = wifiStaNodes.Get (j)->GetObject<MobilityModel> ();
+
+          if (nodeSpeed == 0.)
+            {
+              Simulator::Schedule (Seconds (fuzzTime), &SetPosition, mobilityModel, mobilityModel->GetPosition ());
+            }
+
+          mobilityModel->SetPosition (Vector3D (0., 0., 0.));
+        }
     }
   else
     {
@@ -225,20 +252,6 @@ main (int argc, char *argv[])
   
   phy.Set ("ChannelWidth", UintegerValue (channelWidth));
   phy.SetChannel (channelHelper.Create ());
-
-  // Load FTM map and configure FTM
-  if (!ftmMapPath.empty ())
-    {
-      Ptr<WirelessFtmErrorModel::FtmMap> ftmMap = CreateObject<WirelessFtmErrorModel::FtmMap> ();
-      ftmMap->LoadMap (ftmMapPath);
-      Config::SetDefault ("ns3::WirelessFtmErrorModel::FtmMap", PointerValue (ftmMap));
-    }
-
-  Time::SetResolution (Time::PS);
-  Config::SetDefault ("ns3::RegularWifiMac::QosSupported", BooleanValue (true));
-  Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
-  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth",
-                      StringValue ("Channel_" + std::to_string (channelWidth) + "_MHz"));
 
   // Configure two power levels
   phy.Set ("TxPowerLevels", UintegerValue (2));
@@ -574,6 +587,12 @@ PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW)
                    "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
                    "$ns3::OracleWifiManager/Power",
                DoubleValue (10 * (3 + log10 (txPowerW))));
+}
+
+void 
+SetPosition (Ptr<MobilityModel> mobilityModel, Vector3D pos)
+{
+  mobilityModel->SetPosition (pos);
 }
 
 void
