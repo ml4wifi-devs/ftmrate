@@ -33,6 +33,7 @@ void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 
 #define DISTANCE_UPDATE_INTERVAL 0.005
 #define DEFAULT_TX_POWER 16.0206
+#define HIDDEN_CROSS_SCENARIO true
 
 std::map<uint32_t, uint64_t> warmupFlows;
 
@@ -98,6 +99,11 @@ main (int argc, char *argv[])
     {
       wifiManagerName = rateAdaptationManager;
     }
+  
+  if (mobilityModel == "Hidden")
+    {
+      nWifi = HIDDEN_CROSS_SCENARIO ? 4 * nWifi : 2 * nWifi;
+    }
 
   // Print simulation settings to screen
   std::cout << std::endl
@@ -160,13 +166,18 @@ main (int argc, char *argv[])
       mobilityAp->SetPosition (Vector3D (0., 0., 0.));
 
       // Place Stations on both sides of AP, in (-distance, 0) and (distance, 0)
-      int orientation;
+      int orientation_x = 0;
+      int orientation_y = 0;
       Ptr<MobilityModel> mobilityStation;
       for (int i = 0; i < nWifi; i++)
         {
-          orientation = i % 2 == 0 ? 1 : -1;
+          if (HIDDEN_CROSS_SCENARIO)
+            {
+              orientation_y = i % 4 < 2 ? 1 : -1;
+            }
+          orientation_x = i % 2 == 0 ? 1 : -1;
           mobilityStation = wifiStaNodes.Get (i)->GetObject<MobilityModel> ();
-          mobilityStation->SetPosition (Vector3D (orientation * distance, 0., 0.));
+          mobilityStation->SetPosition (Vector3D (orientation_x * distance, orientation_y * distance, 0.));
         }
     }
   else if (mobilityModel == "RWPM")

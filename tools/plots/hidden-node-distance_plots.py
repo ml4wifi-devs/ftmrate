@@ -6,7 +6,8 @@ import pandas as pd
 from tools.plots.common import *
 
 
-MAX_DISTANCE = 50
+MIN_DISTANCE = 25
+MAX_DISTANCE = 60
 
 
 def plot_results(ax: plt.Axes, n_wifi: int) -> None:
@@ -24,8 +25,8 @@ def plot_results(ax: plt.Axes, n_wifi: int) -> None:
             ax.plot(mean.index, mean, marker='o', markersize=2, label=manager_name, c=colors[i])
             ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
 
-    ax.set_xlim((0, MAX_DISTANCE))
-    ax.set_ylim((0, 125))
+    ax.set_xlim((MIN_DISTANCE, MAX_DISTANCE))
+    ax.set_ylim((0, 50))
 
     ax.set_ylabel('Aggregate throughput [Mb/s]')
 
