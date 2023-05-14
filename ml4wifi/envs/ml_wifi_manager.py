@@ -128,7 +128,7 @@ def main() -> None:
         pname = 'stations'
         NS3_ARGS['distance'] = args.distance
         NS3_ARGS['mobilityModel'] = 'Hidden'
-        NS3_ARGS['nWifi'] = args.nWifi if args.nWifi % 2 == 0 else 2
+        NS3_ARGS['nWifi'] = args.nWifi
 
     else:
         raise ArgumentError(None, 'Bad scenario selected')
