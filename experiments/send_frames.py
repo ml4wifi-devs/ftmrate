@@ -5,10 +5,10 @@ from scapy.all import *
 
 if __name__ == '__main__':
     args = ArgumentParser()
-    
-    args.add_argument('--dst_mac', type=str, default='00:16:ea:12:34:56')
-    args.add_argument('--src_mac', type=str, default='00:16:ea:12:34:57')
-    args.add_argument('--bssid', type=str, default='ff:ff:ff:ff:ff:ff')
+
+    args.add_argument('--dst_mac', type=str, default='00:c2:c6:e6:82:0f')
+    args.add_argument('--src_mac', type=str, default='00:c2:c6:e6:9a:ec')
+    args.add_argument('--bssid', type=str, default='00:c2:c6:e6:82:0f')
     
     args.add_argument('--count', type=int, default=1)
     args.add_argument('--frame_size', type=int, default=1000)
