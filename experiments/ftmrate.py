@@ -1,3 +1,5 @@
+import os
+import re
 import subprocess
 from time import time, sleep
 
@@ -11,13 +13,15 @@ from kalman_filter import kalman_filter
 FTM_INTERVAL = 0.5
 N_SAMPLES = 100
 
-# Estimated from experiments
+WIFI_MODES_RATES = np.array([6., 9., 12., 18., 24., 36., 48., 54.])
+
+# Values estimated from experiments
 KF_SENSOR_NOISE = 0.7455304265022278
 SIGMA_X = 1.3213624954223633
 SIGMA_V = 0.015552043914794922
 
 FTM_BIAS = 0.
-FTM_COEFF = 1.
+FTM_COEFF = 100.
 
 SNR_EXPONENT = 2.0
 SNR_SHIFT = 20.
@@ -33,15 +37,13 @@ WIFI_MODES_SNRS = np.array([
     [18.091175930406580, 0.3536]
 ])
 
-WIFI_MODES_RATES = np.array([6., 9., 12., 18., 24., 36., 48., 54.])
-
 
 def expected_rates(tx_power: float) -> tfb.Bijector:
     """
     Returns a bijector that transforms a distance to a distribution over expected rates.
     Distance is transformed in a following way:
         1. Logarithm                                       \
-        2. Shift by -10 * SNR_EXPONENT / np.log(10.)        | log-distance channel model
+        2. Scale by -10 * SNR_EXPONENT / np.log(10.)        | log-distance channel model
         3. Shift by tx_power - SNR_SHIFT                   /
         4. Shift by -WIFI_MODES_SNRS[:, 0]                 \
         5. Scale by -WIFI_MODES_SNRS[:, 1]                  | success probability
@@ -55,7 +57,7 @@ def expected_rates(tx_power: float) -> tfb.Bijector:
 
     Returns
     -------
-    tfp.bijectors.Bijector
+    tfb.Bijector
         A distance to expected rates bijector.
     """
 
@@ -91,26 +93,61 @@ def get_ftm_measurement() -> float:
     return (raw_distance - FTM_BIAS) / FTM_COEFF
 
 
+def set_mcs(mcs: int) -> None:
+    """
+    Sets the MCS of the Wi-Fi interface by writing appropriate mask to the `rate_scale_table` file.
+
+    Parameters
+    ----------
+    mcs : int
+        The MCS to set.
+    """
+
+    if set_mcs.last_mcs == mcs:
+        return
+
+    RATE_MCS_ANT_MSK = 0x08000
+    RATE_MCS_HT_MSK  = 0x00100
+
+    monitor_tx_rate = 0x0
+    monitor_tx_rate |= RATE_MCS_HT_MSK
+    monitor_tx_rate |= RATE_MCS_ANT_MSK
+    monitor_tx_rate |= mcs
+
+    mask = '0x{:05x}'.format(monitor_tx_rate)
+    set_mcs.last_mcs = mcs
+
+    path = '/sys/kernel/debug/ieee80211/'
+    path += os.listdir(path)[0] + '/'
+    path += [f for f in os.listdir(path) if re.match(r'.*:wl.*', f)][0] + '/stations/'
+    path += os.listdir(path)[0] + '/rate_scale_table'
+
+    os.system(f'echo {mask} | tee {path}')
+
+
 if __name__ == '__main__':
+    last_time = -np.inf
+    set_mcs.last_mcs = -1
     default_tx_power = 20.0
 
     kf = kalman_filter(KF_SENSOR_NOISE, SIGMA_X, SIGMA_V)
     state = kf.init(timestamp=time())
-    last_time = -np.inf
 
     while True:
         if time() - last_time > FTM_INTERVAL:
             while (distance := get_ftm_measurement()) == 0:
                 pass
 
-            print(distance)
+            print(f'FTM distance: {distance:.2f} m')
             state = kf.update(state, distance, time())
             last_time = time()
 
         distance_dist = kf.sample(state, time())
         distance_dist = tfb.Softplus()(distance_dist)
-        rates_mean = np.mean(expected_rates(default_tx_power)(distance_dist).sample(N_SAMPLES, None), axis=0)
+        rates_mean = expected_rates(default_tx_power)(distance_dist).sample(N_SAMPLES).mean(axis=0)
         best_mcs = np.argmax(rates_mean)
 
-        print(best_mcs)
+        print(f'Best MCS: {best_mcs}')
+        set_mcs(best_mcs)
+
         sleep(0.1)
