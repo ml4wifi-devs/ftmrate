@@ -4,7 +4,7 @@ from time import time, sleep
 import numpy as np
 import tensorflow_probability.substrates.numpy.bijectors as tfb
 
-from ml4wifi.agents.kalman_filter import kalman_filter
+from kalman_filter import kalman_filter
 
 
 # FTMRate constants
@@ -12,6 +12,10 @@ FTM_INTERVAL = 0.5
 N_SAMPLES = 100
 
 # Estimated from experiments
+KF_SENSOR_NOISE = 0.7455304265022278
+SIGMA_X = 1.3213624954223633
+SIGMA_V = 0.015552043914794922
+
 FTM_BIAS = 0.
 FTM_COEFF = 1.
 
@@ -90,8 +94,8 @@ def get_ftm_measurement() -> float:
 if __name__ == '__main__':
     default_tx_power = 20.0
 
-    kf = kalman_filter()
-    state = kf.init(None)
+    kf = kalman_filter(KF_SENSOR_NOISE, SIGMA_X, SIGMA_V)
+    state = kf.init(timestamp=time())
     last_time = -np.inf
 
     while True:
@@ -100,10 +104,10 @@ if __name__ == '__main__':
                 pass
 
             print(distance)
-            state = kf.update(state, None, distance, time())
+            state = kf.update(state, distance, time())
             last_time = time()
 
-        distance_dist = kf.sample(state, None, time())
+        distance_dist = kf.sample(state, time())
         distance_dist = tfb.Softplus()(distance_dist)
         rates_mean = np.mean(expected_rates(default_tx_power)(distance_dist).sample(N_SAMPLES, None), axis=0)
         best_mcs = np.argmax(rates_mean)
