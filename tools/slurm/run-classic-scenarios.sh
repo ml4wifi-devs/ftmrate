@@ -218,4 +218,4 @@ echo -e "\nQueue hidden node scenario with varying distance"
 run_hidden_node_distance 1
 
 echo -e "\nQueue hidden node scenario with varying nWifi"
-run_hidden_node_nwifi 40
+run_hidden_node_nwifi 30
