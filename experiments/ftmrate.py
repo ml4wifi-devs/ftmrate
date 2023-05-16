@@ -88,7 +88,7 @@ def get_ftm_measurement() -> float:
     raw_distance = int(data[2].split(" ")[-2])
 
     if status != 0 or raw_distance < -1000:
-        raise ValueError("FTM status code error")
+        return -np.inf
 
     return (raw_distance - FTM_BIAS) / FTM_COEFF
 
@@ -135,7 +135,7 @@ if __name__ == '__main__':
 
     while True:
         if time() - last_time > FTM_INTERVAL:
-            while (distance := get_ftm_measurement()) == 0:
+            while (distance := get_ftm_measurement()) == -np.inf:
                 pass
 
             print(f'FTM distance: {distance:.2f} m')
