@@ -45,7 +45,7 @@ def main() -> None:
     parser.add_argument('--channelWidth', default=20, type=int)
     parser.add_argument('--csvPath', default='results.csv', type=str)
     parser.add_argument('--dataRate', default=125, type=int)
-    parser.add_argument('--delta', default=15, type=float)
+    parser.add_argument('--delta', default=0, type=float)
     parser.add_argument('--distance', default=0., type=float)
     parser.add_argument('--fuzzTime', default=5., type=float)
     parser.add_argument('--interval', default=2, type=float)
