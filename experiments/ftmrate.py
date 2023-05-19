@@ -68,6 +68,20 @@ def expected_rates(tx_power: float) -> tfb.Bijector:
     ])
 
 
+def is_connected() -> bool:
+    """
+    Returns whether the device is connected to a Wi-Fi network.
+
+    Returns
+    -------
+    bool
+        True if the device is connected to a Wi-Fi network, False otherwise.
+    """
+
+    output = subprocess.check_output('iw dev wlp1s0 link', universal_newlines=True)
+    return 'not connected' not in output.lower()
+
+
 def get_ftm_measurement() -> float:
     """
     Returns a single FTM measurement. The function calls a shell script that runs the FTM
@@ -134,7 +148,7 @@ if __name__ == '__main__':
     state = kf.init(timestamp=time())
 
     while True:
-        if time() - last_time > FTM_INTERVAL:
+        if time() - last_time > FTM_INTERVAL and is_connected():
             while (distance := get_ftm_measurement()) == -np.inf:
                 pass
 
