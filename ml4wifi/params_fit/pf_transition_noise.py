@@ -2,7 +2,7 @@ import dataclasses
 import logging
 import pickle
 from argparse import ArgumentParser
-from typing import Dict, Union
+from typing import Dict, Union, Tuple
 
 import chex
 import jax
@@ -43,20 +43,17 @@ HP = HParams()
 
 def log_prob(params: Params, observations: Array) -> chex.Numeric:
     """
-
-      Returns:
-        incremental_log_marginal_likelihoods: float ,
-          giving the natural logarithm of an unbiased estimate of
-          `p(observations[t] | observations[:t])` at each timestep `t`. Note that
-          (by [Jensen's inequality](
-          https://en.wikipedia.org/wiki/Jensen%27s_inequality))
-          this is *smaller* in expectation than the true
-          `log p(observations[t] | observations[:t])`.
+    Returns
+    -------
+    incremental_log_marginal_likelihoods: float
+        giving the natural logarithm of an unbiased estimate of `p(observations[t] | observations[:t])`
+        at each timestep `t`. Note that (by [Jensen's inequality](https://en.wikipedia.org/wiki/Jensen%27s_inequality))
+        this is *smaller* in expectation than the true `log p(observations[t] | observations[:t])`.
     """
 
     llt = sde.ContinuousLocalLinearTrend()
-    # Restore default `jaxify` behavoiur for `ContinuousLocalLinearTrend`
-    # symbls _ [\sigma_v, \sigma_x, t]
+    # Restore default `jaxify` behaviour for `ContinuousLocalLinearTrend`
+    # symbols _ [\sigma_v, \sigma_x, t]
     transition_fn, transition_cov_fn, _ = sde.OrnsteinUhlenbeckProcess.jaxify(llt, cholesky=True)
 
     def pf_transition_fn(particles: Dict[str, Array], t_delta: Scalar) -> tfd.Distribution:
@@ -92,24 +89,16 @@ class TrainState:
 
 if __name__ == '__main__':
     logging.basicConfig(format='%(asctime)s %(levelname)s:%(message)s', level=logging.INFO)
-
     logging.info(str(jax.devices()))
+
     args = ArgumentParser()
     args.add_argument('--lr', default=0.15, type=float)
-    # args.add_argument('--decay', default=0.95, type=float)
     args.add_argument('--n_datasets', default=8, type=int)
     args.add_argument('--n_frames', default=2001, type=int)
-    # args.add_argument('--n_samples', default=2000, type=int)
     args.add_argument('--n_steps', default=800, type=int)
-    # args.add_argument('--output_name', default='parameters.csv', type=str)
     args.add_argument('--plot', action='store_true', default=False)
     args.add_argument('--seed', default=42, type=int)
     args = args.parse_args()
-
-    n_datasets = args.n_datasets
-    n_frames = args.n_frames
-
-
 
     logging.info(args)
 
@@ -132,15 +121,15 @@ if __name__ == '__main__':
 
 
     @jax.jit
-    def update(train_state: TrainState, data: Array):
+    def update(train_state: TrainState, data: Array) -> Tuple[TrainState, Scalar]:
         del data
         k1, k2 = jax.random.split(train_state.key)
 
-        k = jax.random.split(k2, n_datasets)
+        k = jax.random.split(k2, args.n_datasets)
         gen = lambda key: generate_rwpm(key,
-                                        time_total=int((n_frames - 1) * DEFAULT_INTERVAL),
+                                        time_total=int((args.n_frames - 1) * DEFAULT_INTERVAL),
                                         measurement_interval=DEFAULT_INTERVAL,
-                                        frames_total=n_frames
+                                        frames_total=args.n_frames
                                         )
         _, distance_measurement, *_ = jax.vmap(gen)(k)
 
@@ -152,7 +141,8 @@ if __name__ == '__main__':
 
     logging.info('scan')
     ts, losses = jax.lax.scan(update, ts, xs=None, length=args.n_steps)
+
     with open('params.pickle', 'wb') as handle:
-        pickle.dump((ts.params,losses), handle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump((ts.params, losses), handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     logging.info(str(ts.params.constrained))
