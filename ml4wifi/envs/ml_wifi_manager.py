@@ -10,6 +10,7 @@ from ml4wifi.agents.exponential_smoothing import ManagersContainer as Exponentia
 from ml4wifi.agents.kalman_filter import ManagersContainer as KalmanFilter
 from ml4wifi.agents.particle_filter import ManagersContainer as ParticleFilter
 
+from ml4wifi.utils.wifi_specs import ideal_mcs
 from ml4wifi.envs.ns3_ai_structures import Env, Act
 
 
@@ -44,10 +45,11 @@ def main() -> None:
     parser.add_argument('--channelWidth', default=20, type=int)
     parser.add_argument('--csvPath', default='results.csv', type=str)
     parser.add_argument('--dataRate', default=125, type=int)
-    parser.add_argument('--delta', default=0., type=float)
+    parser.add_argument('--delta', default=0, type=float)
     parser.add_argument('--distance', default=0., type=float)
     parser.add_argument('--fuzzTime', default=5., type=float)
-    parser.add_argument('--interval', default=4., type=float)
+    parser.add_argument('--interval', default=2, type=float)
+    parser.add_argument('--logsPath', type=str)
     parser.add_argument('--lossModel', default='Nakagami', type=str)
     parser.add_argument('--managerName', type=str)
     parser.add_argument('--mcs', type=int)
@@ -133,6 +135,12 @@ def main() -> None:
             print(f'  {key}: {val}')
 
 
+    # Save training logs to file
+    if args.logsPath:
+        logs_file = open(args.logsPath, 'w+')
+        logs_file.write('time,distance,station_id,last_mcs,ideal_mcs,tx_power\n')
+
+
     # Shared memory settings
     memblock_key = 2333
     mempool_key = args.mempoolKey
@@ -153,11 +161,24 @@ def main() -> None:
                 if data is None:
                     break
 
+                if args.logsPath and data.env.time >= args.warmupTime and data.env.type == 1:
+                    logs_file.write(
+                        f'{data.env.time},'
+                        f'{data.env.distance},'
+                        f'{data.env.station_id},'
+                        f'{data.env.mode},'
+                        f'{ideal_mcs(data.env.power)(data.env.distance)},'
+                        f'{data.env.power}\n'
+                    )
+
                 data.act = managers_container.do(data.env, data.act)
 
         ns3_process.wait()
     finally:
         del exp
+
+        if args.logsPath:
+            logs_file.close()
 
 
 if __name__ == '__main__':

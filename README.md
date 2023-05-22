@@ -13,50 +13,48 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 2. Go to project root directory and install requirements:
 	```
+	cd ftmrate_internal
 	pip install -e .
 	```
 
-3.  **Attention!** To enable GPU acceleration for jax, run this additional command (For more info, see the official JAX [installation guide](https://github.com/google/jax#pip-installation-gpu-cuda)):
+3.  **Attention!** To enable GPU acceleration for JAX, run command (this is an example command, for more info, see the official JAX [installation guide](https://github.com/google/jax#pip-installation-gpu-cuda)):
 	```
-	pip install "jax[cuda11_cudnn82]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+	pip install "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 	```
 
 ### ns-3 network simulator
 
-To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3.35 by cloning the official gitlab repository, apply patch to [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3), and integrate with our FTMRate solution. You can read more on ns-3 installation process in the
+To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by downloading the official distribution, apply the [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3) path, and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
 [official installation notes](https://www.nsnam.org/wiki/Installation).
 
-1. Clone the ns-3-dev repository:
+1. Download and unzip ns-3.35:
 	```
-	git clone https://gitlab.com/nsnam/ns-3-dev.git
+	wget https://www.nsnam.org/releases/ns-allinone-3.35.tar.bz2
+	tar -xf ns-allinone-3.35.tar.bz2
+	mv ns-allinone-3.35/ns-3.35 $YOUR_NS3_PATH
 	```
-2. Set the repository to the 3.35 version:
-	```
-	cd $YOUR_NS3_PATH
-	git reset --hard 687a2745
-	```
-3. Apply patch:
+2. Apply patch:
     ```
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/ns-3.35-to-wifi-ftm-ns3.patch $YOUR_NS3_PATH
 	cd $YOUR_NS3_PATH
 	patch -p1 -i ns-3.35-to-wifi-ftm-ns3.patch
 	```
-4. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
+3. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
 	```
 	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib/* $YOUR_NS3_PATH/contrib/
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
 	```
-5. Copy modified `src` files to enable FTM frames transmission with higher priority (AC_VO):
+4. Copy modified `src` files to enable FTM frames transmission with higher priority (AC_VO):
 	```
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/src/wifi/model/* $YOUR_NS3_PATH/src/wifi/model/
 	```
-6. Build ns-3:
+5. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./waf configure -d optimized --enable-examples --enable-tests --disable-werror
+	./waf configure -d optimized --enable-examples --enable-tests --disable-werror --disable-python
 	./waf
 	```
-7. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
+6. Once you have built ns-3 (with examples enabled), you can test if the installation was successful by running an example simulation:
 	```
 	./waf --run "wifi-simple-adhoc"
 	```
@@ -102,9 +100,18 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 3. Rebuild ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./waf configure -d optimized --enable-examples --enable-tests --disable-werror
+	./waf configure -d optimized --enable-examples --enable-tests --disable-werror --disable-python
 	./waf
 	```
+ 
+Using our fork of ns3-ai, use can run ns-3 simulations in optimized or debug mode. To select mode change `debug` flag in ns3-ai `Experiment` declaration:
+```python
+exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=False)
+```
+
+```python
+exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=True)
+```
 
 ## Reproducing results
 
@@ -155,3 +162,11 @@ In case you don't have access to a slurm-managed cluster, we provide a slurm-les
 	tools/slurm/generate-plots.sh
 	```
 
+
+# Ares
+
+Shared repository on ares is located in group space:
+`/net/pr2/projects/plgrid/plggml4wifi/ftmrate_internal`
+
+In order to run your experiment you can schedule your script or add makefile entry and use `plgrunmake.sh`
+In this case use the name of your target as job name (`-J`)

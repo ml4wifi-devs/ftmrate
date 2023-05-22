@@ -3,5 +3,5 @@
 NS3_DIR="${NS3_DIR:=$HOME/ns-3-dev}"
 
 cd $NS3_DIR
-./waf configure -d optimized --disable-werror
+./waf configure -d optimized --disable-werror --disable-python
 ./waf
