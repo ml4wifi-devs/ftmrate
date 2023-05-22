@@ -6,6 +6,8 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ### FTMRate Repository
 
+**Note:** if you want to run FTMRate in an out-of-band scenario, please follow the instructions in the `main` branch.
+
 1. Clone the repository:
 	```
 	git clone https://github.com/ml4wifi-devs/ftmrate_internal.git
