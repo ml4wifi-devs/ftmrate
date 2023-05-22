@@ -77,8 +77,8 @@ def is_connected() -> bool:
     bool
         True if the device is connected to a Wi-Fi network, False otherwise.
     """
-
-    output = subprocess.check_output('iw dev wlp1s0 link', universal_newlines=True)
+    link=['iw', 'dev', 'wlp1s0', 'link']
+    output = subprocess.check_output(link, universal_newlines=True)
     return 'not connected' not in output.lower()
 
 
@@ -155,13 +155,19 @@ if __name__ == '__main__':
             print(f'FTM distance: {distance:.2f} m')
             state = kf.update(state, distance, time())
             last_time = time()
+        
+        if is_connected():
+            distance_dist = kf.sample(state, time())
+            distance_dist = tfb.Softplus()(distance_dist)
+            rates_mean = expected_rates(default_tx_power)(distance_dist).sample(N_SAMPLES).mean(axis=0)
+            best_mcs = np.argmax(rates_mean)
 
-        distance_dist = kf.sample(state, time())
-        distance_dist = tfb.Softplus()(distance_dist)
-        rates_mean = expected_rates(default_tx_power)(distance_dist).sample(N_SAMPLES).mean(axis=0)
-        best_mcs = np.argmax(rates_mean)
+            print(f'Best MCS: {best_mcs}')
+            set_mcs(best_mcs)
 
-        print(f'Best MCS: {best_mcs}')
-        set_mcs(best_mcs)
+            sleep(0.1)
 
-        sleep(0.1)
+        else:
+            print(f'Out of range')
+            sleep(0.5)
+ 
