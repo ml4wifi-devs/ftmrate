@@ -2,7 +2,7 @@ from ml4wifi.params_fit.common import *
 
 
 # distance and velocity process noise for SDE dynamics in FTM based agents
-SIGMA_X = 0.83820117
+SIGMA_R = 0.83820117
 SIGMA_V = 0.3324591
 
 # exponential smoothing parameters

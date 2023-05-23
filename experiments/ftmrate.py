@@ -17,8 +17,8 @@ WIFI_MODES_RATES = np.array([6., 9., 12., 18., 24., 36., 48., 54.])
 
 # Values estimated from experiments
 KF_SENSOR_NOISE = 0.7455304265022278
-SIGMA_X = 1.3213624954223633
-SIGMA_V = 0.015552043914794922
+SIGMA_R = 0.83820117
+SIGMA_V = 0.3324591
 
 FTM_BIAS = 0.
 FTM_COEFF = 100.
@@ -144,7 +144,7 @@ if __name__ == '__main__':
     set_mcs.last_mcs = -1
     default_tx_power = 20.0
 
-    kf = kalman_filter(KF_SENSOR_NOISE, SIGMA_X, SIGMA_V)
+    kf = kalman_filter(KF_SENSOR_NOISE, SIGMA_R, SIGMA_V)
     state = kf.init(timestamp=time())
 
     while True:

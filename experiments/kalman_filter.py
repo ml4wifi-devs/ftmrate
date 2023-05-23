@@ -64,19 +64,19 @@ class ContinuousLocalLinearTrend(OrnsteinUhlenbeckProcess):
     https://www.wolfram.com/mathematica/new-in-10/enhanced-random-processes/identify-regularly-sampled-ornstein-uhlenbeck-proc.html
     """
 
-    def __init__(self, sigma_x: float, sigma_v: float) -> None:
+    def __init__(self, sigma_r: float, sigma_v: float) -> None:
         super().__init__(beta=-sm.ImmutableMatrix([[0, 1], [0, 0]]),
                          sigma=sm.ImmutableMatrix(
-                             [[sm.Symbol('\sigma_x'), 0], [0, sm.Symbol('\sigma_v')]]))
+                             [[sm.Symbol('\sigma_r'), 0], [0, sm.Symbol('\sigma_v')]]))
 
-        self.sigma_x = sigma_x
+        self.sigma_r = sigma_r
         self.sigma_v = sigma_v
 
     def to_numpy(self) -> Tuple[DynamicArray, DynamicArray]:
         transition_fn, transition_cov_fn, _ = super().to_numpy()
 
-        transition_fn = partial(transition_fn, self.sigma_v, self.sigma_x)
-        transition_cov_fn = partial(transition_cov_fn, self.sigma_v, self.sigma_x)
+        transition_fn = partial(transition_fn, self.sigma_v, self.sigma_r)
+        transition_cov_fn = partial(transition_cov_fn, self.sigma_v, self.sigma_r)
 
         return transition_fn, transition_cov_fn
 
@@ -95,7 +95,7 @@ class KalmanFilterState:
     time: float
 
 
-def kalman_filter(sensor_noise: float, sigma_x: float, sigma_v: float) -> BaseAgent:
+def kalman_filter(sensor_noise: float, sigma_r: float, sigma_v: float) -> BaseAgent:
     """
     Kalman Filter for FTM distance estimation.
 
@@ -103,7 +103,7 @@ def kalman_filter(sensor_noise: float, sigma_x: float, sigma_v: float) -> BaseAg
     ----------
     sensor_noise : float
         Sensor noise variance
-    sigma_x : float
+    sigma_r : float
         Distance process noise variance for SDE dynamics
     sigma_v : float
         Drift process noise variance for SDE dynamics
@@ -114,7 +114,7 @@ def kalman_filter(sensor_noise: float, sigma_x: float, sigma_v: float) -> BaseAg
         Container for functions of the KF
     """
 
-    F_fn, Q_fn = ContinuousLocalLinearTrend(sigma_x, sigma_v).to_numpy()
+    F_fn, Q_fn = ContinuousLocalLinearTrend(sigma_r, sigma_v).to_numpy()
     H = np.array([[1., 0.]])
     R = np.array([[sensor_noise]])
     

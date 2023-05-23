@@ -53,7 +53,7 @@ def log_prob(params: Params, observations: Array) -> chex.Numeric:
 
     llt = sde.ContinuousLocalLinearTrend()
     # Restore default `jaxify` behaviour for `ContinuousLocalLinearTrend`
-    # symbols _ [\sigma_v, \sigma_x, t]
+    # symbols _ [\sigma_v, \sigma_r, t]
     transition_fn, transition_cov_fn, _ = sde.OrnsteinUhlenbeckProcess.jaxify(llt, cholesky=True)
 
     def pf_transition_fn(particles: Dict[str, Array], t_delta: Scalar) -> tfd.Distribution:
