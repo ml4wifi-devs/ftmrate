@@ -117,7 +117,7 @@ def generate_data(
 
 
 CSV_FILES_DIR = 'csv_files'
-PARAMS_HEADER = 'mcs,loc,scale,skewness,tailweight,es_alpha,es_beta,kf_sensor_noise,sigma_x,sigma_v\n'
+PARAMS_HEADER = 'mcs,loc,scale,skewness,tailweight,es_alpha,es_beta,kf_sensor_noise,sigma_r,sigma_v\n'
 
 
 def load_parameters_file(name: str = 'parameters.csv'):

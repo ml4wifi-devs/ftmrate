@@ -19,5 +19,5 @@ module load cuda/11.3.1
 module load cudnn/8.2.1.32-cuda-11.3.1
 
 source $PLG_GROUPS_STORAGE/plggml4wifi/venv/bin/activate
-
+echo "$SLURM_JOB_NAME"
 make "$SLURM_JOB_NAME"
