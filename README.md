@@ -4,9 +4,9 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ## Installation
 
-### FTMRate Repository
-
 **Note:** if you want to run FTMRate in an out-of-band scenario, please follow the instructions in the `main` branch.
+
+### FTMRate Repository
 
 1. Clone the repository:
 	```
@@ -26,7 +26,7 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ### ns-3 network simulator
 
-To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by downloading the official distribution, apply the [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3) path, and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
+To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by downloading the official distribution, apply the [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3) patch, and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
 [official installation notes](https://www.nsnam.org/wiki/Installation).
 
 1. Download and unzip ns-3.35:

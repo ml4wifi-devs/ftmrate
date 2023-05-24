@@ -19,7 +19,7 @@ class SDETestCase(unittest.TestCase):
                 [0, 0]
             ]),
             sigma=sm.ImmutableMatrix([
-                [sm.Symbol('\sigma_x'), 0],
+                [sm.Symbol('\sigma_r'), 0],
                 [0, sm.Symbol('\sigma_v')]
             ])
         )
