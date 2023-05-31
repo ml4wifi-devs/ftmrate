@@ -13,12 +13,13 @@ from kalman_filter import kalman_filter
 FTM_INTERVAL = 0.5
 N_SAMPLES = 100
 
-WIFI_MODES_RATES = np.array([6., 9., 12., 18., 24., 36., 48., 54.])
+#WIFI_MODES_RATES = np.array([6., 9., 12., 18., 24., 36., 48., 54.])
+WIFI_MODES_RATES = np.array([6.5, 13., 19.5, 26., 39., 52, 58.5, 65., 13., 26., 39., 52., 78., 104., 117., 130.])
 
 # Values estimated from experiments
 KF_SENSOR_NOISE = 0.7455304265022278
-SIGMA_R = 0.83820117
-SIGMA_V = 0.3324591
+SIGMA_X = 1.3213624954223633
+SIGMA_V = 0.015552043914794922
 
 FTM_BIAS = 0.
 FTM_COEFF = 100.
@@ -27,6 +28,14 @@ SNR_EXPONENT = 2.0
 SNR_SHIFT = 20.
 
 WIFI_MODES_SNRS = np.array([
+    [10.613624240405125, 0.3536],
+    [10.647249582547907, 0.3536],
+    [10.660723984151614, 0.3536],
+    [10.682584060100158, 0.3536],
+    [11.151267538857537, 0.3536],
+    [15.413200906170632, 0.3536],
+    [16.735812667249125, 0.3536],
+    [18.091175930406580, 0.3536],
     [10.613624240405125, 0.3536],
     [10.647249582547907, 0.3536],
     [10.660723984151614, 0.3536],
@@ -120,7 +129,8 @@ def set_mcs(mcs: int) -> None:
     if set_mcs.last_mcs == mcs:
         return
 
-    RATE_MCS_ANT_MSK = 0x08000
+    #RATE_MCS_ANT_MSK = 0x08000
+    RATE_MCS_ANT_MSK = 0x0c000
     RATE_MCS_HT_MSK  = 0x00100
 
     monitor_tx_rate = 0x0
@@ -130,7 +140,8 @@ def set_mcs(mcs: int) -> None:
 
     mask = '0x{:05x}'.format(monitor_tx_rate)
     set_mcs.last_mcs = mcs
-
+    print(mcs)
+    
     path = '/sys/kernel/debug/ieee80211/'
     path += os.listdir(path)[0] + '/'
     path += [f for f in os.listdir(path) if re.match(r'.*:wl.*', f)][0] + '/stations/'
@@ -144,7 +155,7 @@ if __name__ == '__main__':
     set_mcs.last_mcs = -1
     default_tx_power = 20.0
 
-    kf = kalman_filter(KF_SENSOR_NOISE, SIGMA_R, SIGMA_V)
+    kf = kalman_filter(KF_SENSOR_NOISE, SIGMA_X, SIGMA_V)
     state = kf.init(timestamp=time())
 
     while True:
@@ -162,7 +173,7 @@ if __name__ == '__main__':
             rates_mean = expected_rates(default_tx_power)(distance_dist).sample(N_SAMPLES).mean(axis=0)
             best_mcs = np.argmax(rates_mean)
 
-            print(f'Best MCS: {best_mcs}')
+    #        print(f'Best MCS: {best_mcs}')
             set_mcs(best_mcs)
 
             sleep(0.1)
