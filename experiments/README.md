@@ -23,7 +23,8 @@ be taken at shorter distances.
 	```
 
 Note that the packages listed in `requirements.txt` differ from the ones in the root directory. This file contains 
-minimal requirements for running experiments on hardware.
+minimal requirements for running experiments on hardware. During the calibration process, you may need to install
+matplotlib and pandas packages.
 
 **Attention!** Before starting calibration and hardware tests, make sure that the appropriate MAC addresses of the 
 station and access point are in the configuration files and scripts.
@@ -147,6 +148,14 @@ cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/success_probability
 Since successive measurements may have significantly different results (even for the same distance), it is recommended 
 to view the results manually and discard outliers. The visualization can be started quickly with `visualize.py`.
 After processing the results, save them in the `data.csv` file.
+
+Now you have to transform the distance to the RSSI (hence our method transforms the distance to the RSSI and then
+transforms the RSSI to the expected rate). To do this, run the `covert_to_rssi.py` script with the estimated channel
+model parameters:
+
+```bash
+python3 convert_to_rssi.py --rssi_exponent 2.0 --rssi_shift -40.0
+```
 
 At the end, run a script that will fit CDF of the normal distribution to the data for each MCS:
 
