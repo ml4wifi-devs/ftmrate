@@ -80,7 +80,7 @@ Using the FTM measurements made earlier, you can calibrate the sensor noise for 
 
 ```bash
 cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/ftm
-python3 fit_kf.py --a 97.022 --b 289.461
+python3 fit_kf.py --a <A_VAL> --b <B_VAL>
 ```
 
 The results (variance of the sensor noise) should be assigned to constant `KF_SENSOR_NOISE` in the `ftmrate.py` file.
@@ -128,7 +128,7 @@ AP using specific MCS. At the same time, the AP should listen to the channel and
 
 2. Send frames from the station:
     ```bash
-    sudo python3 send_frames_sta.py --mcs 13
+    sudo python3 send_frames_sta.py --mcs <MCS_VAL>
     ```
     
 3. Stop listening on the AP (press `Ctrl+C`).
@@ -157,7 +157,7 @@ transforms the RSSI to the expected rate). To do this, run the `covert_to_rssi.p
 model parameters:
 
 ```bash
-python3 convert_to_rssi.py --rssi_exponent 2.0 --rssi_shift -40.0
+python3 convert_to_rssi.py --rssi_exponent <EXPONENT> --rssi_shift <SHIFT>
 ```
 
 At the end, run a script that will fit CDF of the normal distribution to the data for each MCS:
