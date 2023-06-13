@@ -1,4 +1,5 @@
 *
 !.gitignore
 !rssi.sh
-!fit_rssi.py
+!fit_channel.py
+!parse.py

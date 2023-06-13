@@ -24,7 +24,7 @@ be taken at shorter distances.
 
 Note that the packages listed in `requirements.txt` differ from the ones in the root directory. This file contains 
 minimal requirements for running experiments on hardware. During the calibration process, you may need to install
-matplotlib and pandas packages.
+matplotlib, pandas, and seaborn packages.
 
 **Attention!** Before starting calibration and hardware tests, make sure that the appropriate MAC addresses of the 
 station and access point are in the configuration files and scripts.
@@ -63,9 +63,11 @@ The file naming convention we use is `dX_Y.out`, where `X` is the distance and `
 multiple measurements to fail and have a high variance. For each distance, we make 5 measurements arranged in a cross 
 with measuring points 6 cm apart (i.e. a wavelength with a frequency of 2.4 GHz).
 
-With all measurements saved, run a script that will fit the line to the data and determine the correction factors for FTM:
+With all measurements saved, run a script that will parse the collected files and then run a script that will fit the 
+line to the data and determine the correction factors for FTM:
 
 ```bash
+python3 parse.py
 python3 fit_ftm.py
 ```
 
@@ -74,11 +76,11 @@ The results (coefficients of the line) should be assigned to constants `FTM_COEF
 ### Kalman filter sensor noise calibration
 
 Using the FTM measurements made earlier, you can calibrate the sensor noise for the Kalman filter. To do this, run the
-`fit_kf.py` script.
+`fit_kf.py` script (it requires fitted coefficients of the line):
 
 ```bash
 cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/ftm
-python3 fit_kf.py
+python3 fit_kf.py --a 97.022 --b 289.461
 ```
 
 The results (variance of the sensor noise) should be assigned to constant `KF_SENSOR_NOISE` in the `ftmrate.py` file.
@@ -100,10 +102,11 @@ The file naming convention remains the same as for FTM calibration.
 **Attention!** We recommend taking multiple measurements for each distance due to multipath fading, which can cause 
 significant fluctuations in signal strength.
 
-With all measurements saved, run a script that will fit the log-distance path loss model to the data and determine
-the exponent and shift:
+With all measurements saved, run a script that will parse the collected files and then run a script that will fit the
+log-distance path loss model to the data and determine the exponent and shift:
 
 ```bash
+python3 parse.py
 python3 fit_channel.py
 ```
 
