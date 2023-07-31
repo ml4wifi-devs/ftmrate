@@ -1,5 +1,8 @@
 #!/bin/bash
 
+ORIGIN_DIR=$(pwd)
+cd $1
+
 FILENAME="data_raw.csv"
 echo "mode,distance,k,n" > $FILENAME
 
@@ -19,3 +22,5 @@ for file in *.pcap; do
 
     echo "$MCS,$D,$K,$N" >> "$FILENAME"
 done
+
+mv $FILENAME $ORIGIN_DIR

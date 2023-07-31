@@ -11,7 +11,7 @@ def distance_to_rssi(distance: float, exponent: float, shift: float) -> float:
 if __name__ == '__main__':
     args = ArgumentParser()
     args.add_argument('--rssi_exponent', type=float, required=True)
-    args.add_argument('--rssi_shift', type=float, required=True)
+    args.add_argument('--rssi_shift', type=float, required=True)    # The exact as from the RSSI curve fir, with the same sign!
     args = args.parse_args()
 
     data = pd.read_csv('data.csv')

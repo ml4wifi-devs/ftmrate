@@ -15,9 +15,14 @@ if __name__ == '__main__':
         for line in rssi_file.readlines():
 
             # print(len(line.split(" ")))
-            if len(line.split(" ")) == 20:
+            if len(line.split(" ")) == 20: 
                 rssi_val = line.split(" ")[4][:-3]
-                rssi_matrix.append([distance, rssi_val])
+                try:
+                    rssi_val_float = float(rssi_val)
+                    if rssi_val_float < -60:
+                        rssi_matrix.append([distance, rssi_val])
+                except ValueError:
+                    print(f'Parsing Exception: "{rssi_val}"')
 
     rssi_matrix = np.array(rssi_matrix, dtype=np.float64)
     np.random.shuffle(rssi_matrix)
