@@ -1,3 +1,5 @@
+import os
+import re
 from argparse import ArgumentParser
 
 from scapy.all import *

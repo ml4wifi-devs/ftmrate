@@ -6,31 +6,11 @@ from tensorflow_probability.substrates import numpy as tfp
 
 tfd = tfp.distributions
 
-PROPOSALS = [
-    (-100, 10),         # MCS 0
-    (-100, 10),         # MCS 1
-    (-100, 10),         # MCS 2
-    (-100, 10),         # MCS 3
-    (-79, 1),         # MCS 4
-    (-78, 5),         # MCS 5
-    (-77, 5),         # MCS 6
-    (-73, 5),         # MCS 7
-    (-100, 10),         # MCS 8
-    (-100, 10),         # MCS 9
-    (-82, 1),         # MCS 10
-    (-80, 1),         # MCS 11
-    (-77, 5),         # MCS 12
-    (-71, 100),         # MCS 13
-    (-71, 100),         # MCS 14
-    (-71, 100),         # MCS 15
-]
-
 
 def plot_estimated(x: np.ndarray, y: np.ndarray, y_hat: np.ndarray, title: str, legend_title: str = None) -> None:
     plt.scatter(x, y, label='Measurements', marker='o', s=40, alpha=0.3)
     plt.plot(x, y_hat, label='Estimated')
 
-    # plt.xlim((-80, -50))
     plt.ylim((-0.015, 1.015))
     plt.ylabel('Success probability')
     plt.xlabel('RSSI [dBm]')
@@ -49,7 +29,7 @@ def cdf_fn(x: np.ndarray, loc: float, scale: float) -> np.ndarray:
 if __name__ == '__main__':
     data = pd.read_csv('data.csv')
 
-    for mode, proposal in zip(range(16), PROPOSALS):
+    for mode in range(16):
         df = data[(data['mode'] == mode) & (data['n'] > 0)].sort_values('rssi')
         rssi = df['rssi'].to_numpy(dtype=np.float64)
         p_s = (df['k'] / df['n']).to_numpy(dtype=np.float64)
