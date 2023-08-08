@@ -47,7 +47,7 @@ def cdf_fn(x: np.ndarray, loc: float, scale: float) -> np.ndarray:
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('data_augmented.csv')
+    data = pd.read_csv('data.csv')
 
     for mode, proposal in zip(range(16), PROPOSALS):
         df = data[(data['mode'] == mode) & (data['n'] > 0)].sort_values('rssi')
@@ -55,7 +55,9 @@ if __name__ == '__main__':
         p_s = (df['k'] / df['n']).to_numpy(dtype=np.float64)
         p_s = np.clip(p_s, 0, 1)
 
-        (loc, scale), cov = curve_fit(f=cdf_fn, xdata=rssi, ydata=p_s, p0=proposal)
+        (loc, scale), cov = curve_fit(f=cdf_fn, xdata=rssi, ydata=p_s, bounds=[
+            [-150, 0], [-50, 10]
+        ])
         loc_std, scale_std = np.sqrt(np.diag(cov))
 
         params_str = f'loc={loc:.3f} +/- {loc_std:.3f}\nscale={scale:.3f} +/- {scale_std:.3f}\n'
