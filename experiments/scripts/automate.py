@@ -1,5 +1,6 @@
 import paramiko
 from argparse import ArgumentParser
+import winsound
 
 
 # Configuration
@@ -68,4 +69,4 @@ if __name__ == '__main__':
     print(f"[Info] MCS values: {args.mcs}")
     
     measure(distance=args.distance, measurement=args.measurement, mcs_vals=args.mcs)
-
+    winsound.PlaySound("sound.wav", winsound.SND_ALIAS)
