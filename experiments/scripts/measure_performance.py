@@ -1,6 +1,6 @@
 import paramiko
 import argparse
-import winsound
+from playsound import playsound
 import time
 
 
@@ -49,7 +49,6 @@ def measure(framerate, duration,useFtmrate):
         # sta_channel = sta_transport.open_session()
         # sta_channel.get_pty()
         # sta_channel.set_combine_stderr(True)    
-        # 
 
         # Enable FTMRAte
         if useFtmrate:
@@ -70,7 +69,9 @@ def measure(framerate, duration,useFtmrate):
         # Send frames from STA
         print("Sending frames from STA")
         sta_ssh.exec_command(STA_TRANSMIT_CMD + str(framerate) + " &")
-        time.sleep(duration)
+        # Play sound to indicate start of experiment
+        playsound('./sound.wav')
+        time.sleep(duration-1) # -1 s to account for the duration of sound.wav
 
         # Cleanup
         print("Killing traffic generator")
@@ -99,4 +100,6 @@ if __name__ == '__main__':
         print("[Info] Data rate manager: default")
     
     measure(framerate=args.framerate, duration=args.duration, useFtmrate=args.useFtmrate)
-    winsound.PlaySound("sound.wav", winsound.SND_ALIAS)
+    
+    # Play sound to indicate end of experiment
+    playsound('./sound.wav')
