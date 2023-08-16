@@ -37,7 +37,7 @@ if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
     fig, axes = plt.subplots(2, 1, sharex='col')
 
-    for distance, ax in zip([0, 20], axes):
+    for distance, ax in zip([1, 20], axes):
         plot_results(ax, distance)
 
     axes[0].tick_params('x', labelbottom=False, bottom=False)
