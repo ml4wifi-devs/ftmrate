@@ -34,6 +34,58 @@ run_equal_distance() {
   done
 }
 
+run_hidden_node_distance() {
+  N_REP=10
+  N_POINTS=17
+  N_WIFI=$1
+
+  for (( i = 0; i < MANAGERS_LEN; i++ )); do
+    MANAGER=${MANAGERS[$i]}
+    MANAGER_NAME=${MANAGERS_NAMES[$i]}
+    ARRAY_SHIFT=0
+
+    for (( j = 1; j <= N_POINTS; j++)); do
+      DISTANCE=$(( 5 * j + 20 ))
+      SIM_TIME=$(( 20 * N_WIFI + 50 ))
+
+      START=$ARRAY_SHIFT
+      END=$(( ARRAY_SHIFT + N_REP - 1 ))
+
+      ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
+
+      sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/hidden_node/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME"
+    done
+
+    SHIFT=$(( SHIFT + N_POINTS * N_REP ))
+  done
+}
+
+run_hidden_node_nwifi() {
+  N_REP=10
+  N_POINTS=10
+  DISTANCE=$1
+
+  for (( i = 0; i < MANAGERS_LEN; i++ )); do
+    MANAGER=${MANAGERS[$i]}
+    MANAGER_NAME=${MANAGERS_NAMES[$i]}
+    ARRAY_SHIFT=0
+
+    for (( j = 1; j <= N_POINTS; j++)); do
+      N_WIFI=$(( j ))
+      SIM_TIME=$(( 20 * N_WIFI + 50 ))
+
+      START=$ARRAY_SHIFT
+      END=$(( ARRAY_SHIFT + N_REP - 1 ))
+
+      ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
+
+      sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/hidden_node/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME"
+    done
+
+    SHIFT=$(( SHIFT + N_POINTS * N_REP ))
+  done
+}
+
 run_rwpm() {
   N_REP=40
   N_WIFI=10
@@ -121,23 +173,23 @@ run_power_moving() {
 
 ### Run section
 
-echo -e "\nQueue equal distance (d=0) scenario"
-run_equal_distance 0
+echo -e "\nQueue equal distance (d=1) scenario"
+run_equal_distance 1
 
 echo -e "\nQueue equal distance (d=20) scenario"
 run_equal_distance 20
+
+echo -e "\nQueue hidden node scenario with varying distance"
+run_hidden_node_distance 1
+
+echo -e "\nQueue hidden node scenario with varying nWifi"
+run_hidden_node_nwifi 30
 
 echo -e "\nQueue moving station (v=1) scenario"
 run_moving 1 56 1
 
 echo -e "\nQueue moving station (v=2) scenario"
 run_moving 2 28 "0.5"
-
-echo -e "\nQueue static stations scenario"
-run_rwpm 0
-
-echo -e "\nQueue mobile stations scenario"
-run_rwpm "1.4"
 
 echo -e "\nQueue power with moving station (delta=5, interval=4, v=0, start=5) scenario"
 run_power_moving 5 4 0 5
@@ -150,3 +202,9 @@ run_power_static 1 15
 
 echo -e "\nQueue power with multiple static stations (nWiFi=10, delta=15) scenario"
 run_power_static 10 15
+
+echo -e "\nQueue static stations scenario"
+run_rwpm 0
+
+echo -e "\nQueue mobile stations scenario"
+run_rwpm "1.4"
