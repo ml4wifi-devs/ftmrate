@@ -70,7 +70,7 @@ def measure(framerate, duration, useFtmrate):
 
         # Send frames from STA
         print("Sending frames from STA")
-        sta_ssh.exec_command(f'{STA_TRANSMIT_CMD} {framerate} &')
+        sta_ssh.exec_command(f'{STA_TRANSMIT_CMD} {framerate} > /dev/null &')
         # Play sound to indicate start of experiment
         playsound('./sound.wav')
         time.sleep(duration - 1)  # -1 s to account for the duration of sound.wav
