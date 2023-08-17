@@ -1,7 +1,8 @@
-import paramiko
 import argparse
-from playsound import playsound
 import time
+
+import paramiko
+from playsound import playsound
 
 
 # Configuration
@@ -16,8 +17,8 @@ HOME_DIR = '/home/opus'
 AP_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/ap.pcap"
 STA_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/sta2.pcap"
 
-STA_TRANSMIT_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/run_send_frames.py {HOME_DIR}"
-STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/run_ftmrate.py {HOME_DIR} > {HOME_DIR}/ftmrate_log &"
+STA_TRANSMIT_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_send_frames.sh {HOME_DIR}"
+STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_ftmrate.sh {HOME_DIR} > {HOME_DIR}/ftmrate_log &"
 
 SLEEP_CMD = "sleep " + str(TIMEOUT)
 
@@ -69,10 +70,10 @@ def measure(framerate, duration, useFtmrate):
 
         # Send frames from STA
         print("Sending frames from STA")
-        sta_ssh.exec_command(STA_TRANSMIT_CMD + str(framerate) + " &")
+        sta_ssh.exec_command(f'{STA_TRANSMIT_CMD} {framerate} &')
         # Play sound to indicate start of experiment
         playsound('./sound.wav')
-        time.sleep(duration-1) # -1 s to account for the duration of sound.wav
+        time.sleep(duration - 1)  # -1 s to account for the duration of sound.wav
 
         # Cleanup
         print("Killing traffic generator")
