@@ -4,14 +4,15 @@ import winsound
 
 
 # Configuration
-AP_HOSTNAME  = '192.168.1.1'
+AP_HOSTNAME = '192.168.1.1'
 STA_HOSTNAME = '192.168.1.7'
 PORT = 22
-USERNAME = 'root' # Root us required since paramiko does not support sudo
+USERNAME = 'root'  # Root us required since paramiko does not support sudo
 PASSWORD = 'opus'
+HOME_DIR = '/home/opus'
 
 AP_CMD = "tcpdump -i mon0 -e 'ether host 00:c2:c6:e6:9a:ec' -w mcs"
-STA_CMD = "/home/opus/ftmrate_venv/bin/python3.8 /home/opus/experiments/ps_test.py --mcs="
+STA_CMD = f"{HOME_DIR}/ftmrate_venv/bin/python3.8 {HOME_DIR}/ftmrate_internal/experiments/success_probability/send_frames_sta.py --mcs "
 
 
 def measure(distance, measurement, mcs_vals):

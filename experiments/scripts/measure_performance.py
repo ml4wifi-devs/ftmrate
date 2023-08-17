@@ -5,23 +5,24 @@ import time
 
 
 # Configuration
-AP_HOSTNAME  = '192.168.1.1'
+AP_HOSTNAME = '192.168.1.1'
 STA_HOSTNAME = '192.168.1.7'
 PORT = 22
-USERNAME = 'root' # Root us required since paramiko does not support sudo
+USERNAME = 'root'  # Root us required since paramiko does not support sudo
 PASSWORD = 'opus'
 TIMEOUT = 5
+HOME_DIR = '/home/opus'
 
-AP_MONITOR_CMD = "nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w /home/opus/ap.pcap"
-STA_MONITOR_CMD = "nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w /home/opus/sta2.pcap"
+AP_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/ap.pcap"
+STA_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/sta2.pcap"
 
-STA_TRANSMIT_CMD = "nohup /home/opus/ftmrate_internal/experiments/wyslij_ramki "
-STA_FTMRATE_CMD = "nohup /home/opus/ftmrate_internal/experiments/uruchom_ftmrate > /home/opus/ftmrate_log &"
+STA_TRANSMIT_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/run_send_frames.py {HOME_DIR}"
+STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/run_ftmrate.py {HOME_DIR} > {HOME_DIR}/ftmrate_log &"
 
 SLEEP_CMD = "sleep " + str(TIMEOUT)
 
-# def measure(distance, measurement, mcs_vals):
-def measure(framerate, duration,useFtmrate):
+
+def measure(framerate, duration, useFtmrate):
 
     with paramiko.SSHClient() as ap_ssh, paramiko.SSHClient() as sta_ssh:
         # Open SSH connection to AP
@@ -89,11 +90,11 @@ if __name__ == '__main__':
     args = argparse.ArgumentParser()
     args.add_argument('-r', '--framerate', required=True, type=int, help="Station packet generation rate")
     args.add_argument('-d', '--duration', required=True, type=int, help="Measurement duration [s]")
-    args.add_argument('--useFtmrate', action=argparse.BooleanOptionalAction,
-                       help="Enable FTMRate as the rate manager")
+    args.add_argument('--useFtmrate', action=argparse.BooleanOptionalAction, help="Enable FTMRate as the rate manager")
     args = args.parse_args()
     
     print(f"[Info] Generating packets at a rate of {args.framerate} for {args.duration} seconds")
+
     if args.useFtmrate:
         print("[Info] Data rate manager: FTMRate")
     else:

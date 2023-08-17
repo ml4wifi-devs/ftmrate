@@ -1,5 +1,7 @@
 import os
 import re
+import signal
+import sys
 import subprocess
 from time import time, sleep
 
@@ -8,6 +10,9 @@ import tensorflow_probability.substrates.numpy.bijectors as tfb
 
 from kalman_filter import kalman_filter
 
+
+# Configuration
+HOME_DIR = '/home/opus'
 
 # FTMRate constants
 FTM_INTERVAL = 0.5
@@ -26,7 +31,7 @@ FTM_COEFF = 152.71236
 RSSI_EXPONENT = 1.31177 
 RSSI_SHIFT = 67.81936
 
-WIFI_MODES_SNRS = np.array([
+WIFI_MODES_RSSIS = np.array([
     [-97.58278408366853, 9.999999999999893],
     [-98.54009444684868, 9.99999999999753],
     [-97.16405000702329, 9.99999999999969],
@@ -45,6 +50,9 @@ WIFI_MODES_SNRS = np.array([
     [-56.912850080258735, 9.999999999999526],
 ])
 
+# Minimum distance that can be measured by FTM
+MIN_DISTANCE = 2.0
+
 
 def expected_rates(delta_tx_power: float = 0.) -> tfb.Bijector:
     """
@@ -53,8 +61,8 @@ def expected_rates(delta_tx_power: float = 0.) -> tfb.Bijector:
         1. Logarithm                                       \
         2. Scale by -10 * RSSI_EXPONENT / np.log(10.)       | log-distance channel model
         3. Shift by delta_tx_power - RSSI_SHIFT                  /
-        4. Shift by -WIFI_MODES_SNRS[:, 0]                 \
-        5. Scale by -WIFI_MODES_SNRS[:, 1]                  | success probability
+        4. Shift by -WIFI_MODES_RSSIS[:, 0]                 \
+        5. Scale by -WIFI_MODES_RSSIS[:, 1]                  | success probability
         6. Apply CDF of a standard normal distribution     /
         7. Scale by WIFI_MODES_RATES                       |  success probability to expected rate
 
@@ -72,8 +80,8 @@ def expected_rates(delta_tx_power: float = 0.) -> tfb.Bijector:
     return tfb.Chain([
         tfb.Scale(WIFI_MODES_RATES),
         tfb.NormalCDF(),
-        tfb.Scale(WIFI_MODES_SNRS[:, 1]),
-        tfb.Shift(-WIFI_MODES_SNRS[:, 0]),
+        tfb.Scale(WIFI_MODES_RSSIS[:, 1]),
+        tfb.Shift(-WIFI_MODES_RSSIS[:, 0]),
         tfb.Shift(delta_tx_power - RSSI_SHIFT),
         tfb.Scale(-10 * RSSI_EXPONENT / np.log(10.)),
         tfb.Log()
@@ -94,20 +102,24 @@ def is_connected() -> bool:
     return 'not connected' not in output.lower()
 
 
-def get_ftm_measurement() -> float:
+def get_ftm_measurement(min_distance: float) -> float:
     """
     Returns a single FTM measurement. The function calls a shell script that runs the FTM
     measurement and returns the raw distance in centimeters. The measurement is corrected
     by experimentally estimated bias and coefficient. If the measurement is invalid,
     raises a ValueError.
 
+    Parameters
+    ----------
+    min_distance : float
+        The minimum distance to measure.
     Returns
     -------
     float
         The distance in meters.
     """
 
-    output = subprocess.check_output('/home/opus/experiments/measure_distance.sh', universal_newlines=True)
+    output = subprocess.check_output(f'{HOME_DIR}/ftmrate_internal/experiments/measure_distance.sh', universal_newlines=True)
     data = output.split("\n")
 
     status = int(data[1].split(" ")[-1])
@@ -116,7 +128,8 @@ def get_ftm_measurement() -> float:
     if status != 0 or raw_distance < -1000:
         return -np.inf
 
-    return (raw_distance - FTM_BIAS) / FTM_COEFF
+    distance = (raw_distance - FTM_BIAS) / FTM_COEFF
+    return max(distance, min_distance)
 
 
 def set_mcs(mcs: int) -> None:
@@ -152,7 +165,18 @@ def set_mcs(mcs: int) -> None:
     os.system(f'echo {mask} | tee {path}')
 
 
+def signal_handler(sig, frame):
+    """
+    Handles SIGTERM signal by exiting the program.
+    """
+
+    set_mcs(0)
+    sys.exit(0)
+
+
 if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, signal_handler)
+
     last_time = -np.inf
     set_mcs.last_mcs = -1
 
@@ -161,7 +185,7 @@ if __name__ == '__main__':
 
     while True:
         if time() - last_time > FTM_INTERVAL and is_connected():
-            while (distance := get_ftm_measurement()) == -np.inf:
+            while (distance := get_ftm_measurement(MIN_DISTANCE)) == -np.inf:
                 pass
 
             print(f'FTM distance: {distance:.2f} m')
