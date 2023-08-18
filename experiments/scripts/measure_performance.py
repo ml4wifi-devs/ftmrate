@@ -38,22 +38,9 @@ def measure(framerate, duration, useFtmrate):
         # Stop any leftover running processes (tcpdump on AP and STA, frame generation on STA)
         ap_ssh.exec_command("pkill tcpdump") 
         sta_ssh.exec_command("pkill tcpdump") 
-        sta_ssh.exec_command("pkill python3") 
+        sta_ssh.exec_command("pkill python3")
 
-        ### Use transport channels (block below) if processes get killed after execution
-        ## Open SSH transport channel on AP
-        # ap_transport = ap_ssh.get_transport()
-        # ap_channel = ap_transport.open_session()
-        # ap_channel.get_pty()
-        # ap_channel.set_combine_stderr(True)
-
-        # # Open SSH transport channel on STA
-        # sta_transport = sta_ssh.get_transport()
-        # sta_channel = sta_transport.open_session()
-        # sta_channel.get_pty()
-        # sta_channel.set_combine_stderr(True)    
-
-        # Enable FTMRAte
+        # Enable FTMRate
         if useFtmrate:
             print("Starting FTMRate on STA")    
             sta_ssh.exec_command(STA_FTMRATE_CMD)
@@ -73,7 +60,7 @@ def measure(framerate, duration, useFtmrate):
         print("Sending frames from STA")
         sta_ssh.exec_command(f'{STA_TRANSMIT_CMD} {framerate} > /dev/null &')
         # Play sound to indicate start of experiment
-        playsound('./sound.wav')
+        playsound('../resources/sound.wav')
         time.sleep(duration - 1)  # -1 s to account for the duration of sound.wav
 
         # Cleanup
@@ -105,4 +92,4 @@ if __name__ == '__main__':
     measure(framerate=args.framerate, duration=args.duration, useFtmrate=args.useFtmrate)
     
     # Play sound to indicate end of experiment
-    playsound('./sound.wav')
+    playsound('../resources/sound.wav')
