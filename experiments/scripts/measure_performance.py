@@ -1,5 +1,6 @@
 import argparse
 import time
+from datetime import datetime
 
 import paramiko
 from playsound import playsound
@@ -14,8 +15,8 @@ PASSWORD = 'opus'
 TIMEOUT = 5
 HOME_DIR = '/home/opus'
 
-AP_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/ap.pcap"
-STA_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/sta2.pcap"
+AP_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/ap-{datetime.now().strftime('%Y%m%d-%H%M%S')}.pcap"
+STA_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/sta-{datetime.now().strftime('%Y%m%d-%H%M%S')}.pcap"
 
 STA_TRANSMIT_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_send_frames.sh {HOME_DIR}"
 STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_ftmrate.sh {HOME_DIR} > {HOME_DIR}/ftmrate_log &"
