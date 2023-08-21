@@ -92,7 +92,7 @@ def main() -> None:
     NS3_ARGS['dataRate'] = args.dataRate
     NS3_ARGS['delta'] = args.delta
     NS3_ARGS['fuzzTime'] = args.fuzzTime
-    NS3_ARGS['idealDistance'] = args.idealDistance
+    NS3_ARGS['idealDistance'] = args.idealDistance or args.ml_manager == 'oracle_ftm'
     NS3_ARGS['interval'] = args.interval
     NS3_ARGS['lossModel'] = args.lossModel
     NS3_ARGS['managerName'] = args.managerName if args.managerName else args.ml_manager
