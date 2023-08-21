@@ -114,32 +114,22 @@ The results should be assigned to constants `RSSI_EXPONENT` and `RSSI_SHIFT` in 
 
 ### Estimation of the success probability
 
-The last step is to estimate the success probability of transmission for each MCS. To do this, you need to repeat this 
-procedure multiple times at different distances for each MCS. The station should send a certain number of frames to the 
-AP using specific MCS. At the same time, the AP should listen to the channel and count the number of frames it receives.
+The last step is to estimate the success probability of transmission for each MCS. The station should send a certain 
+number of frames to the AP using specific MCS. At the same time, the AP should listen to the channel and count the 
+number of frames it receives.
 
-1. Start listening on the AP:
-    ```bash
-    cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/success_probability
-    sudo ./listen_ap.sh mcs13_d10_0.out
-    ```
-   The file naming convention we use is `mcsX_dY_Z.out`, where `X` is the MCS, `Y` is the distance and `Z` is the
-   measurement number.
+We have prepared a script that allows you to easily measure success probability for each MCS:
 
-2. Send frames from the station:
-    ```bash
-    sudo python3 send_frames_sta.py --mcs <MCS_VAL>
-    ```
-    
-3. Stop listening on the AP (press `Ctrl+C`).
-
-4. Repeat steps 1-3 for each MCS. Note that you don't have to measure the entire range of distances for each MCS.
-   The most important is the transition point, where the probability of success is between 0 and 1. You can cleverly 
-   find this point and then make measurements around it (to have points where a negligible number of frames are 
-   successfully transmitted, where some frames reach AP and in which all frames are successfully transmitted).
+```bash
+cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/success_probability
+sudo ./automate.py -d <DISTANCE> -m <MEASUREMENT NUMBER>
+```
 
 **Attention!** We recommend taking multiple measurements for each distance due to multipath fading, which can cause 
 significant fluctuations in signal strength.
+
+**Attention!** The script contains some constants that need to be configured before running experiments (e.g. 
+IP addresses of the station and AP, password, directories for saving results, etc.).
 
 Having all measurements saved, run a script that will gather all data and save it to a file (requires tshark to be installed):
 
@@ -147,10 +137,6 @@ Having all measurements saved, run a script that will gather all data and save i
 cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/success_probability
 ./parse.sh
 ```
-
-Since successive measurements may have significantly different results (even for the same distance), it is recommended 
-to view the results manually and discard outliers. The visualization can be started quickly with `visualize.py`.
-After processing the results, save them in the `data.csv` file.
 
 Now you have to transform the distance to the RSSI (hence our method transforms the distance to the RSSI and then
 transforms the RSSI to the expected rate). To do this, run the `covert_to_rssi.py` script with the estimated channel
@@ -166,6 +152,9 @@ At the end, run a script that will fit CDF of the normal distribution to the dat
 python3 fit_ps.py
 ```
 
+Since successive measurements may have significantly different results (even for the same distance), it is recommended 
+to view the results and manually discard outliers. The visualization is included in the `fit_ps.py` script.
+
 The results should be assigned to array `WIFI_MODES_SNRS` in the `ftmrate.py` file.
 
 ## Experiments
@@ -179,7 +168,21 @@ directory:
 - `conf` - configuration file for the `measure_distance.sh` script,
 - `send_frames.py` - script for sending frames to the AP.
 
-To conveniently carry out measurements, we recommend automatically running scripts `ftmrate.py` and `send_frames.py`, 
-which will allow you to start rate control and generate traffic. At the station and AP, we recommend using a monitor 
-and capturing traffic for later analysis. During our measurements, we also used an external station, which signaled the 
-start and end of measurements (this facilitates the synchronization of pcap files from the station and AP).
+### Automation script
+
+To conveniently carry out measurements, we have prepared a script that allows to automate the process of measuring
+the performance of FTMRate. The script has the following parameters:
+
+- `-r` or `--framerate` - the number of frames sent by scapy at once,
+- `-d` or `--duration` - the duration of the experiment in seconds,
+- `--useFtmrate` - flag indicating whether to use FTMRate or the default rate control algorithm.
+
+The script connects to the AP and station via SSH, (optionally) runs FTMRate on the station, enables sending frames
+from the station to the AP, and then runs tcpdump on the station and AP to collect the results. After the experiment,
+it kills all processes on the station and AP. The script signals the beginning and end of the experiment with a sound 
+signal.
+
+**Attention!** The script contains some constants that need to be configured before running experiments (e.g. 
+IP addresses of the station and AP, password, directories for saving results, etc.).
+
+> Dealing with ' Blowfish has been deprecated' warning - [link](https://github.com/paramiko/paramiko/issues/2038#issuecomment-1117345478).
