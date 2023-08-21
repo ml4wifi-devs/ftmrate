@@ -47,6 +47,14 @@ MlWifiManager::GetTypeId (void)
                    Mac48AddressValue (Mac48Address ("ff:ff:ff:ff:ff:ff")),
                    MakeMac48AddressAccessor (&MlWifiManager::m_apAddr),
                    MakeMac48AddressChecker ())
+    .AddAttribute ("Distance", "Distance between the station and the access point",
+                   DoubleValue (0.),
+                   MakeDoubleAccessor (&MlWifiManager::m_distance),
+                   MakeDoubleChecker<double_t> ())
+    .AddAttribute ("IdealDistance", "Pass ideal distance between the station and the AP to the environment",
+                   BooleanValue (false),
+                   MakeBooleanAccessor (&MlWifiManager::m_idealDistance),
+                   MakeBooleanChecker ())
   ;
   return tid;
 }
@@ -98,8 +106,8 @@ MlWifiManager::DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiMode 
 }
 
 void
-MlWifiManager::DoReportAmpduTxStatus (WifiRemoteStation *station, uint8_t nSuccessfulMpdus,
-                                      uint8_t nFailedMpdus, double rxSnr, double dataSnr,
+MlWifiManager::DoReportAmpduTxStatus (WifiRemoteStation *station, uint16_t nSuccessfulMpdus,
+                                      uint16_t nFailedMpdus, double rxSnr, double dataSnr,
                                       uint16_t dataChannelWidth, uint8_t dataNss)
 {
   NS_LOG_FUNCTION (this << station << nSuccessfulMpdus << nFailedMpdus << rxSnr << dataSnr
@@ -262,7 +270,11 @@ MlWifiManager::FtmSessionOver (FtmSession session)
 
   if (distance != 0 && distance < MAX_DISTANCE)
     {
-      m_distance = distance;
+      if (!m_idealDistance)
+        {
+          m_distance = distance;
+        }
+
       m_ftmCompleted = true;
     }
   else

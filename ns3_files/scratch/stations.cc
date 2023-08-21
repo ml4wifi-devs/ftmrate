@@ -44,6 +44,7 @@ std::map<uint32_t, uint64_t> warmupFlows;
 double fuzzTime = 5.;
 double warmupTime = 10.;
 double simulationTime = 50.;
+bool idealDistance = false;
 
 /***** Main with scenario definition *****/
 
@@ -85,6 +86,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("distance", "Distance between AP and STAs (m) - only for Distance mobility type",distance);
   cmd.AddValue ("ftmMap", "Path to FTM wireless error map", ftmMapPath);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
+  cmd.AddValue ("idealDistance", "Return ideal distance between AP and STA (m)", idealDistance);
   cmd.AddValue ("interval", "Interval between power change (s)", interval);
   cmd.AddValue ("lossModel", "Propagation loss model (LogDistance, Nakagami)", lossModel);
   cmd.AddValue ("manager", "Rate adaptation manager", rateAdaptationManager);
@@ -323,6 +325,9 @@ main (int argc, char *argv[])
                    "$ns3::MlWifiManager/ApAddress",
                Mac48AddressValue (Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ())));
 
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/IdealDistance",
+               BooleanValue (idealDistance));
 
   // Manage AMPDU aggregation
   if (!ampdu)
@@ -637,6 +642,14 @@ UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode)
                    "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
                    "$ns3::OracleWifiManager/Distance",
                DoubleValue (d));
+
+  if (idealDistance)
+    {
+      Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
+                       "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                       "$ns3::MlWifiManager/Distance",
+                   DoubleValue (d));
+    }
 
   Simulator::Schedule (Seconds (DISTANCE_UPDATE_INTERVAL), &UpdateDistance, staNode, apNode);
 }

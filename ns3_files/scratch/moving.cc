@@ -56,6 +56,7 @@ double simulationTime = 56.;
 double measurementsInterval = 2.;
 double delta = 0.;      // difference between 2 power levels in dB
 double interval = 4.;   // mean (exponential) interval between power change
+bool idealDistance = false;
 
 /***** Main with scenario definition *****/
 
@@ -85,6 +86,7 @@ main (int argc, char *argv[])
   cmd.AddValue ("delta", "Power change (dBm)", delta);
   cmd.AddValue ("ftmMap", "Path to FTM wireless error map", ftmMapPath);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
+  cmd.AddValue ("idealDistance", "Return ideal distance between AP and STA (m)", idealDistance);
   cmd.AddValue ("interval", "Interval between power change (s)", interval);
   cmd.AddValue ("lossModel", "Propagation loss model to use (LogDistance, Nakagami)", lossModel);
   cmd.AddValue ("measurementsInterval", "Interval between successive measurement points (s)",measurementsInterval);
@@ -223,6 +225,10 @@ main (int argc, char *argv[])
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
                    "$ns3::MlWifiManager/ApAddress",
                Mac48AddressValue (Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ())));
+
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/IdealDistance",
+               BooleanValue (idealDistance));
 
   // Manage AMPDU aggregation
   if (!ampdu)
@@ -559,6 +565,14 @@ UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode)
                    "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
                    "$ns3::OracleWifiManager/Distance",
                DoubleValue (d));
+
+  if (idealDistance)
+    {
+      Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
+                       "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                       "$ns3::MlWifiManager/Distance",
+                   DoubleValue (d));
+    }
 
   Simulator::Schedule (Seconds (DISTANCE_UPDATE_INTERVAL), &UpdateDistance, staNode, apNode);
 }

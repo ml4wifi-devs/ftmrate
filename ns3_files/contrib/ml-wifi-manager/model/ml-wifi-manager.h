@@ -45,8 +45,8 @@ public:
 private:
   WifiRemoteStation *DoCreateStation (void) const;
   void DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiMode txMode);
-  void DoReportAmpduTxStatus (WifiRemoteStation *station, uint8_t nSuccessfulMpdus,
-                              uint8_t nFailedMpdus, double rxSnr, double dataSnr,
+  void DoReportAmpduTxStatus (WifiRemoteStation *station, uint16_t nSuccessfulMpdus,
+                              uint16_t nFailedMpdus, double rxSnr, double dataSnr,
                               uint16_t dataChannelWidth, uint8_t dataNss);
   void DoReportRtsFailed (WifiRemoteStation *station);
   void DoReportDataFailed (WifiRemoteStation *station);
@@ -70,6 +70,7 @@ private:
   double m_power;       // current tx power
   double m_distance;    // current distance between STA and AP
   bool m_ftmCompleted;  // has the FTM measurement been completed
+  bool m_idealDistance; // pass the ideal distance to the module
 
   Ptr<WifiNetDevice> m_device;  // device where the manager is installed
   Mac48Address m_apAddr;        // MAC address of the AP
