@@ -5,21 +5,35 @@ import pandas as pd
 
 from tools.plots.common import *
 
+ALL_MANAGERS = {
+    'minstrel_false': 'Minstrel',
+    'minstrel_true': 'Minstrel\n(RTS/CTS)',
+    'kf_false': 'FTMRate w/ KF',
+    'kf_true': 'FTMRate w/ KF\n(RTS/CTS)'
+}
+
 
 def plot_results(ax: plt.Axes, distance: int) -> None:
-    colors = pl.cm.viridis(np.linspace(0., 1., len(ALL_MANAGERS) - 1))
+    colors = pl.cm.viridis(np.linspace(0., 1., 5))
+    colors_map = {
+        'minstrel_false': colors[0],
+        'kf_false': colors[3],
+        'minstrel_true': colors[0],
+        'kf_true': colors[3],
+    }
 
     df = pd.read_csv(DATA_FILE)
     df = df[(df.mobility == 'Hidden') & (df.distance == distance)]
 
     for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
-        mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'nWifi')
+        mean, ci_low, ci_high = get_thr_ci(df[df.manager.str.lower() == manager], 'nWifi')
 
         if manager == 'Oracle':
             ax.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
         else:
-            ax.plot(mean.index, mean, marker='o', markersize=2, label=manager_name, c=colors[i])
-            ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
+            marker = 'd' if 'true' in manager else 'o'
+            ax.plot(mean.index, mean, marker=marker, markersize=2, label=manager_name, c=colors_map[manager])
+            ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors_map[manager], linewidth=0.0)
 
     ax.set_ylim((0, 25))
 
