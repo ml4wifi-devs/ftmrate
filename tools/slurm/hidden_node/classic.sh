@@ -13,6 +13,7 @@ MANAGER_NAME=$3
 N_WIFI=$4
 DISTANCE=$5
 SIM_TIME=$6
+RTS_CTS=$7
 
 SEED=$(( SEED_SHIFT + SLURM_ARRAY_TASK_ID ))
 
@@ -22,4 +23,4 @@ WARMUP_TIME=$(( N_WIFI + 4))
 FUZZ_TIME=$(( N_WIFI / 2 + 2 ))
 LOSS_MODEL="Nakagami"
 
-./ns3.36.1-stations-optimized --mobilityModel="Hidden" --manager="$MANAGER" --managerName="$MANAGER_NAME" --distance="$DISTANCE" --nWifi="$N_WIFI" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"
+./ns3.36.1-stations-optimized --mobilityModel="Hidden" --manager="$MANAGER" --managerName="${MANAGER_NAME}_${RTS_CTS}" --distance="$DISTANCE" --nWifi="$N_WIFI" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH" --enableRtsCts="$RTS_CTS"
