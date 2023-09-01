@@ -8,6 +8,10 @@ from tools.plots.common import *
 ALL_MANAGERS = {
     'minstrel_false': 'Minstrel',
     'minstrel_true': 'Minstrel\n(RTS/CTS)',
+    'ts_false': 'Thompson sampling',
+    'ts_true': 'Thompson sampling\n(RTS/CTS)',
+    'oracle_false': 'Oracle',
+    'oracle_true': 'Oracle\n(RTS/CTS)',
     'kf_false': 'FTMRate w/ KF',
     'kf_true': 'FTMRate w/ KF\n(RTS/CTS)'
 }
@@ -18,8 +22,10 @@ def plot_results(ax: plt.Axes, distance: int) -> None:
     colors_map = {
         'minstrel_false': colors[0],
         'kf_false': colors[3],
+        'ts_false': colors[1],
         'minstrel_true': colors[0],
         'kf_true': colors[3],
+        'ts_true': colors[1],
     }
 
     df = pd.read_csv(DATA_FILE)
@@ -28,8 +34,9 @@ def plot_results(ax: plt.Axes, distance: int) -> None:
     for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
         mean, ci_low, ci_high = get_thr_ci(df[df.manager.str.lower() == manager], 'nWifi')
 
-        if manager == 'Oracle':
-            ax.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
+        if manager.startswith('oracle'):
+            linestyle = '-.' if 'true' in manager else '--'
+            ax.plot(mean.index, mean, linestyle=linestyle, c='gray', label=manager_name, linewidth=2)
         else:
             marker = 'd' if 'true' in manager else 'o'
             ax.plot(mean.index, mean, marker=marker, markersize=2, label=manager_name, c=colors_map[manager])
