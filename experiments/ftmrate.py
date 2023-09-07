@@ -119,7 +119,7 @@ def get_ftm_measurement(min_distance: float) -> float:
         The distance in meters.
     """
 
-    output = subprocess.check_output(f'{HOME_DIR}/ftmrate_internal/experiments/measure_distance.sh', universal_newlines=True)
+    output = subprocess.check_output(f'{HOME_DIR}/ftmrate_internal/experiments/measure_distance.sh {HOME_DIR}', universal_newlines=True)
     data = output.split("\n")
 
     status = int(data[1].split(" ")[-1])
