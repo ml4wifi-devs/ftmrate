@@ -5,7 +5,7 @@
 
 FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the IEEE 802.11 fine time measurement (FTM) protocol to improve the per-frame selection of modulation and coding schemes. Its detailed operation and a performance analysis can be found in:
 
-- Wojciech Ciezobka, Maksymilian Wojnar, Katarzyna Kosek-Szott, Szymon Szott, and Krzysztof Rusek. "FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks." 24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM), 2023. [[preprint](https://arxiv.org/pdf/2304.10140.pdf)]
+- Wojciech Ciezobka, Maksymilian Wojnar, Katarzyna Kosek-Szott, Szymon Szott, and Krzysztof Rusek. "FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks." 24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM), 2023. [[preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443)]
 
 ## Installation
 
