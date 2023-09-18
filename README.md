@@ -92,7 +92,7 @@ We provide two ways of generating article results. One requires the Slurm worklo
 ### Using the Slurm workload manager
 
 To produce reliable results, many independant simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
-To collect results from multiple WiFi scenarios so to reproduce our results presented in our [article](LINK_TO_OUR_ARTICLE), you need to run
+To collect results from multiple WiFi scenarios so to reproduce our results presented in our article ([preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443)), you need to run
 ```
 sbatch ftmrate/tools/slurm/run-classic-scenarios.sh
 sbatch ftmrate/tools/slurm/run-ml-scenarios.sh
