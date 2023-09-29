@@ -1,15 +1,14 @@
 from argparse import ArgumentParser
-from typing import Callable, Tuple
+from typing import Callable, Tuple, List
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+from scipy.stats import t
 
 
-COLUMN_WIDTH = 3.5
-COLUMN_HIGHT = 1.4 * COLUMN_WIDTH
 PLOT_PARAMS = {
-    'figure.figsize': (COLUMN_WIDTH, COLUMN_HIGHT),
+    'figure.figsize': (3.5, 2.45),
     'figure.dpi': 72,
     'font.size': 9,
     'font.family': 'serif',
@@ -26,42 +25,7 @@ PLOT_PARAMS = {
     'ytick.major.width': 0.5,
 }
 
-MARKERS = ['o', 'v', '^', '<', '>', 's', 'p', '*', 'h', 'H']
-LINESTYLES = ['-', '--', '-.', ':', '-', '--', '-.', ':', '-', '--']
-
-EXPERIMENT_TIME = 25
-CDF_POINTS = 100
-
-
-def plot_data_rate(df: pd.DataFrame, axes: plt.Axes) -> None:
-    runs = df['run'].unique()
-
-    for i, run in enumerate(runs):
-        run_df = df[(df['run'] == run) & (df['device'] == 'ap')]
-        axes.plot(run_df['time'], run_df['rate'], linestyle=LINESTYLES[i % len(LINESTYLES)], marker=MARKERS[i % len(MARKERS)], label=f'Run {run}', markersize=1.5)
-
-    axes.set_xlim(0, EXPERIMENT_TIME)
-    axes.set_ylim(0, 80)
-    axes.set_ylabel('Data rate [Mb/s]')
-
-    axes.grid()
-
-
-def twin_plot(ftmrate_df: pd.DataFrame, iwlwifi_df: pd.DataFrame, plot_fn: Callable, filename: str) -> None:
-    _, axes = plt.subplots(2, 1, sharex=True)
-
-    plot_fn(ftmrate_df, axes[0])
-    plot_fn(iwlwifi_df, axes[1])
-
-    axes[0].set_title('FTMRate w/ KF')
-    axes[1].set_title('iwlwifi')
-
-    axes[0].tick_params('x', labelbottom=False, bottom=False)
-    axes[1].set_xlabel('Time [s]')
-    axes[0].legend(ncol=3)
-
-    plt.tight_layout()
-    plt.savefig(filename, bbox_inches='tight')
+CONFIDENCE_INTERVAL = 0.99
 
 
 def cdf(xs: np.ndarray, data: pd.DataFrame) -> np.ndarray:
@@ -72,73 +36,89 @@ def cdf(xs: np.ndarray, data: pd.DataFrame) -> np.ndarray:
     return np.interp(xs, x, y)
 
 
-def get_cdf(ftmrate_df: pd.DataFrame, iwlwifi_df: pd.DataFrame) -> Tuple:
+def get_ci(data: List, ci_interval: float = CONFIDENCE_INTERVAL) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    measurements = len(data)
+    mean, std = np.mean(data, axis=0), np.std(data, axis=0)
 
-    def calculate(xs: np.ndarray, data: pd.DataFrame) -> np.ndarray:
-        runs = [data[(data['run'] == run) & (data['device'] == 'ap')] for run in data['run'].unique()]
-        cdfs = [cdf(xs, run) for run in runs]
-        mean = np.mean(cdfs, axis=0)
-        std = np.std(cdfs, axis=0)
+    alpha = 1 - ci_interval
+    z = t.ppf(1 - alpha / 2, measurements - 1)
 
-        return mean, std
+    ci_low = mean - z * std / np.sqrt(measurements)
+    ci_high = mean + z * std / np.sqrt(measurements)
 
-    xs = np.linspace(0., EXPERIMENT_TIME, CDF_POINTS)
-    return xs, calculate(xs, ftmrate_df), calculate(xs, iwlwifi_df)
-
-
-def get_throughput(ftmrate_df: pd.DataFrame, iwlwifi_df: pd.DataFrame) -> Tuple:
-
-    def approx_throughput(xs: np.ndarray, data: pd.DataFrame) -> np.ndarray:
-        runs = [data[(data['run'] == run) & (data['device'] == 'ap')] for run in data['run'].unique()]
-        cdfs = [cdf(xs, run) for run in runs]
-        grads = [np.gradient(cdf, xs) for cdf in cdfs]
-        grads = [grad / grad.mean() * run['rate'].mean() for grad, run in zip(grads, runs)]
-        mean = np.mean(grads, axis=0)
-        std = np.std(grads, axis=0)
-
-        return mean, std
-
-    xs = np.linspace(0., EXPERIMENT_TIME, CDF_POINTS)
-    return xs, approx_throughput(xs, ftmrate_df), approx_throughput(xs, iwlwifi_df)
+    return mean, ci_low, ci_high
 
 
-def single_plot(ftmrate_df: pd.DataFrame, iwlwifi_df: pd.DataFrame, data_fn: Callable, label: str, ylim: Tuple, filename: str) -> None:
-    plt.figure(figsize=(COLUMN_WIDTH, COLUMN_HIGHT / 2))
-    
-    xs, (ftmrate_mean, ftmrate_std), (iwlwifi_mean, iwlwifi_std) = data_fn(ftmrate_df, iwlwifi_df)
+def get_cdf(xs: np.ndarray, df: pd.DataFrame) -> Tuple:
+    runs = [df[(df['run'] == run) & (df['device'] == 'ap')] for run in df['run'].unique()]
+    cdfs = [cdf(xs, run) for run in runs]
+    return get_ci(cdfs)
+
+
+def get_throughput(xs: np.ndarray, df: pd.DataFrame) -> Tuple:
+    runs = [df[(df['run'] == run) & (df['device'] == 'ap')] for run in df['run'].unique()]
+    cdfs = [cdf(xs, run) for run in runs]
+    grads = [np.gradient(cdf, xs) for cdf in cdfs]
+    grads = [grad / grad.mean() * run['rate'].mean() for grad, run in zip(grads, runs)]
+    return get_ci(grads)
+
+
+def get_data_rate(xs: np.ndarray, df: pd.DataFrame) -> Tuple:
+    runs = [df[(df['run'] == run) & (df['device'] == 'sta')] for run in df['run'].unique()]
+    rates = [np.interp(xs, run['time'].values, run['rate'].values) for run in runs]
+    return get_ci(rates)
+
+
+def single_plot(
+        ftmrate_df: pd.DataFrame,
+        iwlwifi_df: pd.DataFrame,
+        data_fn: Callable,
+        label: str,
+        ylim: Tuple,
+        n_points: int,
+        experiment_time: int,
+        filename: str
+) -> None:
+    xs = np.linspace(0, experiment_time, n_points)
+    ftmrate_mean, ftmrate_low, ftmrate_high = data_fn(xs, ftmrate_df)
+    iwlwifi_mean, iwlwifi_low, iwlwifi_high = data_fn(xs, iwlwifi_df)
+
     colors = plt.cm.viridis(np.linspace(0., 1., 5))
 
     plt.plot(xs, ftmrate_mean, label='FTMRate w/ KF', color=colors[3])
-    plt.fill_between(xs, ftmrate_mean - ftmrate_std, ftmrate_mean + ftmrate_std, alpha=0.3, color=colors[3], linewidth=0)
+    plt.fill_between(xs, ftmrate_low, ftmrate_high, alpha=0.3, color=colors[3], linewidth=0)
 
     plt.plot(xs, iwlwifi_mean, label='iwlwifi', color=colors[0])
-    plt.fill_between(xs, iwlwifi_mean - iwlwifi_std, iwlwifi_mean + iwlwifi_std, alpha=0.3, color=colors[0], linewidth=0)
+    plt.fill_between(xs, iwlwifi_low, iwlwifi_high, alpha=0.3, color=colors[0], linewidth=0)
 
-    plt.xlim(0, EXPERIMENT_TIME)
+    plt.xlim(0, experiment_time)
     plt.ylim(ylim)
     plt.xlabel('Time [s]')
     plt.ylabel(label)
 
     plt.grid()
-    plt.legend(loc='lower right')
+    plt.legend()
 
     plt.tight_layout()
     plt.savefig(filename, bbox_inches='tight')
+    plt.clf()
 
 
 if __name__ == '__main__':
     args = ArgumentParser()
     args.add_argument('--filename', type=str, required=True)
+    args.add_argument('--n_points', type=int, default=100)
+    args.add_argument('--experiment_time', type=int, required=True)
     args = args.parse_args()
 
     plt.rcParams.update(PLOT_PARAMS)
 
     df = pd.read_csv(args.filename)
-    df = df[df['time'] < EXPERIMENT_TIME]
+    df = df[df['time'] < args.experiment_time]
 
     ftmrate_df = df[df['manager'] == 'ftmrate']
     iwlwifi_df = df[df['manager'] == 'iwlwifi']
 
-    twin_plot(ftmrate_df, iwlwifi_df, plot_data_rate, f'data_rate.pdf')
-    single_plot(ftmrate_df, iwlwifi_df, get_cdf, 'CDF', (0, 1), f'cdf.pdf')
-    single_plot(ftmrate_df, iwlwifi_df, get_throughput, 'Approximated throughput [Mb/s]', (0, 80), f'throughput.pdf')
+    single_plot(ftmrate_df, iwlwifi_df, get_cdf, 'CDF', (0, 1), args.n_points, args.experiment_time, 'cdf.pdf')
+    single_plot(ftmrate_df, iwlwifi_df, get_throughput, 'Approximated throughput [Mb/s]', (0, 80), args.n_points, args.experiment_time, 'throughput.pdf')
+    single_plot(ftmrate_df, iwlwifi_df, get_data_rate, 'Per-frame data rate [Mb/s]', (0, 80), args.n_points, args.experiment_time, 'data_rate.pdf')
