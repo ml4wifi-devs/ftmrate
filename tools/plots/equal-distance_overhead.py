@@ -32,7 +32,7 @@ def plot_results(distance: float) -> None:
     plt.xlabel('Number of stations')
 
     plt.ylim((0, 100))
-    plt.ylabel('Decrease in throughput [\%]')
+    plt.ylabel('Throughput loss [\%]')
 
     plt.legend()
     plt.grid()
