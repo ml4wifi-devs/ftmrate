@@ -6,10 +6,10 @@ import pandas as pd
 from tools.plots.common import *
 
 ALL_MANAGERS = {
-    'ts_false': 'Thompson sampling',
-    'ts_true': 'Thompson sampling\n(RTS/CTS)',
-    'kf_false': 'FTMRate w/ KF',
-    'kf_true': 'FTMRate w/ KF\n(RTS/CTS)'
+    'ts_false': 'without RTS/CTS',
+    'ts_true': 'with RTS/CTS',
+    'kf_false': 'without RTS/CTS',
+    'kf_true': 'with RTS/CTS'
 }
 
 
@@ -57,8 +57,8 @@ if __name__ == '__main__':
     ax.xaxis.set_major_locator(plt.MultipleLocator(2))
 
     lines = plt.gca().get_lines()
-    legend1 = plt.legend([lines[i] for i in [1,0]], [lines[i].get_label() for i in [1,0]], loc="lower left", fontsize=6)
-    legend2 = plt.legend([lines[i] for i in [3,2]], [lines[i].get_label() for i in [3,2]], loc="upper right", fontsize=6)
+    legend1 = plt.legend([lines[i] for i in [1,0]], [lines[i].get_label() for i in [1,0]], loc="lower left", fontsize=6, title='Thompson Sampling')
+    legend2 = plt.legend([lines[i] for i in [3,2]], [lines[i].get_label() for i in [3,2]], loc="upper right", fontsize=6, title='FTMRate w/ KF')
     plt.gca().add_artist(legend1)
 
     plt.savefig(f'hn-bar_thr_nwifi.pdf', bbox_inches='tight')
