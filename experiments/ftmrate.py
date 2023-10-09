@@ -16,7 +16,7 @@ HOME_DIR = '/home/opus'
 
 # FTMRate constants
 FTM_INTERVAL = 0.5
-N_SAMPLES = 100
+N_SAMPLES = 500
 WIFI_MODES_RATES = np.array([6.5, 13., 19.5, 26., 39., 52, 58.5, 65., 13., 26., 39., 52., 78., 104., 117., 130.])
 
 # Values estimated from experiments
@@ -51,7 +51,7 @@ WIFI_MODES_RSSIS = np.array([
 ])
 
 # Minimum distance that can be measured by FTM
-MIN_DISTANCE = 2.0
+MIN_DISTANCE = 1.0
 
 
 def expected_rates(delta_tx_power: float = 0.) -> tfb.Bijector:
@@ -119,7 +119,7 @@ def get_ftm_measurement(min_distance: float) -> float:
         The distance in meters.
     """
 
-    output = subprocess.check_output(f'{HOME_DIR}/ftmrate_internal/experiments/measure_distance.sh', universal_newlines=True)
+    output = subprocess.check_output([f'{HOME_DIR}/ftmrate_internal/experiments/measure_distance.sh', HOME_DIR], universal_newlines=True)
     data = output.split("\n")
 
     status = int(data[1].split(" ")[-1])
@@ -194,7 +194,7 @@ if __name__ == '__main__':
 
         if is_connected():
             distance_dist = kf.sample(state, time())
-            distance_dist = tfb.Softplus()(distance_dist)
+            distance_dist = tfb.Softplus(0.1)(distance_dist)
             rates_mean = expected_rates()(distance_dist).sample(N_SAMPLES).mean(axis=0)
             best_mcs = np.argmax(rates_mean)
 

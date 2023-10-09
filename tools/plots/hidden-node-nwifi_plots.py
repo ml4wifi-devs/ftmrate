@@ -6,12 +6,8 @@ import pandas as pd
 from tools.plots.common import *
 
 ALL_MANAGERS = {
-    'minstrel_false': 'Minstrel',
-    'minstrel_true': 'Minstrel\n(RTS/CTS)',
     'ts_false': 'Thompson sampling',
     'ts_true': 'Thompson sampling\n(RTS/CTS)',
-    'oracle_false': 'Oracle',
-    'oracle_true': 'Oracle\n(RTS/CTS)',
     'kf_false': 'FTMRate w/ KF',
     'kf_true': 'FTMRate w/ KF\n(RTS/CTS)'
 }
@@ -29,7 +25,7 @@ def plot_results(ax: plt.Axes, distance: int) -> None:
     }
 
     df = pd.read_csv(DATA_FILE)
-    df = df[(df.mobility == 'Hidden') & (df.distance == distance)]
+    df = df[(df.mobility == 'Hidden') & (df.distance == distance) & (df.nWifi == df.nWifiReal) & (df.nWifi <= 16)]
 
     for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
         mean, ci_low, ci_high = get_thr_ci(df[df.manager.str.lower() == manager], 'nWifi')
@@ -57,8 +53,13 @@ if __name__ == '__main__':
 
     plot_results(ax, distance=40)
 
-    ax.set_xlabel(fr'Number of stations')
-    ax.legend()
+    ax.set_xlabel(fr'Total number of stations')
+    ax.xaxis.set_major_locator(plt.MultipleLocator(2))
+
+    lines = plt.gca().get_lines()
+    legend1 = plt.legend([lines[i] for i in [1,0]], [lines[i].get_label() for i in [1,0]], loc="lower left", fontsize=6)
+    legend2 = plt.legend([lines[i] for i in [3,2]], [lines[i].get_label() for i in [3,2]], loc="upper right", fontsize=6)
+    plt.gca().add_artist(legend1)
 
     plt.savefig(f'hn-bar_thr_nwifi.pdf', bbox_inches='tight')
     plt.clf()

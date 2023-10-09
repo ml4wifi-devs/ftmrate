@@ -185,3 +185,26 @@ signal.
 IP addresses of the station and AP, password, directories for saving results, etc.).
 
 > Dealing with ' Blowfish has been deprecated' warning - [link](https://github.com/paramiko/paramiko/issues/2038#issuecomment-1117345478).
+
+## Analysis of results
+
+To easily analyze the results, we recommend saving data from pcap files to CSV files in one folder for each
+manager. Please use the `<DEVICE>_<RUN>.csv` naming convention, where `<DEVICE>` is the device name (`sta` or `ap`) 
+and `<RUN>` is the run number.
+
+**Attention!** The CSV files should contain at least the following columns: `Time`, `Data rate (Mb/s)`!
+
+To collect all data in one file, run the `parse.py` script:
+
+```bash
+cd $PATH_TO_FTMRATE_ROOT/experiments/results
+python3 parse.py --ftmrate_path <FTMRATE_DIR> --iwlwifi_path <IWLWIFI_DIR> --output <FILENAME> --runs <NUMBER_OF_RUNS>
+```
+
+We have prepared a script that plots the results of the experiment, including the data rate, CDF of the transmitted
+frames, and the approximated throughput. The script is in the `experiments/results` directory. To run it, use the 
+following command:
+
+```bash
+python3 plot.py --filename <FILENAME>
+```
