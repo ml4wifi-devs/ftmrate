@@ -64,7 +64,7 @@ run_hidden_node_distance() {
 }
 
 run_hidden_node_nwifi() {
-  N_REP=10
+  N_REP=30
   N_POINTS=10
   DISTANCE=$1
   RTS_CTS=$2
