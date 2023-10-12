@@ -55,8 +55,6 @@ run_hidden_node_distance() {
 
       sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/hidden_node/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME"
     done
-
-    SHIFT=$(( SHIFT + N_POINTS * N_REP ))
   done
 }
 
@@ -81,8 +79,6 @@ run_hidden_node_nwifi() {
 
       sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/hidden_node/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME"
     done
-
-    SHIFT=$(( SHIFT + N_POINTS * N_REP ))
   done
 }
 
