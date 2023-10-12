@@ -37,7 +37,7 @@ void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
 
 #define DISTANCE_UPDATE_INTERVAL 0.005
 #define DEFAULT_TX_POWER 16.0206
-#define HIDDEN_CROSS_SCENARIO true
+#define HIDDEN_CROSS_SCENARIO false
 
 std::map<uint32_t, uint64_t> warmupFlows;
 
@@ -66,6 +66,7 @@ main (int argc, char *argv[])
   double interval = 4.;   // mean (exponential) interval between power change
 
   bool ampdu = true;
+  bool enableRtsCts = false;
   uint32_t packetSize = 1500;
   uint32_t dataRate = 125;
   uint32_t channelWidth = 20;
@@ -83,7 +84,8 @@ main (int argc, char *argv[])
   cmd.AddValue ("csvPath", "Path to output CSV file", csvPath);
   cmd.AddValue ("dataRate", "Traffic generator data rate (Mb/s)", dataRate);
   cmd.AddValue ("delta", "Power change (dBm)", delta);
-  cmd.AddValue ("distance", "Distance between AP and STAs (m) - only for Distance mobility type",distance);
+  cmd.AddValue ("distance", "Distance between AP and STAs (m) - only for Distance mobility type", distance);
+  cmd.AddValue ("enableRtsCts", "Flag set to enable CTS/RTS protocol", enableRtsCts);
   cmd.AddValue ("ftmMap", "Path to FTM wireless error map", ftmMapPath);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
   cmd.AddValue ("idealDistance", "Return ideal distance between AP and STA (m)", idealDistance);
@@ -124,6 +126,7 @@ main (int argc, char *argv[])
             << "- shortest guard interval: " << minGI << " ns" << std::endl
             << "- packets size: " << packetSize << " B" << std::endl
             << "- AMPDU: " << ampdu << std::endl
+            << "- RTS/CTS protocol enabled: " << enableRtsCts << std::endl
             << "- rate adaptation manager: " << rateAdaptationManager << std::endl
             << "- number of stations: " << nWifi << std::endl
             << "- simulation time: " << simulationTime << " s" << std::endl
@@ -298,7 +301,13 @@ main (int argc, char *argv[])
   wifi.SetStandard (WIFI_STANDARD_80211ax_5GHZ);
   wifi.SetRemoteStationManager (rateAdaptationManager);
 
-  //Set SSID
+  // Enable or disable CTS/RTS
+  uint64_t ctsThrLow = 100;
+  uint64_t ctsThrHigh = 100000000; // Arbitrarly large value, 100 MB for now
+  UintegerValue ctsThr = (enableRtsCts ? UintegerValue (ctsThrLow) : UintegerValue (ctsThrHigh));
+  Config::SetDefault ("ns3::WifiRemoteStationManager::RtsCtsThreshold", ctsThr); 
+
+  // Set SSID
   Ssid ssid = Ssid ("ns3-80211ax");
   mac.SetType ("ns3::StaWifiMac", "Ssid", SsidValue (ssid), "MaxMissedBeacons",
                UintegerValue (1000)); // prevents exhaustion of association IDs

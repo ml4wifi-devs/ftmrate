@@ -15,11 +15,13 @@ PASSWORD = 'opus'
 TIMEOUT = 5
 HOME_DIR = '/home/opus'
 
-AP_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/ap-{datetime.now().strftime('%Y%m%d-%H%M%S')}.pcap"
-STA_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/sta-{datetime.now().strftime('%Y%m%d-%H%M%S')}.pcap"
+DATE = datetime.now().strftime('%Y%m%d-%H%M%S')
+
+AP_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/ap-{DATE}.pcap"
+STA_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/sta-{DATE}.pcap"
 
 STA_TRANSMIT_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_send_frames.sh {HOME_DIR}"
-STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_ftmrate.sh {HOME_DIR} > {HOME_DIR}/ftmrate_log &"
+STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_ftmrate.sh {HOME_DIR} &> {HOME_DIR}/ftmrate_log-{DATE} &"
 
 SLEEP_CMD = "sleep " + str(TIMEOUT)
 
@@ -58,9 +60,9 @@ def measure(framerate, duration, useFtmrate):
 
         # Send frames from STA
         print("Sending frames from STA")
-        sta_ssh.exec_command(f'{STA_TRANSMIT_CMD} {framerate} > /dev/null &')
+        sta_ssh.exec_command(f'{STA_TRANSMIT_CMD} {framerate} &> /dev/null &')
         # Play sound to indicate start of experiment
-        playsound('../resources/sound.wav')
+        playsound('sound.wav')
         time.sleep(duration - 1)  # -1 s to account for the duration of sound.wav
 
         # Cleanup
@@ -92,4 +94,4 @@ if __name__ == '__main__':
     measure(framerate=args.framerate, duration=args.duration, useFtmrate=args.useFtmrate)
     
     # Play sound to indicate end of experiment
-    playsound('../resources/sound.wav')
+    playsound('sound.wav')

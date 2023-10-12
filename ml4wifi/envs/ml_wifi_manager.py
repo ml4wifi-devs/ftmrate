@@ -48,6 +48,7 @@ def main() -> None:
     parser.add_argument('--dataRate', default=125, type=int)
     parser.add_argument('--delta', default=0, type=float)
     parser.add_argument('--distance', default=0., type=float)
+    parser.add_argument('--enableRtsCts', default='False', type=str)
     parser.add_argument('--fuzzTime', default=5., type=float)
     parser.add_argument('--idealDistance', default=False, action='store_true')
     parser.add_argument('--interval', default=2, type=float)
@@ -91,6 +92,7 @@ def main() -> None:
     NS3_ARGS['csvPath'] = args.csvPath
     NS3_ARGS['dataRate'] = args.dataRate
     NS3_ARGS['delta'] = args.delta
+    NS3_ARGS['enableRtsCts'] = True if args.enableRtsCts == 'True' else False
     NS3_ARGS['fuzzTime'] = args.fuzzTime
     NS3_ARGS['idealDistance'] = args.idealDistance or args.ml_manager == 'oracle_ftm'
     NS3_ARGS['interval'] = args.interval

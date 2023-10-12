@@ -70,9 +70,10 @@ run_hidden_node_distance() {
 }
 
 run_hidden_node_nwifi() {
-  N_REP=10
+  N_REP=30
   N_POINTS=10
   DISTANCE=$1
+  RTS_CTS=$2
 
   for (( i = 0; i < MANAGERS_LEN; i++ )); do
     MANAGER=${MANAGERS[$i]}
@@ -89,7 +90,7 @@ run_hidden_node_nwifi() {
       MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
       ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
 
-      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/hidden_node/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME" "$MEMPOOL_SHIFT"
+      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/hidden_node/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME" "$MEMPOOL_SHIFT" "$RTS_CTS"
     done
 
     SHIFT=$(( SHIFT + N_POINTS * N_REP ))
@@ -199,37 +200,42 @@ run_power_moving() {
 ### Run section
 
 echo -e "\nQueue equal distance (d=1) scenario"
-run_equal_distance 1
+run_equal_distance 1              # Fig. 7 (top)
 
 echo -e "\nQueue equal distance (d=20) scenario"
-run_equal_distance 20
-
-echo -e "\nQueue hidden node scenario with varying distance"
-run_hidden_node_distance 1
-
-echo -e "\nQueue hidden node scenario with varying nWifi"
-run_hidden_node_nwifi 30
+run_equal_distance 20             # Fig. 7 (bottom)
 
 echo -e "\nQueue moving station (v=1) scenario"
-run_moving 1 56 1
+run_moving 1 56 1                 # Fig. 8 (top)
 
 echo -e "\nQueue moving station (v=2) scenario"
-run_moving 2 28 "0.5"
+run_moving 2 28 "0.5"             # Fig. 8 (bottom)
 
 echo -e "\nQueue power with moving station (delta=5, interval=4, v=0, start=5) scenario"
-run_power_moving 5 4 0 5
+run_power_moving 5 4 0 5          # Fig. 9 (top)
 
 echo -e "\nQueue power with moving station (delta=15, interval=8, v=0, start=5) scenario"
-run_power_moving 15 8 0 5
+run_power_moving 15 8 0 5         # Fig. 9 (bottom)
 
-echo -e "\nQueue power with single static station (nWiFi=1, delta=15) scenario"
-run_power_static 1 15
+echo -e "\nQueue hidden node scenario with varying nWifi (RTS/CTS disabled)"
+run_hidden_node_nwifi 40 "False"  # Fig. 10 - without RTS/CTS
 
-echo -e "\nQueue power with multiple static stations (nWiFi=10, delta=15) scenario"
-run_power_static 10 15
+echo -e "\nQueue hidden node scenario with varying nWifi (RTS/CTS enabled)"
+run_hidden_node_nwifi 40 "True"   # Fig. 10 - with RTS/CTS
 
 echo -e "\nQueue static stations scenario"
-run_rwpm 0
+run_rwpm 0                        # Fig. 11 (top) 
 
 echo -e "\nQueue mobile stations scenario"
-run_rwpm "1.4"
+run_rwpm "1.4"                    # Fig. 11 (bottom)
+
+## Legacy scenarios
+
+# echo -e "\nQueue hidden node scenario with varying distance"
+# run_hidden_node_distance 1
+
+# echo -e "\nQueue power with single static station (nWiFi=1, delta=15) scenario"
+# run_power_static 1 15
+
+# echo -e "\nQueue power with multiple static stations (nWiFi=10, delta=15) scenario"
+# run_power_static 10 15
