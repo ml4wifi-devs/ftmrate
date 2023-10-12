@@ -17,7 +17,7 @@ ALL_MANAGERS = {
     'PF': 'FTMRate w/ PF',
     'Oracle': 'Oracle'
 }
-MIN_REPS = 5
+MIN_REPS = 4
 CONFIDENCE_INTERVAL = 0.99
 
 COLUMN_WIDTH = 3.5

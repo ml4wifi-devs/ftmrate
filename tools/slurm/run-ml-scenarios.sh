@@ -16,8 +16,7 @@ BASE_MEMPOOL=3000
 ### Basic scenarios
 
 run_equal_distance() {
-  N_REP=10
-  N_POINTS=13
+  N_POINTS=9
   DISTANCE=$1
 
   for (( i = 0; i < MANAGERS_LEN; i++ )); do
@@ -26,8 +25,9 @@ run_equal_distance() {
     ARRAY_SHIFT=0
 
     for (( j = 0; j < N_POINTS; j++)); do
-      N_WIFI=$(( j == 0 ? 1 : 4 * j))
+      N_WIFI=$(( j == 0 ? 1 : 2 * j))
       SIM_TIME=$(( 10 * N_WIFI + 50 ))
+      N_REP=$(( N_WIFI <= 4 ? 6 : N_WIFI * N_WIFI / 2 ))
 
       START=$ARRAY_SHIFT
       END=$(( ARRAY_SHIFT + N_REP - 1 ))
