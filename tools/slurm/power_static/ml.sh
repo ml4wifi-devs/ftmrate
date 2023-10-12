@@ -1,4 +1,4 @@
-#!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
+#!/usr/bin/scl enable devtoolset-8 rh-python38 -- /bin/bash -l
 
 ML4WIFI_DIR="${ML4WIFI_DIR:=$HOME/ftmrate_internal/ml4wifi}"
 TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"

@@ -1,4 +1,4 @@
-#!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
+#!/usr/bin/scl enable devtoolset-8 rh-python38 -- /bin/bash -l
 
 NS3_DIR="${NS3_DIR:=$HOME/ns-3-dev}"
 TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
@@ -23,4 +23,4 @@ WARMUP_TIME=5
 FUZZ_TIME=1
 LOSS_MODEL="Nakagami"
 
-./ns3.36.1-moving-optimized --manager="$MANAGER" --managerName="$MANAGER_NAME" --delta="$DELTA" --interval="$INTERVAL" --velocity="$VELOCITY" --startPosition="$START_POS" --simulationTime="56" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --measurementsInterval="0.5" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"
+./moving --manager="$MANAGER" --managerName="$MANAGER_NAME" --delta="$DELTA" --interval="$INTERVAL" --velocity="$VELOCITY" --startPosition="$START_POS" --simulationTime="56" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --measurementsInterval="0.5" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"

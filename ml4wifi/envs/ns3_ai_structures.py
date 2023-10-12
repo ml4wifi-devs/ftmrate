@@ -10,7 +10,8 @@ class Env(Structure):
         ('distance', c_double),
         ('station_id', c_uint32),
         ('mode', c_uint8),
-        ('type', c_uint8)
+        ('type', c_uint8),
+        ('ftm_completed', c_bool)
     ]
 
 
@@ -19,5 +20,6 @@ class Act(Structure):
     _pack_ = 1
     _fields_ = [
         ('station_id', c_uint32),
-        ('mode', c_uint8)
+        ('mode', c_uint8),
+        ('ftm_request', c_bool)
     ]

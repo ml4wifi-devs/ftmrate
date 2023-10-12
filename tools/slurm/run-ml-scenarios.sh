@@ -1,12 +1,12 @@
-#!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
+#!/usr/bin/scl enable devtoolset-8 rh-python38 -- /bin/bash -l
 
 TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
 
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 TASKS_PER_NODE=5
 
-MANAGERS=("es" "kf" "pf")
-MANAGERS_NAMES=("ES" "KF" "PF")
+MANAGERS=("es" "kf" "pf" "oracle_ftm")
+MANAGERS_NAMES=("ES" "KF" "PF" "OracleFTM")
 MANAGERS_LEN=${#MANAGERS[@]}
 
 SHIFT=0

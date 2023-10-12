@@ -4,7 +4,7 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ## Installation
 
-**Note:** if you want to run FTMRate in an in-band scenario, please follow the instructions in the `wifi_ftm_ns3` branch.
+**Note:** if you want to run FTMRate in an out-of-band scenario, please follow the instructions in the `main` branch.
 
 ### FTMRate Repository
 
@@ -26,29 +26,39 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ### ns-3 network simulator
 
-To fully benefit from FTMRate, the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by downloading the official distribution and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
+To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by downloading the official distribution, apply the [wifi-ftm-ns3](https://github.com/tkn-tub/wifi-ftm-ns3) patch, and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
 [official installation notes](https://www.nsnam.org/wiki/Installation).
 
-1. Download and unzip ns-3.36.1:
+1. Download and unzip ns-3.35:
 	```
-	wget https://www.nsnam.org/releases/ns-allinone-3.36.1.tar.bz2
-	tar -xf ns-allinone-3.36.1.tar.bz2
-	mv ns-allinone-3.36.1/ns-3.36.1 $YOUR_NS3_PATH
+	wget https://www.nsnam.org/releases/ns-allinone-3.35.tar.bz2
+	tar -xf ns-allinone-3.35.tar.bz2
+	mv ns-allinone-3.35/ns-3.35 $YOUR_NS3_PATH
 	```
-2. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
+2. Apply patch:
+    ```
+	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/ns-3.35-to-wifi-ftm-ns3.patch $YOUR_NS3_PATH
+	cd $YOUR_NS3_PATH
+	patch -p1 -i ns-3.35-to-wifi-ftm-ns3.patch
+	```
+3. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
 	```
 	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib/* $YOUR_NS3_PATH/contrib/
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
 	```
-3. Build ns-3:
+4. Copy modified `src` files to enable FTM frames transmission with higher priority (AC_VO):
+	```
+	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/src/wifi/model/* $YOUR_NS3_PATH/src/wifi/model/
+	```
+5. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
-	./ns3 build
+	./waf configure -d optimized --enable-examples --enable-tests --disable-werror --disable-python
+	./waf
 	```
-4. Once you have built ns-3 (with examples enabled), you can test if the installation was successful by running an example simulation:
+6. Once you have built ns-3 (with examples enabled), you can test if the installation was successful by running an example simulation:
 	```
-	./ns3 run wifi-simple-adhoc
+	./waf --run "wifi-simple-adhoc"
 	```
 
 ### FTMRate and ns-3 synchronization (optional)
@@ -56,17 +66,19 @@ To fully benefit from FTMRate, the ns-3 network simulator needs to be installed 
 To flawlessly synchronize files between the FTMRate repository and the ns-3 installation, you can create symbolic links to the corresponding folders.
 **Attention!** backup of all files in the `contrib` and `scratch` directories as creating symbolic links will require deleting these folders!
 
-1. Remove `contrib` and `scratch` folders:
+1. Remove `contrib` and `scratch` folders and remove the modified files from `src`:
 	```
     cd $YOUR_NS3_PATH
     rm -rf contrib
     rm -rf scratch
+    rm src/wifi/model/ftm-manager.cc src/wifi/model/regular-wifi-mac.cc
     ```
  
 2. Create symbolic links:
     ```
     ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib contrib
     ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch scratch
+    ln -s $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/src/wifi/model/* src/wifi/model/
     ```
    
 3. Clone ns3-ai fork into ns-3's `contrib` directory - see [next section](#ns3-ai).
@@ -75,28 +87,23 @@ To flawlessly synchronize files between the FTMRate repository and the ns-3 inst
 
 The ns3-ai module interconnects ns-3 and FTMRate (or any other python-writen software) by transferring data through a shared memory pool. 
 The memory can be accessed by both sides, thus making the connection. Read more about ns3-ai at the
-[official repository](https://github.com/hust-diangroup/ns3-ai).  **Attention!** ns3-ai (as of 2022-10-25) is not compatible with the CMake based ns-3 versions. We have forked and modified the official ns3-ai repository to make it compatible with the 3.36.1 version. In order to install our compatible version follow the steps below.
+[official repository](https://github.com/hust-diangroup/ns3-ai).
 
-1.  Clone our ns3-ai fork into ns-3's `contrib` directory
+1.  Clone ns3-ai into ns-3's `contrib` directory
 	```
 	cd $YOUR_NS3_PATH/contrib/
-	git clone https://github.com/m-wojnar/ns3-ai.git
+	git clone git@github.com:hust-diangroup/ns3-ai.git
 	```
-
-2. Go to ns3-ai directory and checkout the *ml4wifi* branch:
+2. Install the ns3-ai python interface:
 	```
 	cd "$YOUR_NS3_PATH/contrib/ns3-ai/"
-	git checkout ml4wifi
-	```
-3. Install the ns3-ai python interface:
-	```
 	pip install --user "$YOUR_NS3_PATH/contrib/ns3-ai/py_interface"
 	```
-4. Rebuild ns-3:
+3. Rebuild ns-3:
 	```
 	cd $YOUR_NS3_PATH
-	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
-	./ns3 build
+	./waf configure -d optimized --enable-examples --enable-tests --disable-werror --disable-python
+	./waf
 	```
  
 Using our fork of ns3-ai, use can run ns-3 simulations in optimized or debug mode. To select mode change `debug` flag in ns3-ai `Experiment` declaration:

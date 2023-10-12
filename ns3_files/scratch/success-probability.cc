@@ -129,13 +129,15 @@ main (int argc, char *argv[])
       std::cerr << "Selected incorrect loss model!";
       return 1;
     }
+  
+  phy.Set ("ChannelWidth", UintegerValue (channelWidth));
   phy.SetChannel (channelHelper.Create ());
 
   // Configure MAC layer
   WifiMacHelper mac;
   WifiHelper wifi;
 
-  wifi.SetStandard (WIFI_STANDARD_80211ax);
+  wifi.SetStandard (WIFI_STANDARD_80211ax_5GHZ);
   wifi.SetRemoteStationManager ("ns3::ConstantRateWifiManager",
                                 "DataMode", StringValue ("HeMcs" + std::to_string (mode)),
                                 "ControlMode", StringValue ("HeMcs" + std::to_string (mode)));
@@ -160,10 +162,7 @@ main (int argc, char *argv[])
                    UintegerValue (0));
     }
 
-  // Set channel width and shortest GI
-  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelSettings",
-               StringValue ("{0, " + std::to_string (channelWidth) + ", BAND_5GHZ, 0}"));
-
+  // Set shortest GI
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
                TimeValue (NanoSeconds (minGI)));
 

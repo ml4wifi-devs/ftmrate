@@ -7,6 +7,7 @@ from argparse import ArgumentParser, ArgumentError
 from py_interface import *
 
 from ml4wifi.agents.exponential_smoothing import ManagersContainer as ExponentialSmoothing
+from ml4wifi.agents.identity import ManagersContainer as Identity
 from ml4wifi.agents.kalman_filter import ManagersContainer as KalmanFilter
 from ml4wifi.agents.particle_filter import ManagersContainer as ParticleFilter
 
@@ -17,7 +18,8 @@ from ml4wifi.envs.ns3_ai_structures import Env, Act
 MANAGERS = {
     'es': ExponentialSmoothing,
     'kf': KalmanFilter,
-    'pf': ParticleFilter
+    'pf': ParticleFilter,
+    'oracle_ftm': Identity
 }
 
 # Simulation parameters for different scenarios
@@ -48,6 +50,7 @@ def main() -> None:
     parser.add_argument('--distance', default=0., type=float)
     parser.add_argument('--enableRtsCts', default='False', type=str)
     parser.add_argument('--fuzzTime', default=5., type=float)
+    parser.add_argument('--idealDistance', default=False, action='store_true')
     parser.add_argument('--interval', default=2, type=float)
     parser.add_argument('--lossModel', default='Nakagami', type=str)
     parser.add_argument('--managerName', type=str)
@@ -91,6 +94,7 @@ def main() -> None:
     NS3_ARGS['delta'] = args.delta
     NS3_ARGS['enableRtsCts'] = True if args.enableRtsCts == 'True' else False
     NS3_ARGS['fuzzTime'] = args.fuzzTime
+    NS3_ARGS['idealDistance'] = args.idealDistance or args.ml_manager == 'oracle_ftm'
     NS3_ARGS['interval'] = args.interval
     NS3_ARGS['lossModel'] = args.lossModel
     NS3_ARGS['managerName'] = args.managerName if args.managerName else args.ml_manager
@@ -148,7 +152,7 @@ def main() -> None:
 
 
     # Initialize ns3-ai
-    exp = Experiment(mempool_key, mem_size, pname, args.ns3Path, debug=False)
+    exp = Experiment(mempool_key, mem_size, pname, args.ns3Path)
     var = Ns3AIRL(memblock_key, Env, Act)
 
 

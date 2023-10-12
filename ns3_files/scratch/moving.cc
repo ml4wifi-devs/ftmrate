@@ -4,8 +4,11 @@
 #include <string>
 
 #include "ns3/applications-module.h"
+#include "ns3/ap-wifi-mac.h"
 #include "ns3/core-module.h"
 #include "ns3/flow-monitor-module.h"
+#include "ns3/ftm-header.h"
+#include "ns3/ftm-error-model.h"
 #include "ns3/internet-module.h"
 #include "ns3/mobility-module.h"
 #include "ns3/node-container.h"
@@ -22,13 +25,13 @@ NS_LOG_COMPONENT_DEFINE ("moving");
 
 /***** Functions declarations *****/
 
-void ChangePower (NodeContainer wifiStaNode, uint8_t powerLevel);
+void ChangePower (Ptr<Node> staNode, uint8_t powerLevel);
 uint64_t GetReceivedBits (Ptr<Node> sinkNode, Ptr<Node> sourceNode);
 void GetWarmupFlows ();
 void InstallTrafficGenerator (Ptr<ns3::Node> fromNode, Ptr<ns3::Node> toNode, uint32_t port,
                               DataRate offeredLoad, uint32_t packetSize);
 void MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode);
-void PopulateARPcache ();
+void PopulateArpCache ();
 void PowerCallback (std::string path, Ptr<const Packet> packet, double txPowerW);
 void StartMovement (Ptr<Node> staNode);
 void UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode);
@@ -53,6 +56,7 @@ double simulationTime = 56.;
 double measurementsInterval = 2.;
 double delta = 0.;      // difference between 2 power levels in dB
 double interval = 4.;   // mean (exponential) interval between power change
+bool idealDistance = false;
 
 /***** Main with scenario definition *****/
 
@@ -60,10 +64,11 @@ int
 main (int argc, char *argv[])
 {
   // Initialize default simulation parameters
-  std::string rateAdaptationManager = "ns3::MlWifiManager";
-  std::string pcapName = "";
   std::string csvPath = "results.csv";
+  std::string ftmMapPath = "";
   std::string lossModel = "Nakagami";
+  std::string pcapName = "";
+  std::string rateAdaptationManager = "ns3::MlWifiManager";
 
   bool ampdu = true;
   bool enableRtsCts = false;
@@ -81,7 +86,9 @@ main (int argc, char *argv[])
   cmd.AddValue ("dataRate", "Traffic generator data rate (Mb/s)", dataRate);
   cmd.AddValue ("delta", "Power change (dBm)", delta);
   cmd.AddValue ("enableRtsCts", "Flag set to enable CTS/RTS protocol", enableRtsCts);
+  cmd.AddValue ("ftmMap", "Path to FTM wireless error map", ftmMapPath);
   cmd.AddValue ("fuzzTime", "Maximum fuzz value (s)", fuzzTime);
+  cmd.AddValue ("idealDistance", "Return ideal distance between AP and STA (m)", idealDistance);
   cmd.AddValue ("interval", "Interval between power change (s)", interval);
   cmd.AddValue ("lossModel", "Propagation loss model to use (LogDistance, Nakagami)", lossModel);
   cmd.AddValue ("measurementsInterval", "Interval between successive measurement points (s)",measurementsInterval);
@@ -106,6 +113,7 @@ main (int argc, char *argv[])
             << "Simulating an IEEE 802.11ax devices with the following settings:" << std::endl
             << "- frequency band: 5 GHz" << std::endl
             << "- max data rate: " << dataRate << " Mb/s" << std::endl
+            << "- FTM error map: " << !ftmMapPath.empty () << std::endl
             << "- channel width: " << channelWidth << " Mhz" << std::endl
             << "- shortest guard interval: " << minGI << " ns" << std::endl
             << "- packets size: " << packetSize << " B" << std::endl
@@ -123,6 +131,20 @@ main (int argc, char *argv[])
             << "- velocity: " << velocity << " m/s" << std::endl
             << "- startPosition: " << startPosition << " m" << std::endl
             << std::endl;
+
+  // Load FTM map and configure FTM
+  if (!ftmMapPath.empty ())
+    {
+      Ptr<WirelessFtmErrorModel::FtmMap> ftmMap = CreateObject<WirelessFtmErrorModel::FtmMap> ();
+      ftmMap->LoadMap (ftmMapPath);
+      Config::SetDefault ("ns3::WirelessFtmErrorModel::FtmMap", PointerValue (ftmMap));
+    }
+
+  Time::SetResolution (Time::PS);
+  Config::SetDefault ("ns3::RegularWifiMac::QosSupported", BooleanValue (true));
+  Config::SetDefault ("ns3::RegularWifiMac::FTM_Enabled", BooleanValue (true));
+  Config::SetDefault ("ns3::WiredFtmErrorModel::Channel_Bandwidth",
+                      StringValue ("Channel_" + std::to_string (channelWidth) + "_MHz"));
 
   // Create AP and station
   NodeContainer wifiApNode (1);
@@ -167,6 +189,8 @@ main (int argc, char *argv[])
       std::cerr << "Selected incorrect loss model!";
       return 1;
     }
+  
+  phy.Set ("ChannelWidth", UintegerValue (channelWidth));
   phy.SetChannel (channelHelper.Create ());
 
   // Configure two power levels
@@ -178,7 +202,7 @@ main (int argc, char *argv[])
   WifiMacHelper mac;
   WifiHelper wifi;
 
-  wifi.SetStandard (WIFI_STANDARD_80211ax);
+  wifi.SetStandard (WIFI_STANDARD_80211ax_5GHZ);
   wifi.SetRemoteStationManager (rateAdaptationManager);
 
   // Enable or disable CTS/RTS
@@ -201,6 +225,20 @@ main (int argc, char *argv[])
   NetDeviceContainer apDevice;
   apDevice = wifi.Install (phy, mac, wifiApNode);
 
+  // Setup FTM parameters in MlWifiManager
+  Config::Set ("/NodeList/" + std::to_string (wifiStaNode.Get (0)->GetId ()) +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/WifiNetDevice",
+               PointerValue (staDevice.Get (0)->GetObject<WifiNetDevice>()));
+
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/ApAddress",
+               Mac48AddressValue (Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ())));
+
+  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/IdealDistance",
+               BooleanValue (idealDistance));
+
   // Manage AMPDU aggregation
   if (!ampdu)
     {
@@ -208,10 +246,7 @@ main (int argc, char *argv[])
                    UintegerValue (0));
     }
 
-  // Set channel width and shortest GI
-  Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/Phy/ChannelSettings",
-               StringValue ("{0, " + std::to_string (channelWidth) + ", BAND_5GHZ, 0}"));
-
+  // Set shortest GI
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/HeConfiguration/GuardInterval",
                TimeValue (NanoSeconds (minGI)));
 
@@ -226,7 +261,7 @@ main (int argc, char *argv[])
   Ipv4InterfaceContainer apNodeInterface = address.Assign (apDevice);
 
   // PopulateArpCache
-  PopulateARPcache ();
+  PopulateArpCache ();
 
   // Configure applications
   DataRate applicationDataRate = DataRate (dataRate * 1e6);
@@ -262,7 +297,7 @@ main (int argc, char *argv[])
     {
       // Draw from the exponential distribution ( [ -1/lambda * ln(x) ] ~ Exp[lambda] where x ~ Uniform[0, 1] )
       time += -interval * std::log (rng.RandU01 ());
-      Simulator::Schedule (Seconds (time), &ChangePower, wifiStaNode, maxPower);
+      Simulator::Schedule (Seconds (time), &ChangePower, wifiStaNode.Get (0), maxPower);
       maxPower = !maxPower;
     }
 
@@ -331,17 +366,12 @@ main (int argc, char *argv[])
 /***** Function definitions *****/
 
 void
-ChangePower (NodeContainer wifiStaNodes, uint8_t powerLevel)
+ChangePower (Ptr<Node> staNode, uint8_t powerLevel)
 {
-  // Iter through STA nodes and change power for each
-  for (auto node = wifiStaNodes.Begin (); node != wifiStaNodes.End (); ++node)
-    {
-      std::stringstream devicePath;
-      devicePath << "/NodeList/" 
-                 << (*node)->GetId () 
-                 << "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/DefaultTxPowerLevel";
-      Config::Set (devicePath.str(), UintegerValue (powerLevel));
-    }
+  // Change power in STA
+  Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/DefaultTxPowerLevel",
+               UintegerValue (powerLevel));
 }
 
 uint64_t
@@ -457,10 +487,10 @@ MeasurementPoint (Ptr<Node> staNode, Ptr<Node> apNode)
 }
 
 void
-PopulateARPcache ()
+PopulateArpCache ()
 {
   Ptr<ArpCache> arp = CreateObject<ArpCache> ();
-  arp->SetAliveTimeout (Seconds (3600 * 24 * 365));
+  arp->SetAliveTimeout (Seconds (3600 * 24));
 
   for (auto i = NodeList::Begin (); i != NodeList::End (); ++i)
     {
@@ -542,13 +572,16 @@ UpdateDistance (Ptr<Node> staNode, Ptr<Node> apNode)
 
   Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
                    "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
-                   "$ns3::MlWifiManager/Distance",
-               DoubleValue (d));
-
-    Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
-                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
                    "$ns3::OracleWifiManager/Distance",
                DoubleValue (d));
+
+  if (idealDistance)
+    {
+      Config::Set ("/NodeList/" + std::to_string (staNode->GetId ()) +
+                       "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                       "$ns3::MlWifiManager/Distance",
+                   DoubleValue (d));
+    }
 
   Simulator::Schedule (Seconds (DISTANCE_UPDATE_INTERVAL), &UpdateDistance, staNode, apNode);
 }

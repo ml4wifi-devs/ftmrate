@@ -3,8 +3,9 @@
 #ifndef ML_WIFI_MANAGER_H
 #define ML_WIFI_MANAGER_H
 
-#include "ns3/wifi-remote-station-manager.h"
+#include "ns3/ftm-session.h"
 #include "ns3/ns3-ai-module.h"
+#include "ns3/wifi-remote-station-manager.h"
 
 namespace ns3 {
 
@@ -17,12 +18,14 @@ struct sEnv
   uint32_t station_id;
   uint8_t mode;
   uint8_t type;
+  bool ftm_completed;
 } Packed;
 
 struct sAct
 {
   uint32_t station_id;
   uint8_t mode;
+  bool ftm_request;
 } Packed;
 
 struct MlWifiRemoteStation : public WifiRemoteStation
@@ -40,27 +43,38 @@ public:
   virtual ~MlWifiManager ();
 
 private:
-  WifiRemoteStation *DoCreateStation (void) const override;
-  void DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiMode txMode) override;
+  WifiRemoteStation *DoCreateStation (void) const;
+  void DoReportRxOk (WifiRemoteStation *station, double rxSnr, WifiMode txMode);
   void DoReportAmpduTxStatus (WifiRemoteStation *station, uint16_t nSuccessfulMpdus,
                               uint16_t nFailedMpdus, double rxSnr, double dataSnr,
-                              uint16_t dataChannelWidth, uint8_t dataNss) override;
-  void DoReportRtsFailed (WifiRemoteStation *station) override;
-  void DoReportDataFailed (WifiRemoteStation *station) override;
+                              uint16_t dataChannelWidth, uint8_t dataNss);
+  void DoReportRtsFailed (WifiRemoteStation *station);
+  void DoReportDataFailed (WifiRemoteStation *station);
   void DoReportRtsOk (WifiRemoteStation *station, double ctsSnr, WifiMode ctsMode,
-                      double rtsSnr) override;
+                      double rtsSnr);
   void DoReportDataOk (WifiRemoteStation *station, double ackSnr, WifiMode ackMode, double dataSnr,
-                       uint16_t dataChannelWidth, uint8_t dataNss) override;
-  void DoReportFinalRtsFailed (WifiRemoteStation *station) override;
-  void DoReportFinalDataFailed (WifiRemoteStation *station) override;
-  WifiTxVector DoGetDataTxVector (WifiRemoteStation *station) override;
-  WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station) override;
+                       uint16_t dataChannelWidth, uint8_t dataNss);
+  void DoReportFinalRtsFailed (WifiRemoteStation *station);
+  void DoReportFinalDataFailed (WifiRemoteStation *station);
+  WifiTxVector DoGetDataTxVector (WifiRemoteStation *station);
+  WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station);
+
+  void SetWifiNetDevice (Ptr<WifiNetDevice> device);
+  Ptr<WifiNetDevice> GetWifiNetDevice (void) const;
 
   void SampleMode(MlWifiRemoteStation *station);
+  void FtmBurst ();
+  void FtmSessionOver (FtmSession session);
 
   WifiMode m_ctlMode;   // Wi-Fi mode for RTS frames
-  double m_distance;    // current distance between STA and AP
   double m_power;       // current tx power
+  double m_distance;    // current distance between STA and AP
+  bool m_ftmCompleted;  // has the FTM measurement been completed
+  bool m_idealDistance; // pass the ideal distance to the module
+
+  Ptr<WifiNetDevice> m_device;  // device where the manager is installed
+  Mac48Address m_apAddr;        // MAC address of the AP
+
   Ns3AIRL<sEnv, sAct> *m_env;
 };
 

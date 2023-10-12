@@ -1,0 +1,4799 @@
+diff -Naur ns-3.35/src/wifi/ftm_map/ftm_map_generator.py ns-3.35-ftm/src/wifi/ftm_map/ftm_map_generator.py
+--- ns-3.35/src/wifi/ftm_map/ftm_map_generator.py	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/ftm_map/ftm_map_generator.py	2023-03-03 12:13:20
+@@ -0,0 +1,170 @@
++"""
++Copyright (C) 2021 Christos Laskos
++
++This program is free software; you can redistribute it and/or
++modify it under the terms of the GNU General Public License
++as published by the Free Software Foundation; either version 2
++of the License, or (at your option) any later version.
++
++This program is distributed in the hope that it will be useful,
++but WITHOUT ANY WARRANTY; without even the implied warranty of
++ERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++GNU General Public License for more details.
++
++You should have received a copy of the GNU General Public License
++along with this program; if not, write to the Free Software
++Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++"""
++
++import argparse
++from scipy import interpolate
++import numpy as np
++import matplotlib.pyplot as plt
++import locale
++import scipy.stats as st
++
++default_filename = "FTM_Wireless_Error.map"
++default_bias = 10000
++default_dcorr = 0.25
++default_resolution = 0.01
++
++def parseArguments():
++	parser = argparse.ArgumentParser()
++	group1 = parser.add_mutually_exclusive_group()
++	group1.add_argument("--xminmax", type=float, nargs=2, metavar=("MIN","MAX"), help="Minimum and Maximum value for X axis. Type: %(type)s")
++	group1.add_argument("--x", type=float, help="Creates a symmetrical X axis with [-x/2, x/2].")
++	group2 = parser.add_mutually_exclusive_group()
++	group2.add_argument("--yminmax", type=float, nargs=2, metavar=("MIN","MAX"), help="Minimum and Maximum value for Y axis.")
++	group2.add_argument("--y", type=float, help="Creates a symmetrical Y axis with [-y/2, y/2].")
++	parser.add_argument("--dim", type=float, help="Creates both axes with [-dim/2, dim/2].")
++	parser.add_argument("--bias", type=int, help="Set the bias for the map, value between [-bias/2, bias/2]. In units of pico seconds.")
++	parser.add_argument("--dcorr", type=float, help="Set the decorrelation distance between two points.")
++	#parser.add_argument("--resolution", type=float, help="Set the resolution for generated map.")
++	parser.add_argument("-o", "--output", type=str, metavar="Filename", help="Set the name for the generated file.")
++	group3 = parser.add_mutually_exclusive_group()
++	group3.add_argument("--read", action="store_true", help="If set reads from the default map file and visualizes the map.")
++	group3.add_argument("--readfile", type=str, metavar="Filename", help="Reads from the specified map file and then visualizes the map.")
++	parser.add_argument("--silent", action="store_true", help="Disables the prompt for the file size.")
++	#parser.add_argument("--heavy_multipath", action="store_true", help="Uses an expo norm distribution parameterized from real world data in a heavy multipath environment to create the map. Bias value is ignored when using this option.")
++	return parser.parse_args()
++
++def readFileAndDisplay(filename):
++	if filename is None:
++		filename=default_filename
++	ftm_map = np.loadtxt(filename)
++	f = open(filename, "r")
++	header = f.readline().rstrip()[2:].split(",")
++	f.close()
++
++	xmin = float(header[0].split("=")[1])
++	xmax = float(header[1].split("=")[1])
++	ymin = float(header[2].split("=")[1])
++	ymax = float(header[3].split("=")[1])
++	bias = float(header[4].split("=")[1])
++	dcorr = float(header[5].split("=")[1])
++	resolution = float(header[6].split("=")[1])
++	
++	x_bins = round((xmax - xmin) / resolution) + 1
++	y_bins = round((ymax - ymin) / resolution) + 1
++
++	x_new = np.linspace(xmin, xmax, x_bins)
++	y_new = np.linspace(ymin, ymax, y_bins)
++
++	fig, axs = plt.subplots(1)
++	
++	axs.contourf(x_new, y_new, ftm_map)
++	fig.suptitle("FTM Wireless Error Map")
++	axs.set_title("x=[" + str(xmin) + "," + str(xmax) + "], y=[" + str(ymin) + "," + str(ymax) + "], bias="+ str(bias) + ", dcorr="+ str(dcorr) + ", resolution=" + str(resolution))
++	plt.show()
++	
++
++def writeMap(ftm_map, xmin, xmax, ymin, ymax, bias, dcorr, resolution, output):
++	if not output.endswith(".map"):
++		output += ".map"
++	header = "xmin="+str(xmin)+",xmax="+str(xmax)+",ymin="+str(ymin)+",ymax="+str(ymax)+",bias="+str(bias)+",dcorr="+str(dcorr)+",resolution="+str(resolution)+"\n"
++	np.savetxt(output, ftm_map, header=header)
++
++
++def generateMap(args):
++	xmin, xmax = 0, 0
++	ymin, ymax = 0, 0
++	if args.xminmax is not None:
++		xmin = args.xminmax[0]
++		xmax = args.xminmax[1]
++	if args.yminmax is not None:
++		ymin = args.yminmax[0]
++		ymax = args.yminmax[1]
++	if args.x is not None:
++		xmin = -args.x / 2
++		xmax = args.x / 2
++	if args.y is not None:
++		ymin = -args.y / 2
++		ymax = args.y / 2
++	if args.dim is not None:
++		xmin = -args.dim / 2
++		xmax = args.dim / 2
++		ymin = -args.dim / 2
++		ymax = args.dim / 2
++	if (xmin == 0 and xmax == 0) or (ymin == 0 and ymax == 0):
++		print("Please provide dimensions for both axes!\n")
++		return
++	bias = default_bias
++	dcorr = default_dcorr
++	resolution = default_resolution
++	output = default_filename
++	if args.bias is not None:
++		bias = args.bias
++	if args.dcorr is not None:
++		dcorr = args.dcorr
++#	if args.resolution is not None:
++#		resolution = args.resolution
++	if args.output is not None:
++		output = args.output
++	
++	xsize = round((xmax - xmin) / dcorr) + 1
++	ysize = round((ymax - ymin) / dcorr) + 1
++	x_bins = round((xmax - xmin) / resolution) + 1
++	y_bins = round((ymax - ymin) / resolution) + 1
++
++	if not args.silent:
++		locale.setlocale(locale.LC_ALL, '') 
++		filesize = '{:n}'.format(x_bins * y_bins * 25)
++		prompt = "File size will be at least " + filesize + " bytes. Continue? (y/n): "
++		answer = str(input(prompt)).lower().strip()
++		if answer[:1] != 'y':
++			return
++
++
++	x = np.linspace(xmin, xmax, xsize)
++	y = np.linspace(ymin, ymax, ysize)
++	xx, yy = np.meshgrid(x, y)
++
++	z = st.exponnorm.rvs(1.9422496573694217, -1.6435585024441102, 0.8462059922427465, size=xx.shape) * 100 / 0.03
++#	if args.heavy_multipath:
++#		#z = np.random.normal(loc=heavy_multipath_mean, scale=heavy_multipath_sd, size=xx.shape)
++#		z = st.exponnorm.rvs(1.9422496573694217, -1.6435585024441102, 0.8462059922427465, size=xx.shape) * 100 / 0.03
++#	else:
++#		z = np.random.rand(xx.shape[0], xx.shape[1]) * bias - bias/2
++
++	f = interpolate.interp2d(x, y, z, kind='cubic')
++
++	x_new = np.linspace(xmin, xmax, x_bins)
++	y_new = np.linspace(ymin, ymax, y_bins)
++
++	ftm_map = f(x_new, y_new)
++
++	writeMap(ftm_map, xmin, xmax, ymin, ymax, bias, dcorr, resolution, output)
++
++
++def main():
++	args = parseArguments()
++
++	if args.read or args.readfile:
++		readFileAndDisplay(args.readfile)
++		return
++	generateMap(args)
++
++
++if __name__ == "__main__":
++	main()
++
+diff -Naur ns-3.35/src/wifi/model/ftm-error-model.cc ns-3.35-ftm/src/wifi/model/ftm-error-model.cc
+--- ns-3.35/src/wifi/model/ftm-error-model.cc	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-error-model.cc	2023-03-03 12:13:20
+@@ -0,0 +1,632 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2022 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#include "ftm-error-model.h"
++#include <ns3/mobility-model.h>
++#include <ns3/pointer.h>
++#include <ns3/double.h>
++#include <ns3/enum.h>
++#include <ns3/integer.h>
++#include <fstream>
++#include <algorithm>
++
++
++namespace ns3 {
++
++NS_LOG_COMPONENT_DEFINE ("FtmErrorModel");
++
++NS_OBJECT_ENSURE_REGISTERED (FtmErrorModel);
++
++TypeId
++FtmErrorModel::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::FtmErrorModel")
++    .SetParent<Object> ()
++    .SetGroupName ("FTM")
++    .AddConstructor<FtmErrorModel>()
++    ;
++  return tid;
++}
++
++FtmErrorModel::FtmErrorModel ()
++{
++  NS_LOG_FUNCTION (this);
++}
++
++FtmErrorModel::~FtmErrorModel ()
++{
++  NS_LOG_FUNCTION (this);
++}
++
++int
++FtmErrorModel::GetFtmError (double sig_str)
++{
++  return 0;
++}
++
++
++NS_OBJECT_ENSURE_REGISTERED (WiredFtmErrorModel);
++
++TypeId
++WiredFtmErrorModel::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::WiredFtmErrorModel")
++    .SetParent<FtmErrorModel> ()
++    .SetGroupName ("FTM")
++    .AddConstructor<WiredFtmErrorModel>()
++    .AddAttribute("Mean",
++                  "The mean to be used for the gaussian distribution.",
++                  DoubleValue (0.0),
++                  MakeDoubleAccessor (&WiredFtmErrorModel::SetMean,
++                                      &WiredFtmErrorModel::GetMean),
++                  MakeDoubleChecker<double> ())
++    .AddAttribute("Standard_Deviation",
++                  "The Standard Deviation to be used for the gaussion distribution.",
++                  DoubleValue (2562.69),
++                  MakeDoubleAccessor (&WiredFtmErrorModel::SetStandardDeviation,
++                                      &WiredFtmErrorModel::GetStandardDeviation),
++                  MakeDoubleChecker<double> ())
++    .AddAttribute("Channel_Bandwidth",
++                  "The Channel Bandwidth to be used for the error. "
++                  "This changes the Standard Deviation to a real measured value.",
++                  EnumValue (WiredFtmErrorModel::Channel_20_MHz),
++                  MakeEnumAccessor (&WiredFtmErrorModel::SetChannelBandwidth),
++                  MakeEnumChecker<ChannelBandwidth> (WiredFtmErrorModel::Channel_20_MHz, "Channel_20_MHz",
++                                                     WiredFtmErrorModel::Channel_40_MHz, "Channel_40_MHz",
++                                                     WiredFtmErrorModel::Channel_80_MHz, "Channel_80_MHz",
++                                                     WiredFtmErrorModel::Channel_160_MHz, "Channel_160_MHz"))
++    ;
++  return tid;
++}
++
++WiredFtmErrorModel::WiredFtmErrorModel ()
++{
++  NS_LOG_FUNCTION (this);
++  std::random_device random;
++  m_seed = random ();
++  m_generator = std::mt19937 (m_seed);
++  m_gauss_dist = std::normal_distribution<double> (m_mean, m_standard_deviation_20MHz);
++}
++
++WiredFtmErrorModel::WiredFtmErrorModel (std::uint_least32_t seed)
++{
++  NS_LOG_FUNCTION (this);
++  m_seed = seed;
++  m_generator = std::mt19937 (m_seed);
++  m_gauss_dist = std::normal_distribution<double> (m_mean, m_standard_deviation_20MHz);
++}
++
++WiredFtmErrorModel::~WiredFtmErrorModel ()
++{
++  NS_LOG_FUNCTION (this);
++}
++
++int
++WiredFtmErrorModel::GetFtmError (double sig_str)
++{
++  return (int) m_gauss_dist(m_generator);
++}
++
++void
++WiredFtmErrorModel::SetChannelBandwidth (ChannelBandwidth bandwidth)
++{
++  switch (bandwidth)
++  {
++    case Channel_20_MHz:
++      m_standard_deviation = m_standard_deviation_20MHz;
++      break;
++    case Channel_40_MHz:
++      m_standard_deviation = m_standard_deviation_40MHz;
++      break;
++    case Channel_80_MHz:
++      return;
++    case Channel_160_MHz:
++      return;
++  }
++  m_mean = 0;
++  UpdateDistribution ();
++}
++
++void
++WiredFtmErrorModel::SetSeed (std::uint_least32_t seed)
++{
++  m_seed = seed;
++  m_generator = std::mt19937 (m_seed);
++}
++
++std::uint_least32_t
++WiredFtmErrorModel::GetSeed (void) const
++{
++  return m_seed;
++}
++
++void
++WiredFtmErrorModel::SetMean (double mean)
++{
++  m_mean = mean;
++  UpdateDistribution ();
++}
++
++double
++WiredFtmErrorModel::GetMean (void) const
++{
++  return m_mean;
++}
++
++void
++WiredFtmErrorModel::SetStandardDeviation (double sd)
++{
++  m_standard_deviation = sd;
++  UpdateDistribution ();
++}
++
++double
++WiredFtmErrorModel::GetStandardDeviation (void) const
++{
++  return m_standard_deviation;
++}
++
++void
++WiredFtmErrorModel::UpdateDistribution (void)
++{
++  m_gauss_dist = std::normal_distribution<double> (m_mean, m_standard_deviation);
++}
++
++
++NS_OBJECT_ENSURE_REGISTERED (WirelessFtmErrorModel);
++
++TypeId
++WirelessFtmErrorModel::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::WirelessFtmErrorModel")
++    .SetParent<WiredFtmErrorModel> ()
++    .SetGroupName ("FTM")
++    .AddConstructor<WirelessFtmErrorModel>()
++    .AddAttribute("FtmMap",
++                  "The FtmMap from which to select bias."
++                  "For valid results the Map should be big enough for all positions during Simulation.",
++                  PointerValue (),
++                  MakePointerAccessor (&WirelessFtmErrorModel::SetFtmMap,
++                                       &WirelessFtmErrorModel::GetFtmMap),
++                  MakePointerChecker<FtmMap> ())
++    ;
++  return tid;
++}
++
++WirelessFtmErrorModel::WirelessFtmErrorModel ()
++{
++  NS_LOG_FUNCTION (this);
++
++  m_node = 0;
++  m_map = 0;
++}
++
++WirelessFtmErrorModel::WirelessFtmErrorModel (std::uint_least32_t seed)
++: WiredFtmErrorModel (seed)
++{
++  NS_LOG_FUNCTION (this);
++
++  m_node = 0;
++  m_map = 0;
++}
++
++WirelessFtmErrorModel::~WirelessFtmErrorModel()
++{
++  NS_LOG_FUNCTION (this);
++}
++
++int
++WirelessFtmErrorModel::GetFtmError (double sig_str)
++{
++  if (m_node == 0 || m_map == 0)
++    {
++      return 0 + WiredFtmErrorModel::GetFtmError (sig_str);
++    }
++  Ptr<MobilityModel> mobility = m_node->GetObject<MobilityModel> ();
++  Vector position = mobility->GetPosition();
++
++  double bias = m_map->GetBias(position.x, position.y);
++
++  int error = bias + WiredFtmErrorModel::GetFtmError (sig_str);
++  return error;
++}
++
++void
++WirelessFtmErrorModel::SetFtmMap (Ptr<FtmMap> map)
++{
++  m_map = map;
++}
++
++Ptr<WirelessFtmErrorModel::FtmMap>
++WirelessFtmErrorModel::GetFtmMap (void) const
++{
++  return m_map;
++}
++
++void
++WirelessFtmErrorModel::SetNode (Ptr<Node> node)
++{
++  m_node = node;
++}
++
++Ptr<Node>
++WirelessFtmErrorModel::GetNode (void)
++{
++  return m_node;
++}
++
++//NS_OBJECT_ENSURE_REGISTERED (WirelessFtmErrorModel::FtmMap); //does not work for some reason
++
++TypeId
++WirelessFtmErrorModel::FtmMap::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::WirelessFtmErrorModel::FtmMap")
++    .SetParent<Object> ()
++    .SetGroupName ("FTM")
++    .AddConstructor<WirelessFtmErrorModel::FtmMap>()
++    ;
++  return tid;
++}
++
++WirelessFtmErrorModel::FtmMap::FtmMap ()
++{
++  NS_LOG_FUNCTION (this);
++
++  map = 0;
++
++  xmin = 0;
++  xmax = 0;
++  ymin = 0;
++  ymax = 0;
++  resolution = 0;
++  xsize = 0;
++  ysize = 0;
++}
++
++WirelessFtmErrorModel::FtmMap::~FtmMap ()
++{
++  NS_LOG_FUNCTION (this);
++
++  delete [] map;
++}
++
++void
++WirelessFtmErrorModel::FtmMap::LoadMap (std::string filename)
++{
++  std::ifstream file (filename);
++  if (!file.is_open ())
++    {
++      file.close();
++      NS_FATAL_ERROR ("Specified map file can not be opened!");
++      return;
++    }
++  std::string line;
++  std::getline(file, line);
++
++  line.erase(std::remove_if (line.begin(), line.end(), [](unsigned char x){return std::isspace(x);}), line.end());
++  auto begin = line.begin();
++  begin++; //first character is not important
++  double *header = new double [7];
++  int i = 0;
++  std::string tmp = "";
++  bool save = false;
++  for (auto it = begin; it != line.end(); ++it)
++    {
++      if (*it == '=')
++        {
++          save = true;
++          continue;
++        }
++      if (*it == ',')
++        {
++          save = false;
++          header[i] = std::stod(tmp);
++          tmp = "";
++          ++i;
++        }
++      if(save)
++        {
++          tmp += *it;
++        }
++    }
++  header[i] = std::stod(tmp);
++
++  xmin = header[0];
++  xmax = header[1];
++  ymin = header[2];
++  ymax = header[3];
++  resolution = header[6];
++
++  xsize = ((xmax - xmin) / resolution) + 1;
++  ysize = ((ymax - ymin) / resolution) + 1;
++  map = new double [xsize * ysize];
++
++  std::getline(file, line);
++  int y = 0;
++  while(std::getline(file, line))
++    {
++      int x = 0;
++      std::string tmp = "";
++      for (auto it = line.begin(); it != line.end(); ++it)
++        {
++          if (*it == ' ')
++            {
++              map [y * xsize + x] = std::stod (tmp);
++              tmp = "";
++              ++x;
++            }
++          else
++            {
++              tmp += *it;
++            }
++        }
++      map [y * xsize + x] = std::stod (tmp);
++      ++y;
++    }
++  file.close();
++}
++
++double
++WirelessFtmErrorModel::FtmMap::GetBias (double x, double y)
++{
++  if (x < xmin || y < ymin || x > xmax || y > ymax)
++    {
++      return 0.0;
++    }
++
++  int x_val = (std::abs(xmin - x)) / resolution;
++  int y_val = (std::abs(ymax - y)) / resolution;
++
++  return map[y_val * xsize + x_val];
++}
++
++
++NS_OBJECT_ENSURE_REGISTERED (WirelessSigStrFtmErrorModel);
++
++TypeId
++WirelessSigStrFtmErrorModel::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::WirelessSigStrFtmErrorModel")
++    .SetParent<WirelessFtmErrorModel> ()
++    .SetGroupName ("FTM")
++    .AddConstructor<WirelessSigStrFtmErrorModel>()
++    ;
++  return tid;
++}
++
++WirelessSigStrFtmErrorModel::WirelessSigStrFtmErrorModel()
++{
++  NS_LOG_FUNCTION (this);
++  initDistributions ();
++}
++
++WirelessSigStrFtmErrorModel::WirelessSigStrFtmErrorModel(std::uint_least32_t seed)
++: WirelessFtmErrorModel (seed) {
++  NS_LOG_FUNCTION (this);
++  initDistributions ();
++}
++
++WirelessSigStrFtmErrorModel::~WirelessSigStrFtmErrorModel()
++{
++  NS_LOG_FUNCTION (this);
++
++}
++
++int
++WirelessSigStrFtmErrorModel::GetFtmError(double sig_str)
++{
++  int closest_sig_str = getClosestSigStr(sig_str);
++  johnsonsuParams j_p = m_sig_str_map[closest_sig_str];
++
++  double u = m_uniform_generator(m_generator);
++  // for safety to not get exactly 0 and throw an error in the normal cdf inverse function
++  while(u == 0.0) {
++      u = m_uniform_generator(m_generator);
++  }
++  double phi_inv_u = NormalCDFInverse(u);
++  double johnson_error_value = j_p.lamda * sinh((phi_inv_u - j_p.gamma) / j_p.delta) + j_p.xi;
++  johnson_error_value = std::round(johnson_error_value);
++  int error = (int) johnson_error_value;
++//  std::cout << error << std::endl;
++
++  return error + WirelessFtmErrorModel::GetFtmError(sig_str);
++}
++
++void
++WirelessSigStrFtmErrorModel::initDistributions (void)
++{
++  // generator for values between 0 and 1
++  m_uniform_generator = std::uniform_real_distribution<double> (0, 1);
++
++  // set the distributions parameters for each signal strength
++  johnsonsuParams sig_34_db;
++  sig_34_db.gamma = 3.185354317604147;
++  sig_34_db.delta = 5.478262165530669;
++  sig_34_db.xi = 6607.306595955903;
++  sig_34_db.lamda = 10570.049082397905;
++  m_sig_str_map[-34] = sig_34_db;
++
++  johnsonsuParams sig_54_db;
++  sig_54_db.gamma = 5.244677635165819;
++  sig_54_db.delta = 6.7849632493308984;
++  sig_54_db.xi = 11337.621653529686;
++  sig_54_db.lamda = 13422.49177763342;
++  m_sig_str_map[-54] = sig_54_db;
++
++  johnsonsuParams sig_57_db;
++  sig_57_db.gamma = 11.526219535401548;
++  sig_57_db.delta = 11.752569979080313;
++  sig_57_db.xi = 23972.68246527834;
++  sig_57_db.lamda = 21157.45764517224;
++  m_sig_str_map[-57] = sig_57_db;
++
++  johnsonsuParams sig_60_db;
++  sig_60_db.gamma = 2.9557921354424597;
++  sig_60_db.delta = 5.964536004213013;
++  sig_60_db.xi = 7871.392874146462;
++  sig_60_db.lamda = 16622.55659360096;
++  m_sig_str_map[-60] = sig_60_db;
++
++  johnsonsuParams sig_63_db;
++  sig_63_db.gamma = 6.531332615907574;
++  sig_63_db.delta = 9.919020162635562;
++  sig_63_db.xi = 20472.998112906615;
++  sig_63_db.lamda = 30324.20728528186;
++  m_sig_str_map[-63] = sig_63_db;
++
++  johnsonsuParams sig_66_db;
++  sig_66_db.gamma = 1.5679223209733015;
++  sig_66_db.delta = 2.651102194031285;
++  sig_66_db.xi = 6467.335055986082;
++  sig_66_db.lamda = 10780.685947891918;
++  m_sig_str_map[-66] = sig_66_db;
++
++  johnsonsuParams sig_69_db;
++  sig_69_db.gamma = 1.1919025159806425;
++  sig_69_db.delta = 1.7569740011989712;
++  sig_69_db.xi = 5315.277549936767;
++  sig_69_db.lamda = 9231.043791364496;
++  m_sig_str_map[-69] = sig_69_db;
++
++  johnsonsuParams sig_72_db;
++  sig_72_db.gamma = 1.6836266134414828;
++  sig_72_db.delta = 1.5382463243606552;
++  sig_72_db.xi = 9816.63892830534;
++  sig_72_db.lamda = 9491.487540612658;
++  m_sig_str_map[-72] = sig_72_db;
++
++  johnsonsuParams sig_74_db;
++  sig_74_db.gamma = 4.689858735589265;
++  sig_74_db.delta = 1.9587337465051236;
++  sig_74_db.xi = 28439.426802970185;
++  sig_74_db.lamda = 6570.588773099477;
++  m_sig_str_map[-74] = sig_74_db;
++
++  johnsonsuParams sig_75_db;
++  sig_75_db.gamma = 5.456350713475308;
++  sig_75_db.delta = 1.9477684103673694;
++  sig_75_db.xi = 30054.10998533451;
++  sig_75_db.lamda = 4864.245629274696;
++  m_sig_str_map[-75] = sig_75_db;
++
++  johnsonsuParams sig_76_db;
++  sig_76_db.gamma = 7.139744646153247;
++  sig_76_db.delta = 2.1710686890594744;
++  sig_76_db.xi = 38988.747394210804;
++  sig_76_db.lamda = 3882.820051622388;
++  m_sig_str_map[-76] = sig_76_db;
++
++  johnsonsuParams sig_77_db;
++  sig_77_db.gamma = 8.262140730541272;
++  sig_77_db.delta = 2.1345127965798465;
++  sig_77_db.xi = 42133.22288891718;
++  sig_77_db.lamda = 2389.29904971697;
++  m_sig_str_map[-77] = sig_77_db;
++
++  johnsonsuParams sig_78_db;
++  sig_78_db.gamma = 8.522080144367578;
++  sig_78_db.delta = 2.687266469105907;
++  sig_78_db.xi = 64794.77378244052;
++  sig_78_db.lamda = 7235.395990126872;
++  m_sig_str_map[-78] = sig_78_db;
++
++  johnsonsuParams sig_79_db;
++  sig_79_db.gamma = 9.641640107814577;
++  sig_79_db.delta = 3.0128025233396336;
++  sig_79_db.xi = 81275.30052138754;
++  sig_79_db.lamda = 8765.970931713084;
++  m_sig_str_map[-79] = sig_79_db;
++
++  johnsonsuParams sig_80_db;
++  sig_80_db.gamma = 10.561011243252771;
++  sig_80_db.delta = 3.34567183184721;
++  sig_80_db.xi = 99724.65034040553;
++  sig_80_db.lamda = 11258.496064080893;
++  m_sig_str_map[-80] = sig_80_db;
++
++  johnsonsuParams sig_81_db;
++  sig_81_db.gamma = 15.27327368062722;
++  sig_81_db.delta = 5.383312465271288;
++  sig_81_db.xi = 190229.12414263037;
++  sig_81_db.lamda = 27177.723635919916;
++  m_sig_str_map[-81] = sig_81_db;
++
++  johnsonsuParams sig_82_db;
++  sig_82_db.gamma = 21.623359857149143;
++  sig_82_db.delta = 7.2130572012096055;
++  sig_82_db.xi = 282943.14579305204;
++  sig_82_db.lamda = 33155.660042021365;
++  m_sig_str_map[-82] = sig_82_db;
++}
++
++int
++WirelessSigStrFtmErrorModel::getClosestSigStr (double sig_str)
++{
++  int sig_str_int = (int) std::round(sig_str);
++  int closest = signal_strengths[0];
++  for(int strength : signal_strengths)
++    {
++      if (std::abs(sig_str_int - strength) < std::abs(sig_str_int - closest))
++      {
++          closest = strength;
++      }
++    }
++  return closest;
++}
++
++// source start here
++// based on https://www.johndcook.com/blog/cpp_phi_inverse/
++double
++WirelessSigStrFtmErrorModel::RationalApproximation(double t)
++{
++    // Abramowitz and Stegun formula 26.2.23.
++    // The absolute value of the error should be less than 4.5 e-4.
++    double c[] = {2.515517, 0.802853, 0.010328};
++    double d[] = {1.432788, 0.189269, 0.001308};
++    return t - ((c[2]*t + c[1])*t + c[0]) /
++               (((d[2]*t + d[1])*t + d[0])*t + 1.0);
++}
++
++double
++WirelessSigStrFtmErrorModel::NormalCDFInverse(double p)
++{
++    if (p <= 0.0 || p >= 1.0)
++    {
++        std::stringstream os;
++        os << "Invalid input argument for inverse normal CDF. (" << p
++           << "); must be larger than 0 but less than 1.";
++        NS_FATAL_ERROR( os.str() );
++    }
++
++    // See https://www.johndcook.com/blog/normal_cdf_inverse/ for explanation of this section.
++    if (p < 0.5)
++    {
++        // F^-1(p) = - G^-1(p)
++        return -RationalApproximation( sqrt(-2.0*log(p)) );
++    }
++    else
++    {
++        // F^-1(p) = G^-1(1-p)
++        return RationalApproximation( sqrt(-2.0*log(1-p)) );
++    }
++}
++// source end here
++
++} /* namespace ns3 */
+diff -Naur ns-3.35/src/wifi/model/ftm-error-model.h ns-3.35-ftm/src/wifi/model/ftm-error-model.h
+--- ns-3.35/src/wifi/model/ftm-error-model.h	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-error-model.h	2023-03-03 12:13:20
+@@ -0,0 +1,330 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2022 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#ifndef FTM_ERROR_MODEL_H_
++#define FTM_ERROR_MODEL_H_
++
++#include <ns3/object.h>
++#include <random>
++#include <ns3/node.h>
++
++namespace ns3 {
++
++/**
++ * \brief base class for all FTM Error models
++ * \ingroup FTM
++ *
++ * This Class defines the Base for the FTM Error models. It is used as the default for all
++ * FtmSession objects without any error.
++ */
++class FtmErrorModel : public Object
++{
++public:
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  FtmErrorModel ();
++  virtual ~FtmErrorModel ();
++
++  /**
++   * Virtual method to retrieve the error. Used by child classes.
++   *
++   * \return always returns 0 as by default no error model is used.
++   */
++  virtual int GetFtmError (double sig_str);
++};
++
++/**
++ * \brief Error model based on wired channel.
++ * \ingroup FTM
++ *
++ * This class models a wired channel. The error is calculated with a gaussian distribution.
++ * Default values are based on measured data with a coax cable. Implemented Bandwidths are 20
++ * and 40 MHz.
++ */
++class WiredFtmErrorModel : public FtmErrorModel
++{
++public:
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  WiredFtmErrorModel ();
++  /**
++   * Creates the WiredFtmErrorModel with the specified seed.
++   * \param seed the seed
++   */
++  WiredFtmErrorModel (std::uint_least32_t seed);
++  virtual ~WiredFtmErrorModel ();
++
++  /**
++   * Get the calculated error.
++   *
++   * \return the error calculated based on this model
++   */
++  int GetFtmError (double sig_str);
++
++  /**
++   * Enumeration of the available Channel Bandwidths.
++   * Currently only 20 and 40 MHz are implemented.
++   */
++  enum ChannelBandwidth {
++    Channel_20_MHz,
++    Channel_40_MHz,
++    Channel_80_MHz,
++    Channel_160_MHz
++  };
++
++  /**
++   * Set the seed for the mt19937 generator.
++   * \param seed the seed
++   */
++  void SetSeed (std::uint_least32_t seed);
++
++  /**
++   * Returns the currently used seed for the mt19937 generator.
++   * \return the seed
++   */
++  std::uint_least32_t GetSeed (void) const;
++
++  /**
++   * Changes the gaussian distribution to the predefined value of the given channel bandwidth.
++   *
++   * \param bandwidth the bandwidth to be used in the error model
++   */
++  void SetChannelBandwidth (ChannelBandwidth bandwidth);
++
++  /**
++   * Set the mean for the gaussian distribution.
++   *
++   * \param mean the mean to be used
++   */
++  void SetMean (double mean);
++
++  /**
++   * \return the mean currently used
++   */
++  double GetMean (void) const;
++
++  /**
++   * Set the standard deviation for the gaussian distribution.
++   *
++   * \param sd the standard deviation to be used
++   */
++  void SetStandardDeviation (double sd);
++
++  /**
++   * \return the standard deviation currently used
++   */
++  double GetStandardDeviation (void) const;
++
++protected:
++  std::mt19937 m_generator; //!< random generator
++  std::normal_distribution<double> m_gauss_dist; //!< the distribution
++  std::uint_least32_t m_seed;
++
++  double m_mean = 0; //!< mean currently used
++  double m_standard_deviation = 0; //!< standard deviation currently used
++  const double m_standard_deviation_20MHz = 2562.69; //!< value for 20MHz channel bandwidth
++  const double m_standard_deviation_40MHz = 1074.91; //!< value for 40MHz channel bandwidth
++
++  /**
++   * Updates the distribution when mean or standard deviation changes.
++   */
++  void UpdateDistribution (void);
++};
++
++/**
++ * \brief Error model based on wireless channel.
++ * \ingroup FTM
++ *
++ * This class models a wireless indoor channel where multipath influences the accuracy.
++ * In addition to the WiredErrorModel, a map is used to determine
++ * bias. The node is used to determine the bias at its current position.
++ */
++class WirelessFtmErrorModel : public WiredFtmErrorModel
++{
++public:
++  class FtmMap;
++
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  WirelessFtmErrorModel ();
++  /**
++   * Creates Error model with the specified seed.
++   * \param seed the seed
++   */
++  WirelessFtmErrorModel (std::uint_least32_t seed);
++  virtual ~WirelessFtmErrorModel ();
++
++  /*
++   * Get the calculated error.
++   *
++   * \return the calculated error based on this model
++   */
++  int GetFtmError (double sig_str);
++
++  /**
++   * Sets the FtmMap to be used for this model.
++   *
++   * \param map FtmMap to be used
++   */
++  void SetFtmMap (Ptr<FtmMap> map);
++
++  /**
++   * \return the FtmMap used by this model
++   */
++  Ptr<FtmMap> GetFtmMap (void) const;
++
++  /**
++   * Sets the Node which is associated with this error model. Used to determine its position.
++   *
++   * \param node the node for the model
++   */
++  void SetNode (Ptr<Node> node);
++
++  /**
++   * \return the node used in this model
++   */
++  Ptr<Node> GetNode (void);
++
++private:
++  Ptr<FtmMap> m_map; //!< Pointer to the map.
++  Ptr<Node> m_node; //!< Pointer to the node.
++};
++
++/**
++ * \brief This class loads the FtmMap to be used by the wireless error model.
++ * \ingroup FTM
++ *
++ * Loads the generated by the python script to be used in the wireless error model.
++ * Also used to get the bias at a given point.
++ * The map generator script can be found in the folder src/wifi/ftm_map/ and is called
++ * ftm_map_generator.py. It can be used to create maps with custom size and bias.
++ */
++class WirelessFtmErrorModel::FtmMap : public Object
++{
++public:
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  FtmMap ();
++  virtual ~FtmMap ();
++
++  /**
++   * Loads an existing map file created by the map generator.
++   *
++   * \param filename the path/name to an existing .map file to be loaded
++   */
++  void LoadMap (std::string filename);
++
++  /**
++   * Returns the bias from the map at a given point.
++   *
++   * \param x the x coordinate
++   * \param y the y coordinate
++   * \return the bias at the given point
++   */
++  double GetBias (double x, double y);
++
++private:
++  double *map; //!< the map
++
++  double xmin; //!< x axis minimum
++  double xmax; //!< x axis maximum
++  double ymin; //!< y axis minimum
++  double ymax; //!< y axis maximum
++  double resolution; //!< map resolution
++
++  int xsize; //!< x axis size
++  int ysize; //!< y axis size
++};
++
++/**
++ * \brief Error model based on wireless channel with signal strength dependency.
++ * \ingroup FTM
++ *
++ * This class models a wireless indoor channel where the signal strength and multi path influence the accuracy.
++ * It extends the WirelessFtmErrorModel.
++ */
++class WirelessSigStrFtmErrorModel : public WirelessFtmErrorModel
++{
++public:
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  WirelessSigStrFtmErrorModel ();
++  /**
++   * Creates Error model with the specified seed.
++   * \param seed the seed
++   */
++  WirelessSigStrFtmErrorModel (std::uint_least32_t seed);
++  virtual ~WirelessSigStrFtmErrorModel ();
++
++  /*
++   * Get the calculated error.
++   *
++   * \return the calculated error based on this model
++   */
++  int GetFtmError (double sig_str);
++
++protected:
++  struct johnsonsuParams {
++    double gamma;
++    double delta;
++    double lamda;
++    double xi;
++  };
++
++  std::uniform_real_distribution<double> m_uniform_generator;
++
++  std::map<int, johnsonsuParams> m_sig_str_map;
++
++  // set the available signal strengths
++  const int signal_strengths[17] = {-34, -54, -57, -60, -63, -66, -69, -72, -74,
++                                  -75, -76, -77, -78, -79, -80, -81, -82};
++
++  void initDistributions (void);
++
++  int getClosestSigStr (double sig_str);
++
++private:
++  double NormalCDFInverse(double p);
++  double RationalApproximation(double t);
++};
++
++} /* namespace ns3 */
++
++#endif /* FTM_ERROR_MODEL_H_ */
+diff -Naur ns-3.35/src/wifi/model/ftm-header.cc ns-3.35-ftm/src/wifi/model/ftm-header.cc
+--- ns-3.35/src/wifi/model/ftm-header.cc	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-header.cc	2023-03-03 12:13:20
+@@ -0,0 +1,784 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2021 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#include "ftm-header.h"
++
++namespace ns3 {
++
++NS_OBJECT_ENSURE_REGISTERED (FtmParams);
++
++TypeId
++FtmParams::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("FtmParams")
++    .SetParent<Header> ()
++    .AddConstructor<FtmParams> ()
++  ;
++  return tid;
++}
++
++TypeId
++FtmParams::GetInstanceTypeId (void) const
++{
++  return GetTypeId ();
++}
++
++
++FtmParams::FtmParams ()
++{
++  m_status_indication = RESERVED;
++  m_status_indication_value = 0;
++  m_number_of_bursts_exponent = 0;
++  m_burst_duration = 0;
++  m_min_delta_ftm = 0;
++  m_partial_tsf_timer = 0;
++  m_partial_tsf_no_pref = false;
++  m_asap_capable = false;
++  m_asap = false;
++  m_ftms_per_burst = 0;
++  m_format_and_bandwidth = 0;
++  m_burst_period = 0;
++}
++
++FtmParams::~FtmParams ()
++{
++
++}
++
++uint32_t
++FtmParams::GetSerializedSize (void) const
++{
++  return 11;
++}
++void
++FtmParams::Serialize (Buffer::Iterator start) const
++{
++  start.WriteU8(m_element_id);
++  start.WriteU8(m_tag_length);
++  uint8_t tmp = (m_status_indication & 0x03) | ((m_status_indication_value & 0x1F) << 2);
++  start.WriteU8(tmp);
++  start.WriteU8((m_number_of_bursts_exponent & 0x0F) | (m_burst_duration << 4));
++  start.WriteU8(m_min_delta_ftm);
++  start.WriteHtonU16(m_partial_tsf_timer); //weird in wireshark
++  tmp = (m_partial_tsf_no_pref & 0x01) | ((m_asap_capable << 1) & 0x02) | ((m_asap << 2) & 0x04);
++  tmp |= ((m_ftms_per_burst << 3) & 0xF8);
++//  std::cout << (int) tmp << " " << (int) ((m_ftms_per_burst << 3) & 0xF8) << std::endl;
++  start.WriteU8(tmp);
++  start.WriteU8(m_format_and_bandwidth << 2);
++  start.WriteHtonU16(m_burst_period);
++}
++
++uint32_t
++FtmParams::Deserialize (Buffer::Iterator start)
++{
++  uint8_t element_id = start.ReadU8();
++  NS_ASSERT_MSG(element_id == m_element_id, "Received unsupported Tag in FTM Packet");
++  uint8_t length = start.ReadU8();
++  NS_ASSERT(length == m_tag_length);
++  uint8_t tmp = start.ReadU8();
++  m_status_indication = IntToStatusIndication (tmp & 0x03);
++  m_status_indication_value = (tmp >> 2) & 0x1F;
++  tmp = start.ReadU8();
++  m_number_of_bursts_exponent = tmp & 0x0F;
++  m_burst_duration = tmp >> 4;
++  m_min_delta_ftm = start.ReadU8();
++  m_partial_tsf_timer = start.ReadNtohU16(); //TODO weird in wireshark
++  tmp = start.ReadU8();
++  m_partial_tsf_no_pref = tmp & 0x01 ;
++  m_asap_capable = (tmp >> 1) & 0x01;
++  m_asap = (tmp >> 2) & 0x01;
++  m_ftms_per_burst = (tmp >> 3) & 0x1F;
++  m_format_and_bandwidth = start.ReadU8() >> 2;
++  m_burst_period = start.ReadNtohU16();
++  return 11; // the number of bytes consumed.
++}
++
++void
++FtmParams::Print (std::ostream &os) const
++{
++  os << "element_id=" << (int) m_element_id
++      << ", length=" << (int) m_tag_length
++      << ", status_indication=" << (int) m_status_indication
++      << ", status_indication_value=" << (int) m_status_indication_value
++      << ", number_of_bursts_exponent=" << (int) m_number_of_bursts_exponent
++      << ", burst_duration=" << (int) m_burst_duration
++      << ", min_delta_ftm=" << (int) m_min_delta_ftm
++      << ", partial_tsf_timer=" << (int) m_partial_tsf_timer
++      << ", partial_tsf_no_pref=" << m_partial_tsf_no_pref
++      << ", asap_capable=" << m_asap_capable
++      << ", asap=" << m_asap
++      << ", ftms_per_burst=" << (int) m_ftms_per_burst
++      << ", format_and_bandwidth=" << (int) m_format_and_bandwidth
++      << ", burst_period=" << (int) m_burst_period;
++}
++
++void
++FtmParams::SetStatusIndication (StatusIndication status)
++{
++  m_status_indication = status;
++}
++
++FtmParams::StatusIndication
++FtmParams::GetStatusIndication (void)
++{
++  return m_status_indication;
++}
++
++void
++FtmParams::SetStatusIndicationValue (uint8_t value)
++{
++  m_status_indication_value = value;
++}
++
++uint8_t
++FtmParams::GetStatusIndicationValue (void)
++{
++  return m_status_indication_value;
++}
++
++void
++FtmParams::SetNumberOfBurstsExponent (uint8_t burst_exponent)
++{
++  m_number_of_bursts_exponent = burst_exponent;
++}
++
++uint8_t
++FtmParams::GetNumberOfBurstsExponent (void)
++{
++  return m_number_of_bursts_exponent;
++}
++
++void
++FtmParams::SetBurstDuration (uint8_t burst_duration)
++{
++  m_burst_duration = burst_duration;
++}
++
++uint8_t
++FtmParams::GetBurstDuration (void)
++{
++  return m_burst_duration;
++}
++
++void
++FtmParams::SetMinDeltaFtm (uint8_t min_delta_ftm)
++{
++  m_min_delta_ftm = min_delta_ftm;
++}
++uint8_t
++FtmParams::GetMinDeltaFtm (void)
++{
++  return m_min_delta_ftm;
++}
++
++void
++FtmParams::SetPartialTsfTimer (uint16_t partial_tsf_timer)
++{
++  m_partial_tsf_timer = partial_tsf_timer;
++}
++
++uint16_t
++FtmParams::GetPartialTsfTimer (void)
++{
++  return m_partial_tsf_timer;
++}
++
++void
++FtmParams::SetPartialTsfNoPref (bool tsf_no_pref)
++{
++  m_partial_tsf_no_pref = tsf_no_pref;
++}
++
++bool
++FtmParams::GetPartialTsfNoPref (void)
++{
++  return m_partial_tsf_no_pref;
++}
++
++void
++FtmParams::SetAsapCapable (bool asap_capable)
++{
++  m_asap_capable = asap_capable;
++}
++
++bool
++FtmParams::GetAsapCapable (void)
++{
++  return m_asap_capable;
++}
++
++void
++FtmParams::SetAsap (bool asap)
++{
++  m_asap = asap;
++}
++
++bool
++FtmParams::GetAsap (void)
++{
++  return m_asap;
++}
++
++void
++FtmParams::SetFtmsPerBurst (uint8_t ftms_per_burst)
++{
++  m_ftms_per_burst = ftms_per_burst;
++}
++
++uint8_t
++FtmParams::GetFtmsPerBurst (void)
++{
++  return m_ftms_per_burst;
++}
++
++void
++FtmParams::SetFormatAndBandwidth (uint8_t format_bandwidth)
++{
++  m_format_and_bandwidth = format_bandwidth;
++}
++
++uint8_t
++FtmParams::GetFormatAndBandwidth (void)
++{
++  return m_format_and_bandwidth;
++}
++
++void
++FtmParams::SetBurstPeriod (uint16_t burst_period)
++{
++  m_burst_period = burst_period;
++}
++
++uint16_t
++FtmParams::GetBurstPeriod (void)
++{
++  return m_burst_period;
++}
++
++FtmParams::StatusIndication
++FtmParams::IntToStatusIndication (uint8_t status)
++{
++  switch (status)
++  {
++    case 0:
++      return RESERVED;
++    case 1:
++      return SUCCESSFUL;
++    case 2:
++      return REQUEST_INCAPABLE;
++    case 3:
++      return REQUEST_FAILED;
++  }
++  return RESERVED; //used to keep compiler happy, should never be reached as status is only 2 bits
++}
++
++// returns the burst duration in micro seconds
++uint32_t
++FtmParams::DecodeBurstDuration (void)
++{
++  if (m_burst_duration < 2 || m_burst_duration > 11)
++    {
++      return 0;
++    }
++  return 125 * (1 << (m_burst_duration - 1)); //125 * (2 ^ (m_burst_duration - 1))
++}
++
++NS_OBJECT_ENSURE_REGISTERED (FtmParamsHolder);
++
++TypeId
++FtmParamsHolder::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::FtmParamsHolder")
++    .SetParent<Object> ()
++    .SetGroupName ("Wifi")
++    .AddConstructor<FtmParamsHolder>()
++    ;
++  return tid;
++}
++
++FtmParamsHolder::FtmParamsHolder ()
++{
++
++}
++
++FtmParamsHolder::~FtmParamsHolder ()
++{
++
++}
++
++void
++FtmParamsHolder::SetFtmParams (FtmParams params)
++{
++  m_ftm_params = params;
++}
++
++FtmParams
++FtmParamsHolder::GetFtmParams ()
++{
++  return m_ftm_params;
++}
++
++
++/*
++ * Ftm Request Header class used for creating request frames
++ */
++
++NS_OBJECT_ENSURE_REGISTERED (FtmRequestHeader);
++
++TypeId
++FtmRequestHeader::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("FtmRequestHeader")
++    .SetParent<Header> ()
++    .AddConstructor<FtmRequestHeader> ()
++  ;
++  return tid;
++}
++
++TypeId
++FtmRequestHeader::GetInstanceTypeId (void) const
++{
++  return GetTypeId ();
++}
++
++
++FtmRequestHeader::FtmRequestHeader ()
++{
++  m_trigger = 0;
++  m_ftm_params_set = false;
++}
++
++FtmRequestHeader::~FtmRequestHeader ()
++{
++
++}
++
++uint32_t
++FtmRequestHeader::GetSerializedSize (void) const
++{
++  if (m_ftm_params_set)
++    {
++      return 1 + m_ftm_params.GetSerializedSize();
++    }
++  else
++    {
++      return 1;
++    }
++}
++
++void
++FtmRequestHeader::Serialize (Buffer::Iterator start) const
++{
++  start.WriteU8(m_trigger);
++  if (m_ftm_params_set)
++    {
++      m_ftm_params.Serialize(start);
++    }
++}
++uint32_t
++FtmRequestHeader::Deserialize (Buffer::Iterator start)
++{
++  m_trigger = start.ReadU8();
++
++  if (start.GetRemainingSize() >= m_ftm_params.GetSerializedSize()
++      && start.PeekU8() == 206)
++    {
++      m_ftm_params.Deserialize(start);
++      m_ftm_params_set = true;
++      return 1 + m_ftm_params.GetSerializedSize();
++    }
++  return 1; // the number of bytes consumed.
++}
++
++void
++FtmRequestHeader::Print (std::ostream &os) const
++{
++  os << "trigger=" << m_trigger;
++  if (m_ftm_params_set)
++    {
++      os << ", FTM_PARAMS: ";
++      m_ftm_params.Print(os);
++    }
++}
++
++void
++FtmRequestHeader::SetTrigger (uint8_t trigger)
++{
++  m_trigger = trigger;
++}
++
++uint8_t
++FtmRequestHeader::GetTrigger (void)
++{
++  return m_trigger;
++}
++
++void
++FtmRequestHeader::SetFtmParams (FtmParams ftm_params)
++{
++  m_ftm_params = ftm_params;
++  m_ftm_params_set = true;
++}
++
++
++FtmParams
++FtmRequestHeader::GetFtmParams (void)
++{
++  if (m_ftm_params_set)
++    {
++      return m_ftm_params;
++    }
++  return FtmParams();
++}
++
++bool
++FtmRequestHeader::GetFtmParamsSet (void)
++{
++  return m_ftm_params_set;
++}
++
++/*
++ * Ftm Response Header class used for creating ftm responses
++ */
++
++NS_OBJECT_ENSURE_REGISTERED (FtmResponseHeader);
++
++TypeId
++FtmResponseHeader::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("FtmResponseHeader")
++    .SetParent<Header> ()
++    .AddConstructor<FtmResponseHeader> ()
++  ;
++  return tid;
++}
++
++TypeId
++FtmResponseHeader::GetInstanceTypeId (void) const
++{
++  return GetTypeId ();
++}
++
++
++FtmResponseHeader::FtmResponseHeader ()
++{
++  m_dialog_token = 0;
++  m_follow_up_dialog_token = 0;
++  m_tod = 0;
++  m_toa = 0;
++  m_tod_error = 0;
++  m_toa_error = 0;
++
++  union { //source: https://stackoverflow.com/a/1001373
++    uint32_t i;
++    char c[4];
++  } bint = {0x01020304};
++  m_big_endian = bint.c[0] == 1;
++
++  m_ftm_params_set = false;
++}
++
++FtmResponseHeader::~FtmResponseHeader ()
++{
++
++}
++
++uint32_t
++FtmResponseHeader::GetSerializedSize (void) const
++{
++  if (m_ftm_params_set)
++    {
++      return 18 + m_ftm_params.GetSerializedSize();
++    }
++  else
++    {
++      return 18;
++    }
++}
++
++/*
++ * for now the timestamps are in 64bit size, but are only 48bit in the ftm protocol
++ */
++void
++FtmResponseHeader::Serialize (Buffer::Iterator start) const
++{
++  start.WriteU8(m_dialog_token);
++  start.WriteU8(m_follow_up_dialog_token);
++
++  if(m_big_endian) {
++      for(int i = 0; i < 6; i++) {
++          start.WriteU8((m_tod >> (40 - 8 * i)) &0xFF);
++      }
++      for(int i = 0; i < 6; i++) {
++          start.WriteU8((m_toa >> (40 - 8 * i)) &0xFF);
++      }
++  }
++  else {
++      for(int i = 0; i < 6; i++) {
++          start.WriteU8((m_tod >> (8 * i)) &0xFF);
++      }
++      for(int i = 0; i < 6; i++) {
++          start.WriteU8((m_toa >> (8 * i)) &0xFF);
++      }
++  }
++
++  start.WriteHtonU16(m_tod_error);
++  start.WriteHtonU16(m_toa_error);
++
++  if (m_ftm_params_set)
++    {
++      m_ftm_params.Serialize(start);
++    }
++}
++
++uint32_t
++FtmResponseHeader::Deserialize (Buffer::Iterator start)
++{
++  m_dialog_token = start.ReadU8();
++  m_follow_up_dialog_token = start.ReadU8();
++  uint8_t tod_buffer[6];
++  start.Read (tod_buffer, 6);
++  uint8_t toa_buffer[6];
++  start.Read (toa_buffer, 6);
++  m_tod = 0;
++  m_toa = 0;
++
++  if(m_big_endian) {
++      int i;
++      for(i = 0; i < 5; i++) {
++          m_tod |= tod_buffer[i];
++          m_tod <<= 8;
++
++          m_toa |= toa_buffer[i];
++          m_toa <<= 8;
++      }
++      m_tod |= tod_buffer[i];
++      m_toa |= toa_buffer[i];
++  }
++  else {
++      int i;
++      for(i = 5; i > 0; i--) {
++          m_tod |= tod_buffer[i];
++          m_tod <<= 8;
++
++          m_toa |= toa_buffer[i];
++          m_toa <<= 8;
++      }
++      m_tod |= tod_buffer[i];
++      m_toa |= toa_buffer[i];
++  }
++
++  m_tod_error = start.ReadNtohU16();
++  m_toa_error = start.ReadNtohU16();
++
++  if (start.GetRemainingSize() >= m_ftm_params.GetSerializedSize()
++      && start.PeekU8() == 206)
++    {
++
++      m_ftm_params.Deserialize(start);
++      m_ftm_params_set = true;
++      return 18 + m_ftm_params.GetSerializedSize();
++    }
++
++  return 18; // the number of bytes consumed.
++}
++
++void
++FtmResponseHeader::Print (std::ostream &os) const
++{
++  os << "DialogToken=" << m_dialog_token
++      << ", FollowUpDialogToken=" << m_follow_up_dialog_token
++      << ", TOD=" << m_tod << ", TOA=" << m_toa
++      << ", TOD_Error=" << m_tod_error
++      << ", TOA_Error=" << m_toa_error;
++}
++
++void
++FtmResponseHeader::SetDialogToken (uint8_t dialog_token)
++{
++  m_dialog_token = dialog_token;
++}
++
++uint8_t
++FtmResponseHeader::GetDialogToken (void)
++{
++  return m_dialog_token;
++}
++
++void
++FtmResponseHeader::SetFollowUpDialogToken (uint8_t follow_up_dialog_token)
++{
++  m_follow_up_dialog_token = follow_up_dialog_token;
++}
++
++uint8_t
++FtmResponseHeader::GetFollowUpDialogToken (void)
++{
++  return m_follow_up_dialog_token;
++}
++
++void
++FtmResponseHeader::SetTimeOfDeparture (uint64_t tod)
++{
++  m_tod = tod;
++}
++
++uint64_t
++FtmResponseHeader::GetTimeOfDeparture (void)
++{
++  return m_tod;
++}
++
++void
++FtmResponseHeader::SetTimeOfArrival (uint64_t toa)
++{
++  m_toa = toa;
++}
++
++uint64_t
++FtmResponseHeader::GetTimeOfArrival (void)
++{
++  return m_toa;
++}
++
++void
++FtmResponseHeader::SetTimeOfDepartureError (uint16_t tod_error)
++{
++  m_tod_error = tod_error;
++}
++
++uint16_t
++FtmResponseHeader::GetTimeOfDepartureError (void)
++{
++  return m_tod_error;
++}
++
++void
++FtmResponseHeader::SetTimeOfArrivalError (uint16_t toa_error)
++{
++  m_toa_error = toa_error;
++}
++
++uint16_t
++FtmResponseHeader::GetTimeOfArrivalError (void)
++{
++  return m_toa_error;
++}
++
++void
++FtmResponseHeader::SetFtmParams (FtmParams ftm_params)
++{
++  m_ftm_params = ftm_params;
++  m_ftm_params_set = true;
++}
++
++
++FtmParams
++FtmResponseHeader::GetFtmParams (void)
++{
++  if (m_ftm_params_set)
++    {
++      return m_ftm_params;
++    }
++  return FtmParams();
++}
++
++bool
++FtmResponseHeader::GetFtmParamsSet (void)
++{
++  return m_ftm_params_set;
++}
++
++
++NS_OBJECT_ENSURE_REGISTERED (TsfSyncInfo);
++
++TsfSyncInfo::TsfSyncInfo ()
++{
++  tsf_sync_info = 0;
++}
++
++TsfSyncInfo::~TsfSyncInfo ()
++{
++
++}
++
++TypeId
++TsfSyncInfo::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("TsfSyncInfo")
++    .SetParent<Header> ()
++    .AddConstructor<TsfSyncInfo> ()
++  ;
++  return tid;
++}
++
++TypeId
++TsfSyncInfo::GetInstanceTypeId (void) const
++{
++  return GetTypeId ();
++}
++
++uint32_t
++TsfSyncInfo::GetSerializedSize () const
++{
++  return 7;
++}
++
++void
++TsfSyncInfo::Serialize (Buffer::Iterator start) const
++{
++  start.WriteU8 (element_id);
++  start.WriteU8 (length);
++  start.WriteU8 (element_id_extension);
++  start.WriteHtonU32 (tsf_sync_info);
++}
++
++uint32_t
++TsfSyncInfo::Deserialize (Buffer::Iterator start)
++{
++  uint8_t tmp = start.ReadU8 ();
++  NS_ASSERT (tmp == element_id);
++  tmp = start.ReadU8 ();
++  NS_ASSERT (tmp == length);
++  tmp = start.ReadU8 ();
++  NS_ASSERT (tmp == element_id_extension);
++  tsf_sync_info = start.ReadNtohU32 ();
++  return GetSerializedSize ();
++}
++
++void
++TsfSyncInfo::Print (std::ostream &os) const
++{
++  os << "TSF sync info=" << tsf_sync_info;
++}
++
++void
++TsfSyncInfo::SetTsfSyncInfo (uint32_t tsf_sync)
++{
++  tsf_sync_info = tsf_sync;
++}
++
++uint32_t
++TsfSyncInfo::GetTsfSyncInfo (void) const
++{
++  return tsf_sync_info;
++}
++
++} /* namespace ns3 */
+diff -Naur ns-3.35/src/wifi/model/ftm-header.h ns-3.35-ftm/src/wifi/model/ftm-header.h
+--- ns-3.35/src/wifi/model/ftm-header.h	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-header.h	2023-03-03 12:13:20
+@@ -0,0 +1,553 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2021 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#ifndef FTM_HEADER_H_
++#define FTM_HEADER_H_
++
++#include "ns3/header.h"
++#include "ns3/object.h"
++
++namespace ns3 {
++
++/**
++ * \brief Class for the FTM parameters.
++ * \ingroup FTM
++ *
++ * This Class implements the FTM parameter header.
++ */
++class FtmParams : public Header
++{
++public:
++  FtmParams ();
++  virtual ~FtmParams ();
++
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++  virtual TypeId GetInstanceTypeId (void) const;
++  virtual uint32_t GetSerializedSize (void) const;
++  virtual void Serialize (Buffer::Iterator start) const;
++  virtual uint32_t Deserialize (Buffer::Iterator start);
++  virtual void Print (std::ostream &os) const;
++
++  /**
++   * Status Indication types.
++   */
++  enum StatusIndication : uint8_t
++  {
++    RESERVED = 0,
++    SUCCESSFUL = 1,
++    REQUEST_INCAPABLE = 2,
++    REQUEST_FAILED = 3
++  };
++
++  /**
++   * Set the StatusIndication field in the FTM parameters header.
++   *
++   * \param status the StatusIndication field value
++   */
++  void SetStatusIndication (StatusIndication status);
++
++  /**
++   * Return the StatusIndication field.
++   *
++   * \return the StatusIndication field
++   */
++  StatusIndication GetStatusIndication (void);
++
++  /**
++   * Set the status indication value field.
++   *
++   * \param value the status indication value
++   */
++  void SetStatusIndicationValue (uint8_t value);
++
++  /**
++   * Returns the status indication value field.
++   *
++   * \return the status indication value
++   */
++  uint8_t GetStatusIndicationValue (void);
++
++  /**
++   * Set the number of bursts exponent field.
++   *
++   * \param burst_exponent the burst exponent
++   */
++  void SetNumberOfBurstsExponent (uint8_t burst_exponent);
++
++  /**
++   * Returns the number of bursts exponent field.
++   *
++   * \return the number of bursts exponent
++   */
++  uint8_t GetNumberOfBurstsExponent (void);
++
++  /**
++   * Set the burst duration field.
++   *
++   * \param burst_duration the burst duration
++   */
++  void SetBurstDuration (uint8_t burst_duration);
++
++  /**
++   * Returns the burst duration field.
++   *
++   * \return the burst duration
++   */
++  uint8_t GetBurstDuration (void);
++
++  /**
++   * Set the min delta FTM field.
++   *
++   * \param min_delta_ftm the min delta FTM
++   */
++  void SetMinDeltaFtm (uint8_t min_delta_ftm);
++
++  /**
++   * Returns the min delta FTM field.
++   *
++   * \return the min delta FTM
++   */
++  uint8_t GetMinDeltaFtm (void);
++
++  /**
++   * Set the partial TSF timer field.
++   *
++   * \param partial_tsf_timer the partial TSF timer
++   */
++  void SetPartialTsfTimer (uint16_t partial_tsf_timer);
++
++  /**
++   * Returns the partial TSF timer field.
++   *
++   * \return the partial TSF timer
++   */
++  uint16_t GetPartialTsfTimer (void);
++
++  /**
++   * Set the partial TSF no pref field.
++   *
++   * \param tsf_no_pref the TSF no pref
++   */
++  void SetPartialTsfNoPref (bool tsf_no_pref);
++
++  /**
++   * Returns the partial TSF no pref field.
++   *
++   * \return the partial TSF no pref
++   */
++  bool GetPartialTsfNoPref (void);
++
++  /**
++   * Set the ASAP capable field.
++   *
++   * \param asap_capable the ASAP capable
++   */
++  void SetAsapCapable (bool asap_capable);
++
++  /**
++   * Returns the ASAP capable field.
++   *
++   * \return the ASAP capable
++   */
++  bool GetAsapCapable (void);
++
++  /**
++   * Set the ASAP field.
++   *
++   * \param asap the ASAP
++   */
++  void SetAsap (bool asap);
++
++  /**
++   * Returns the ASAP field.
++   *
++   * \return the ASAP
++   */
++  bool GetAsap (void);
++
++  /**
++   * Set the FTMs per burst field.
++   *
++   * \param ftms_per_burst the FTMs per burst
++   */
++  void SetFtmsPerBurst (uint8_t ftms_per_burst);
++
++  /**
++   * Returns the FTMs per burst field.
++   *
++   * \return the FTMs per burst
++   */
++  uint8_t GetFtmsPerBurst (void);
++
++  /**
++   * Set the format and bandwidth field. This is not used in the implementation.
++   *
++   * \param format_bandwidth the format and bandwidth
++   */
++  void SetFormatAndBandwidth (uint8_t format_bandwidth);
++
++  /**
++   * Returns the format and bandwidth field. This not used in the implementation.
++   *
++   * \return the format and bandwidth
++   */
++  uint8_t GetFormatAndBandwidth (void);
++
++  /**
++   * Set the burst period field.
++   *
++   * \param burst_period the burst period
++   */
++  void SetBurstPeriod (uint16_t burst_period);
++
++  /**
++   * Returns the burst duration field.
++   *
++   * \return the burst duration
++   */
++  uint16_t GetBurstPeriod (void);
++
++  /**
++   * Returns the burst duration in micro seconds. Used to convert the header value into a Time value.
++   * Details for the conversation can be found in table 9-257 in the 802.11-2016 standard.
++   *
++   * \return the decoded burst duration
++   */
++  uint32_t DecodeBurstDuration (void);
++
++private:
++  /**
++   * Convert the integer value of the status indication to the StatusIndication enum.
++   *
++   * \param status int representation of the status indication
++   *
++   * \return the status indication as the enum
++   */
++  StatusIndication IntToStatusIndication (uint8_t status);
++
++  static const uint8_t m_element_id = 206; //!< Element ID for the header
++  static const uint8_t m_tag_length = 9; //!< Tag length for the header
++
++  StatusIndication m_status_indication;
++  uint8_t m_status_indication_value;
++  uint8_t m_number_of_bursts_exponent;
++  uint8_t m_burst_duration;
++  uint8_t m_min_delta_ftm;
++  uint16_t m_partial_tsf_timer;
++  bool m_partial_tsf_no_pref;
++  bool m_asap_capable;
++  bool m_asap;
++  uint8_t m_ftms_per_burst;
++  uint8_t m_format_and_bandwidth;
++  uint16_t m_burst_period;
++};
++
++/**
++ * \brief holder class for an FtmParams header
++ * \ingroup FTM
++ *
++ * This class only purpose is to be used in the attribute system to set the default FTM parameters
++ * for the FtmSession class. This was created because creating an attribute value from a header did not work.
++ */
++class FtmParamsHolder : public Object
++{
++public:
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  FtmParamsHolder ();
++   virtual ~FtmParamsHolder ();
++
++   /**
++    * Set the FTM parameters.
++    *
++    * \param params the FtmParams to set
++    */
++   void SetFtmParams (FtmParams params);
++
++   /**
++    * Get the FTM parameters.
++    *
++    * \return the FtmParams
++    */
++   FtmParams GetFtmParams (void);
++
++private:
++   FtmParams m_ftm_params; //!< FtmParams
++};
++
++/**
++ * \brief Class for the FTM request header.
++ * \ingroup FTM
++ *
++ * Implementation of the FTM request header.
++ */
++class FtmRequestHeader : public Header
++{
++public:
++  FtmRequestHeader ();
++  virtual
++  ~FtmRequestHeader ();
++
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++  virtual TypeId GetInstanceTypeId (void) const;
++  virtual uint32_t GetSerializedSize (void) const;
++  virtual void Serialize (Buffer::Iterator start) const;
++  virtual uint32_t Deserialize (Buffer::Iterator start);
++  virtual void Print (std::ostream &os) const;
++
++  /**
++   * Set the Trigger field.
++   *
++   * \param trigger the trigger
++   */
++  void SetTrigger (uint8_t trigger);
++
++  /**
++   * Returns the trigger field.
++   *
++   * \return the trigger
++   */
++  uint8_t GetTrigger (void);
++
++  /**
++   * Set the FTM parameters.
++   *
++   * \param ftm_params the FtmParams
++   */
++  void SetFtmParams (FtmParams ftm_params);
++
++  /**
++   * Returns the FTM parameters, if set.
++   *
++   * \return the FtmParams
++   */
++  FtmParams GetFtmParams (void);
++
++  /**
++   * Returns true if the FTM parameters have been set.
++   *
++   * \return if FtmParams have been set
++   */
++  bool GetFtmParamsSet (void);
++
++private:
++  uint8_t m_trigger;
++  FtmParams m_ftm_params;
++  bool m_ftm_params_set;
++};
++
++/**
++ * \brief Class for the FTM response header.
++ * \ingroup FTM
++ *
++ * Implementation of the FTM response header.
++ */
++class FtmResponseHeader : public Header
++{
++public:
++  FtmResponseHeader ();
++  virtual ~FtmResponseHeader ();
++
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++  virtual TypeId GetInstanceTypeId (void) const;
++  virtual uint32_t GetSerializedSize (void) const;
++  virtual void Serialize (Buffer::Iterator start) const;
++  virtual uint32_t Deserialize (Buffer::Iterator start);
++  virtual void Print (std::ostream &os) const;
++
++  /**
++   * Set the dialog token.
++   *
++   * \param dialog_token the dialog token
++   */
++  void SetDialogToken (uint8_t dialog_token);
++
++  /**
++   * Returns the dialog token.
++   *
++   * \return the dialog token
++   */
++  uint8_t GetDialogToken (void);
++
++  /**
++   * Set the follow up dialog token.
++   *
++   * \param follow_up_dialog_token the follow up dialog token
++   */
++  void SetFollowUpDialogToken (uint8_t follow_up_dialog_token);
++
++  /**
++   * Returns the follow up dialog token.
++   *
++   * \return the follow up dialog token
++   */
++  uint8_t GetFollowUpDialogToken (void);
++
++  /**
++   * Set the time of departure.
++   *
++   * \param tod the time of departure
++   */
++  void SetTimeOfDeparture (uint64_t tod);
++
++  /**
++   * Returns the time of departure.
++   *
++   * \return the time of departure
++   */
++  uint64_t GetTimeOfDeparture (void);
++
++  /**
++   * Set the time of arrival.
++   *
++   * \param toa the time of arrival
++   */
++  void SetTimeOfArrival (uint64_t toa);
++
++  /**
++   * Returns the time of arrival.
++   *
++   * \return the time of arrival
++   */
++  uint64_t GetTimeOfArrival (void);
++
++  /**
++   * Set the time of departure error.
++   *
++   * \param rod_error the time of departure error
++   */
++  void SetTimeOfDepartureError (uint16_t tod_error);
++
++  /**
++   * Returns the time of departure error.
++   *
++   * \return the time of departure error
++   */
++  uint16_t GetTimeOfDepartureError (void);
++
++  /**
++   * Set the time of arrival error.
++   *
++   * \param toa_error the time of arrival error
++   */
++  void SetTimeOfArrivalError (uint16_t toa_error);
++
++  /**
++   * Returns the time of arrival error.
++   *
++   * \return the time of arrival error
++   */
++  uint16_t GetTimeOfArrivalError (void);
++
++  /**
++   * Set the FTM parameters.
++   *
++   * \param ftm_params the FtmParams
++   */
++  void SetFtmParams (FtmParams ftm_params);
++
++  /**
++   * Returns the FTM parameters.
++   *
++   * \return the FtmParams
++   */
++  FtmParams GetFtmParams (void);
++
++  /**
++   * Returns true if the FTM parameters have been set.
++   *
++   * \return if FtmParams have been set
++   */
++  bool GetFtmParamsSet (void);
++
++private:
++  uint8_t m_dialog_token;
++  uint8_t m_follow_up_dialog_token;
++  uint64_t m_tod;
++  uint64_t m_toa;
++  uint16_t m_tod_error;
++  uint16_t m_toa_error;
++
++  FtmParams m_ftm_params;
++  bool m_ftm_params_set;
++
++  bool m_big_endian; //!< If this system is big endian. Used for conversion of the 6 byte time stamps.
++};
++
++/**
++ * \brief Class for the TSF sync info header.
++ * \ingroup FTM
++ *
++ * Implementation of the TSF sync info header.
++ */
++class TsfSyncInfo : public Header
++{
++public:
++  TsfSyncInfo ();
++  virtual ~TsfSyncInfo ();
++
++  static TypeId GetTypeId (void);
++  virtual TypeId GetInstanceTypeId (void) const;
++  virtual uint32_t GetSerializedSize (void) const;
++  virtual void Serialize (Buffer::Iterator start) const;
++  virtual uint32_t Deserialize (Buffer::Iterator start);
++  virtual void Print (std::ostream &os) const;
++
++  /**
++   * Sets the TSF sync info.
++   * \param tsf_sync the value for the TSF sync info
++   */
++  void SetTsfSyncInfo (uint32_t tsf_sync);
++
++  /**
++   * Returns the TSF sync info.
++   * \return the TSF sync info
++   */
++  uint32_t GetTsfSyncInfo () const;
++
++private:
++  const uint8_t element_id = 255;
++  const uint8_t length = 5;
++  const uint8_t element_id_extension = 9;
++  uint32_t tsf_sync_info;
++};
++
++
++
++
++} /* namespace ns3 */
++
++#endif /* FTM_HEADER_H_ */
+diff -Naur ns-3.35/src/wifi/model/ftm-manager.cc ns-3.35-ftm/src/wifi/model/ftm-manager.cc
+--- ns-3.35/src/wifi/model/ftm-manager.cc	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-manager.cc	2023-03-03 12:13:20
+@@ -0,0 +1,320 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2022 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#include "ftm-manager.h"
++#include "ns3/core-module.h"
++
++
++namespace ns3 {
++
++NS_LOG_COMPONENT_DEFINE ("FtmManager");
++
++NS_OBJECT_ENSURE_REGISTERED (FtmManager);
++
++TypeId
++FtmManager::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::FtmManager")
++    .SetParent<Object> ()
++    .SetGroupName ("Wifi")
++    .AddConstructor<FtmManager>()
++    ;
++  return tid;
++}
++
++FtmManager::FtmManager ()
++{
++  received_packets = 0;
++  awaiting_ack = false;
++  sent_packets = 0;
++  sending_ack = false;
++}
++
++FtmManager::FtmManager (Ptr<WifiPhy> phy, Ptr<Txop> txop)
++{
++  received_packets = 0;
++  awaiting_ack = false;
++  sent_packets = 0;
++  sending_ack = false;
++  phy->TraceConnectWithoutContext("PhyTxBegin", MakeCallback(&FtmManager::PhyTxBegin, this));
++  phy->TraceConnectWithoutContext("PhyRxBegin", MakeCallback(&FtmManager::PhyRxBegin, this));
++  phy->TraceConnectWithoutContext("MonitorSnifferRx", MakeCallback(&FtmManager::SnifferRxNotify, this));
++  m_txop = txop;
++
++  m_preamble_detection_duration = phy->GetPreambleDetectionDuration();
++}
++
++FtmManager::~FtmManager ()
++{
++  TraceDisconnectWithoutContext("PhyTxBegin", MakeCallback(&FtmManager::PhyTxBegin, this));
++  TraceDisconnectWithoutContext("PhyRxBegin", MakeCallback(&FtmManager::PhyRxBegin, this));
++  sessions.clear();
++  m_blocked_partners.clear();
++  m_txop = 0;
++}
++
++void
++FtmManager::PhyTxBegin(Ptr<const Packet> packet, double num)
++{
++
++  Time now = Simulator::Now();
++  int64_t pico_sec = now.GetPicoSeconds();
++  pico_sec &= 0x0000FFFFFFFFFFFF;
++  sent_packets++;
++  Ptr<Packet> copy = packet->Copy();
++  WifiMacHeader hdr;
++  copy->RemoveHeader(hdr);
++  if(hdr.IsMgt() && hdr.IsAction()) {
++      WifiActionHeader action_hdr;
++      copy->RemoveHeader(action_hdr);
++      if(action_hdr.GetCategory() == WifiActionHeader::PUBLIC_ACTION) {
++          WifiActionHeader::ActionValue action = action_hdr.GetAction();
++          if (action.publicAction == WifiActionHeader::FTM_RESPONSE)
++            {
++              Ptr<FtmSession> session = FindSession (hdr.GetAddr1());
++              if (session != 0)
++                {
++                  FtmResponseHeader ftm_resp_hdr;
++                  copy->RemoveHeader(ftm_resp_hdr);
++                  session->SetT1(ftm_resp_hdr.GetDialogToken(), pico_sec);
++
++                  received_packets = 0;
++                  awaiting_ack = true;
++
++                  PacketInPieces pieces;
++                  pieces.mac_hdr = hdr;
++                  pieces.action_hdr = action_hdr;
++                  pieces.ftm_res_hdr = ftm_resp_hdr;
++                  m_current_tx_packet = pieces;
++                }
++            }
++      }
++  }
++  else if(hdr.IsAck()) {
++      if(sending_ack && sent_packets == 1) {
++          if(m_ack_to == hdr.GetAddr1()) {
++              sending_ack = false;
++              Ptr<FtmSession> session = FindSession (m_current_rx_packet.mac_hdr.GetAddr2());
++              if (session != 0)
++                {
++                  session->SetT3(m_current_rx_packet.ftm_res_hdr.GetDialogToken(), pico_sec);
++                }
++          }
++      }
++  }
++}
++
++void
++FtmManager::PhyRxBegin(Ptr<const Packet> packet, RxPowerWattPerChannelBand rxPowersW)
++{
++  NS_LOG_FUNCTION (this);
++  Time now = Simulator::Now();
++  int64_t pico_sec = now.GetPicoSeconds();
++  pico_sec &= 0x0000FFFFFFFFFFFF;
++  Ptr<Packet> copy = packet->Copy();
++  received_packets++;
++  WifiMacHeader hdr;
++  copy->RemoveHeader(hdr);
++  if(hdr.GetAddr1() == m_mac_address){
++      if(hdr.IsMgt() && hdr.IsAction()) {
++          WifiActionHeader action_hdr;
++          copy->RemoveHeader(action_hdr);
++          if(action_hdr.GetCategory() == WifiActionHeader::PUBLIC_ACTION) {
++              Mac48Address partner = hdr.GetAddr2();
++              if(action_hdr.GetAction().publicAction == WifiActionHeader::FTM_RESPONSE) {
++                  sending_ack = true;
++                  sent_packets = 0;
++                  m_ack_to = partner;
++
++                  FtmResponseHeader ftm_res_hdr;
++                  copy->RemoveHeader(ftm_res_hdr);
++
++                  Ptr<FtmSession> session = FindSession(partner);
++                  if (session != 0 && ftm_res_hdr.GetDialogToken() != 0)
++                    {
++                      session->SetT2(ftm_res_hdr.GetDialogToken(), pico_sec);
++                      PacketInPieces pieces;
++                      pieces.mac_hdr = hdr;
++                      pieces.action_hdr = action_hdr;
++                      pieces.ftm_res_hdr = ftm_res_hdr;
++                      m_current_rx_packet = pieces;
++                    }
++              }
++          }
++      }
++      if(hdr.IsAck()) {
++          if(awaiting_ack && received_packets == 1) {
++              awaiting_ack = false;
++              Ptr<FtmSession> session = FindSession (m_current_tx_packet.mac_hdr.GetAddr1());
++              if (session != 0)
++                {
++                  session->SetT4(m_current_tx_packet.ftm_res_hdr.GetDialogToken(), pico_sec);
++                }
++          }
++          else if(awaiting_ack && received_packets > 1) { //this needs to be checked also for non ack, cause if ack never arrives but other packet, its still an error
++              awaiting_ack = false;
++          }
++      }
++  }
++}
++
++void
++FtmManager::SnifferRxNotify(Ptr<const Packet> packet, uint16_t channelFreqMhz, WifiTxVector txVector, MpduInfo aMpdu, SignalNoiseDbm signalNoise, uint16_t staId)
++{
++  NS_LOG_FUNCTION (this);
++  Ptr<Packet> copy = packet->Copy();
++
++  WifiMacHeader hdr;
++  copy->RemoveHeader(hdr);
++  if(hdr.GetAddr1() == m_mac_address)
++    {
++    if(hdr.IsMgt() && hdr.IsAction())
++      {
++      WifiActionHeader action_hdr;
++      copy->RemoveHeader(action_hdr);
++      if(action_hdr.GetCategory() == WifiActionHeader::PUBLIC_ACTION)
++        {
++        Mac48Address partner = hdr.GetAddr2();
++        if(action_hdr.GetAction().publicAction == WifiActionHeader::FTM_RESPONSE)
++          {
++          FtmResponseHeader ftm_res_hdr;
++          copy->RemoveHeader(ftm_res_hdr);
++          Ptr<FtmSession> session = FindSession(partner);
++          if (session != 0 && ftm_res_hdr.GetDialogToken() != 0)
++            {
++              // set the signal strength for the current dialog
++              session->SetSignalStrength(ftm_res_hdr.GetDialogToken(), signalNoise.signal);
++            }
++          }
++        }
++      }
++    }
++}
++
++void
++FtmManager::SetMacAddress(Mac48Address addr)
++{
++  m_mac_address = addr;
++}
++
++Ptr<FtmSession>
++FtmManager::CreateNewSession (Mac48Address partner, FtmSession::SessionType type)
++{
++  if(FindSession(partner) == 0 && !CheckSessionBlocked (partner) && partner != m_mac_address)
++    {
++      Ptr<FtmSession> new_session = CreateObject<FtmSession> ();
++      new_session->InitSession(partner, type, MakeCallback(&FtmManager::SendPacket, this));
++      new_session->SetSessionOverCallbackManager(MakeCallback(&FtmManager::SessionOver, this));
++      new_session->SetBlockSessionCallback(MakeCallback(&FtmManager::BlockSession, this));
++      new_session->SetOverrideCallback(MakeCallback(&FtmManager::OverrideSession, this));
++      new_session->SetPreambleDetectionDuration(m_preamble_detection_duration);
++      sessions.insert({partner, new_session});
++      return new_session;
++    }
++  return 0;
++}
++
++void
++FtmManager::SendPacket (Ptr<Packet> packet, WifiMacHeader hdr)
++{
++  hdr.SetType(WIFI_MAC_MGT_ACTION);
++  hdr.SetAddr2(m_mac_address);
++  hdr.SetAddr3(m_mac_address);
++  hdr.SetDsNotTo();
++  hdr.SetDsNotFrom();
++//  hdr.SetNoRetry();
++  m_txop->Queue(packet, hdr);
++}
++
++Ptr<FtmSession>
++FtmManager::FindSession (Mac48Address addr)
++{
++  auto search = sessions.find(addr);
++  if (search != sessions.end())
++    {
++      return search->second;
++    }
++  return 0;
++}
++
++void
++FtmManager::SessionOver (Mac48Address addr)
++{
++//  std::cout << "erase: " << addr << " " << sessions.size()  << std::endl;
++  sessions.erase (addr);
++}
++
++void
++FtmManager::ReceivedFtmRequest (Mac48Address partner, FtmRequestHeader ftm_req)
++{
++  Ptr<FtmSession> session = FindSession (partner);
++  if (session == 0)
++    {
++      session = CreateNewSession(partner, FtmSession::FTM_RESPONDER);
++    }
++  session->ProcessFtmRequest(ftm_req);
++}
++
++void
++FtmManager::ReceivedFtmResponse (Mac48Address partner, FtmResponseHeader ftm_res)
++{
++  Ptr<FtmSession> session = FindSession (partner);
++  if (session != 0)
++    {
++      session->ProcessFtmResponse(ftm_res);
++    }
++}
++
++
++void
++FtmManager::BlockSession (Mac48Address partner, Time duration)
++{
++  m_blocked_partners.push_back (partner);
++  Simulator::Schedule(duration, &FtmManager::UnblockSession, this, partner);
++}
++
++void
++FtmManager::UnblockSession (Mac48Address partner)
++{
++  m_blocked_partners.remove (partner);
++}
++
++bool
++FtmManager::CheckSessionBlocked (Mac48Address partner)
++{
++  for (Mac48Address addr : m_blocked_partners)
++    {
++      if (addr == partner)
++        {
++          return true;
++        }
++    }
++  return false;
++}
++
++void
++FtmManager::OverrideSession (Mac48Address partner, FtmRequestHeader ftm_req)
++{
++  std::cout << "override" << std::endl;
++  Ptr<FtmSession> session = CreateNewSession (partner, FtmSession::FTM_RESPONDER);
++  session->ProcessFtmRequest (ftm_req);
++}
++
++}
+diff -Naur ns-3.35/src/wifi/model/ftm-manager.h ns-3.35-ftm/src/wifi/model/ftm-manager.h
+--- ns-3.35/src/wifi/model/ftm-manager.h	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-manager.h	2023-03-03 12:13:20
+@@ -0,0 +1,227 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2022 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#ifndef FTMMANAGER_H
++#define FTMMANAGER_H
++
++#include "ns3/object.h"
++#include "ns3/wifi-phy.h"
++#include "ns3/packet.h"
++#include "ns3/ftm-session.h"
++#include "ns3/wifi-mac-header.h"
++#include "ns3/qos-txop.h"
++#include "ns3/ftm-header.h"
++#include "ns3/mgt-headers.h"
++
++
++namespace ns3 {
++/** \defgroup FTM
++ *  FTM group containing the FTM modules
++ */
++
++/**
++ * \brief FTM manager class which takes care of all FTM sessions.
++ * \ingroup FTM
++ *
++ * The FTM manager connects to the PHY layer and takes time stamps whenever a packet is sent or received. Processes it
++ * and if it is a FTM packet it sets the appropriate time stamps.
++ * It forwards the packets to the right sessions and manages them. This means creating and deleting them.
++ */
++class FtmManager : public Object
++{
++public:
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  FtmManager ();
++  /**
++   * This is the main constructor that is used by the RegularWifiMac to set the PHY for the time stamps and
++   * the Txop for sending packets.
++   *
++   * \param phy the WifiPhy
++   * \param txop the Txop
++   */
++  FtmManager (Ptr<WifiPhy> phy, Ptr<Txop> txop);
++  virtual
++  ~FtmManager ();
++
++  /**
++   * Sets the own MAC address.
++   *
++   * \param addr the managers Mac48Address
++   */
++  void SetMacAddress (Mac48Address addr);
++
++  /**
++   * Creates a new session with the specified partner and type. The basic initialization of the FtmSession is
++   * also done here.
++   *
++   * \param partner the partner Mac48Address
++   * \param type the session type
++   *
++   * \return the newly created FtmSession
++   */
++  Ptr<FtmSession> CreateNewSession (Mac48Address partner, FtmSession::SessionType type);
++
++  /**
++   * Called from the RegularWifiMac when a FTM request has been received. It then gets forwarded to
++   * the correct FtmSession.
++   *
++   * \param partner the partner address
++   * \param ftm_req the FTM request
++   */
++  void ReceivedFtmRequest (Mac48Address partner, FtmRequestHeader ftm_req);
++
++  /**
++   * Called from the RegularWifiMac when a FTM response has been received. It then gets forwarded to
++   * the correct FtmSession.
++   *
++   * \param partner the partner address
++   * \param ftm_req the FTM response
++   */
++  void ReceivedFtmResponse (Mac48Address partner, FtmResponseHeader ftm_res);
++
++
++private:
++
++  /**
++   * Structure to store all the header pieces.
++   */
++  struct PacketInPieces
++  {
++    WifiMacHeader mac_hdr;
++    WifiActionHeader action_hdr;
++    FtmRequestHeader ftm_req_hdr;
++    FtmResponseHeader ftm_res_hdr;
++  };
++
++  /**
++   * Finds the session with the specified partner, if it exists.
++   *
++   * \return the FtmSession if it exists, 0 otherwise
++   */
++  Ptr<FtmSession> FindSession (Mac48Address addr);
++
++  /**
++   * Called from the PHY layer when a frame starts transmitting and a time stamp gets taken.
++   * Time stamp then gets added to the correct session, if it is an FTM frame.
++   *
++   * \param packet the packet
++   * \param num a number, needed for the callback, not used
++   */
++  void PhyTxBegin(Ptr<const Packet> packet, double num);
++
++  /**
++   * Called from the PHY layer when a frame gets received and a time stamp gets taken.
++   * Time stamp then gets added to the correct session, if it is an FTM frame.
++   *
++   * \param packet the packet
++   * \param rxPowersW the power
++   */
++  void PhyRxBegin(Ptr<const Packet> packet, RxPowerWattPerChannelBand rxPowersW);
++
++  /**
++   * Called from PHY when packet fully received.
++   * Used to extract the signal strength for error calculation
++   *
++   * @param packet the packet
++   * @param channelFreqMhz frequency
++   * @param txVector
++   * @param aMpdu
++   * @param signalNoise signal strength and noise
++   * @param staId
++   */
++  void SnifferRxNotify(Ptr<const Packet> packet, uint16_t channelFreqMhz, WifiTxVector txVector, MpduInfo aMpdu, SignalNoiseDbm signalNoise, uint16_t staId);
++
++  /**
++   * Sends the specified packet with the specified header.
++   *
++   * \param packet the packet
++   * \param hdr the header
++   */
++  void SendPacket (Ptr<Packet> packet, WifiMacHeader hdr);
++
++  /**
++   * Blocks new sessions with the partner for the given duration.
++   *
++   * \param partner the partner address
++   * \param duration the block duration
++   */
++  void BlockSession (Mac48Address partner, Time duration);
++
++  /**
++   * Unblocks new sessions with the partner, after the duration passed.
++   *
++   * \param partner the partner address
++   */
++  void UnblockSession (Mac48Address partner);
++
++  /**
++   * Checks if new sessions with the partner are blocked.
++   *
++   * \param partner the partner address
++   *
++   * \return true if the session is blocked, false otherwise
++   */
++  bool CheckSessionBlocked (Mac48Address partner);
++
++  /**
++   * Deletes the session, cause it is over.
++   *
++   * \param addr the partner address
++   */
++  void SessionOver (Mac48Address addr);
++
++  /**
++   * Over rides a session by deleting the old session and creating a new one with the FTM request.
++   *
++   * \param partner the partner address
++   * \param ftm_req the FTM request
++   */
++  void OverrideSession (Mac48Address partner, FtmRequestHeader ftm_req);
++
++  Mac48Address m_mac_address; //!< The mac address.
++  std::map<Mac48Address, Ptr<FtmSession>> sessions; //!< The FTM sessions this manager has.
++  unsigned int received_packets;  //!< How many packets have been received, after transmitting a FTM frame.
++  bool awaiting_ack; //!< Next packet should be ack.
++
++  unsigned int sent_packets; //!< How many packets have been sent, after receiving FTM frame.
++  bool sending_ack; //!< Next packet should be ack.
++  Mac48Address m_ack_to; //!< Who the ack should go to.
++
++  Ptr<Txop> m_txop; //!< The Txop.
++
++  Time m_preamble_detection_duration; //!< The preamble detection duration.
++
++  PacketInPieces m_current_tx_packet; //!< The currently transmitted packet.
++  PacketInPieces m_current_rx_packet; //!< The currently received packet.
++
++  std::list<Mac48Address> m_blocked_partners; //!< List of all the blocked partners.
++
++};
++
++}
++
++
++
++#endif /* FTMMANAGER_H_ */
+diff -Naur ns-3.35/src/wifi/model/ftm-session.cc ns-3.35-ftm/src/wifi/model/ftm-session.cc
+--- ns-3.35/src/wifi/model/ftm-session.cc	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-session.cc	2023-03-03 12:13:20
+@@ -0,0 +1,948 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2022 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#include "ftm-session.h"
++#include "ns3/ftm-header.h"
++#include "ns3/core-module.h"
++#include "ns3/mgt-headers.h"
++#include "ns3/wifi-mac-header.h"
++
++
++namespace ns3 {
++
++NS_LOG_COMPONENT_DEFINE ("FtmSession");
++
++NS_OBJECT_ENSURE_REGISTERED (FtmSession);
++
++TypeId
++FtmSession::GetTypeId (void)
++{
++  static TypeId tid = TypeId ("ns3::FtmSession")
++    .SetParent<Object> ()
++    .SetGroupName ("Wifi")
++    .AddConstructor<FtmSession> ()
++    .AddAttribute ("FtmErrorModel",
++                   "The FtmErrorModel to be used for the FtmSession.",
++                   PointerValue (),
++                   MakePointerAccessor (&FtmSession::SetFtmErrorModel),
++                   MakePointerChecker<FtmErrorModel> ())
++    .AddAttribute ("DefaultFtmParams",
++                   "The default FTM parameters which will be used on the initiator, if no other "
++                   "parameters are specified.",
++                   PointerValue (),
++                   MakePointerAccessor (&FtmSession::SetDefaultFtmParamsHolder),
++                   MakePointerChecker<FtmParamsHolder> ())
++  ;
++  return tid;
++}
++
++FtmSession::FtmSession ()
++{
++  m_session_type = FTM_UNINITIALIZED;
++  m_session_over_callback_set = false;
++  m_dialog_token_overflow = false;
++  m_session_active = false;
++  m_ftm_error_model = CreateObject<FtmErrorModel> ();
++  m_live_rtt_enabled = false;
++  m_timestamp_set_checks_next_frame = 0;
++  m_timestamp_set_checks_last_frame = 0;
++  CreateDefaultFtmParams ();
++
++  send_packet = MakeNullCallback <void, Ptr<Packet>, WifiMacHeader> ();
++  session_over_ftm_manager_callback = MakeNullCallback<void, Mac48Address> ();
++  session_over_callback = MakeNullCallback<void, FtmSession> ();
++  block_session = MakeNullCallback<void, Mac48Address, Time> ();
++  live_rtt = MakeNullCallback<void, int64_t> ();
++  session_override = MakeNullCallback<void, Mac48Address, FtmRequestHeader> ();
++}
++
++FtmSession::~FtmSession ()
++{
++  m_ftm_error_model = 0;
++  m_rtt_list.clear();
++  m_sig_str_list.clear();
++  m_ftm_dialogs.clear();
++  m_current_dialog = 0;
++
++
++  send_packet = MakeNullCallback <void, Ptr<Packet>, WifiMacHeader> ();
++  session_over_ftm_manager_callback = MakeNullCallback<void, Mac48Address> ();
++  session_over_callback = MakeNullCallback<void, FtmSession> ();
++  block_session = MakeNullCallback<void, Mac48Address, Time> ();
++  live_rtt = MakeNullCallback<void, int64_t> ();
++  session_override = MakeNullCallback<void, Mac48Address, FtmRequestHeader> ();
++}
++
++void
++FtmSession::InitSession (Mac48Address partner_addr, SessionType type, Callback <void, Ptr<Packet>, WifiMacHeader> callback)
++{
++  m_partner_addr = partner_addr;
++  m_session_type = type;
++  send_packet = callback;
++  if (type == FTM_INITIATOR)
++    {
++      UseDefaultFtmParams ();
++    }
++}
++
++void
++FtmSession::SetPreambleDetectionDuration (Time duration)
++{
++  m_preamble_detection_duration = duration.GetPicoSeconds();
++}
++
++void
++FtmSession::SetFtmParams (FtmParams ftm_params)
++{
++  m_ftm_params = ftm_params;
++}
++
++FtmParams
++FtmSession::GetFtmParams (void)
++{
++  return m_ftm_params;
++}
++
++void
++FtmSession::ProcessFtmRequest (FtmRequestHeader ftm_req)
++{
++  if (ftm_req.GetTrigger() == 1)
++    {
++      if(ftm_req.GetFtmParamsSet() && !m_session_active)
++        {
++          SetFtmParams(ftm_req.GetFtmParams());
++          if (ValidateFtmParams()) //if parameters valid then session gets accepted
++            {
++              m_session_active = true;
++              m_ftm_params.SetStatusIndication(FtmParams::SUCCESSFUL);
++              m_ftm_params.SetAsapCapable(true);
++
++              m_current_dialog_token = 1;
++              m_previous_dialog_token = 0;
++              m_number_of_bursts_remaining = 1 << m_ftm_params.GetNumberOfBurstsExponent(); // 2 ^ Number of Bursts
++              m_ftms_per_burst_remaining = m_ftm_params.GetFtmsPerBurst();
++              SessionBegin();
++            }
++          else
++            {
++              DenySession ();
++            }
++        }
++      else if (ftm_req.GetFtmParamsSet() && m_session_active)
++        {
++          EndSession ();
++          session_override (m_partner_addr, ftm_req);
++        }
++      else
++        {
++          TriggerReceived ();
++        }
++
++    }
++  else if (ftm_req.GetTrigger() == 0)
++    {
++      EndSession ();
++    }
++}
++
++void
++FtmSession::ProcessFtmResponse (FtmResponseHeader ftm_res)
++{
++  if (ftm_res.GetFtmParamsSet())
++    {
++      m_ftm_params = ftm_res.GetFtmParams ();
++      FtmParams::StatusIndication status = m_ftm_params.GetStatusIndication();
++      if (status == FtmParams::SUCCESSFUL)
++        {
++          m_session_active = true;
++          Simulator::Cancel(m_session_active_check_event);
++//          std::cout << "inactive cancelled at t=" << Simulator::Now().GetSeconds() << std::endl;
++
++          m_number_of_bursts_remaining = 1 << m_ftm_params.GetNumberOfBurstsExponent(); // 2 ^ Number of Bursts
++          m_next_burst_period = MilliSeconds(m_ftm_params.GetBurstPeriod() * 100);
++
++          // session expire timer
++          // extend burst duration for expiration to have some tolerance
++          Time session_expire = MicroSeconds(m_ftm_params.DecodeBurstDuration() * 4);
++
++          if(!m_ftm_params.GetAsap())
++            {
++              m_ftm_dialogs.clear();
++              Time burst_begin = MilliSeconds (m_ftm_params.GetPartialTsfTimer());
++              m_next_burst_event = Simulator::Schedule(burst_begin, &FtmSession::StartNextBurst, this);
++              session_expire += burst_begin;
++            }
++          else
++            {
++              m_number_of_bursts_remaining--;
++              m_next_burst_event = Simulator::Schedule(m_next_burst_period, &FtmSession::StartNextBurst, this);
++            }
++          session_expire += m_number_of_bursts_remaining * m_next_burst_period;
++//          std::cout << "session expiration:" << session_expire.GetSeconds() << std::endl;
++          m_session_expire_event = Simulator::Schedule(session_expire, &FtmSession::SessionExpired, this);
++        }
++      else if (status == FtmParams::REQUEST_FAILED)
++        {
++          NS_LOG_ERROR ("FTM Request Failed!");
++          if (m_ftm_params.GetStatusIndicationValue () != 0)
++            {
++              Time timeout = Seconds (m_ftm_params.GetStatusIndicationValue());
++              block_session (m_partner_addr, timeout);
++            }
++          EndSession ();
++          return;
++        }
++      else
++        {
++          NS_LOG_ERROR ("FTM Request Incapable!");
++          EndSession ();
++          return;
++        }
++    }
++
++  if (ftm_res.GetDialogToken() != 0)
++    {
++      Ptr<FtmDialog> dialog = FindDialog (ftm_res.GetDialogToken());
++      if(dialog == 0)
++        {
++          dialog = CreateNewDialog(ftm_res.GetDialogToken());
++          m_ftm_dialogs.insert({ftm_res.GetDialogToken(), dialog});
++        }
++    }
++
++  if (ftm_res.GetFollowUpDialogToken() != 0)
++    {
++      Ptr<FtmDialog> follow_up_dialog = FindDialog(ftm_res.GetFollowUpDialogToken());
++      if(follow_up_dialog != 0 && follow_up_dialog->t1 == 0 && follow_up_dialog->t4 == 0)
++        {
++          follow_up_dialog->t1 = ftm_res.GetTimeOfDeparture();
++          follow_up_dialog->t4 = ftm_res.GetTimeOfArrival();
++          CalculateRTT (follow_up_dialog);
++          //after RTT is calculated, we are done with this dialog and can delete it from the list
++          DeleteDialog(ftm_res.GetFollowUpDialogToken());
++        }
++    }
++
++  if (ftm_res.GetDialogToken() == 0)
++    {
++      EndSession ();
++    }
++}
++
++bool
++FtmSession::ValidateFtmParams (void)
++{
++  if (m_ftm_params.GetStatusIndication () != FtmParams::RESERVED)
++    {
++      NS_LOG_ERROR ("FTM session denied! Status indication is not set to reserved");
++      return false;
++    }
++  if (m_ftm_params.GetNumberOfBurstsExponent () == 15)
++    {
++      m_ftm_params.SetNumberOfBurstsExponent (m_default_ftm_params.GetNumberOfBurstsExponent ());
++    }
++  uint8_t burst_duration = m_ftm_params.GetBurstDuration ();
++  if (burst_duration <= 1 || (burst_duration >= 12 && burst_duration <= 14))
++    {
++      NS_LOG_ERROR ("FTM session denied! Burst duration set to a reserved value. Should be in range [2, 11] "
++          "or 15 if no preference.");
++      return false;
++    }
++  if (burst_duration == 15)
++    {
++      m_ftm_params.SetBurstDuration (m_default_ftm_params.GetBurstDuration ());
++    }
++  if (m_ftm_params.GetMinDeltaFtm () == 0)
++    {
++      m_ftm_params.SetMinDeltaFtm (m_default_ftm_params.GetMinDeltaFtm ());
++    }
++  //TSF field does not need to be checked, because in the way we use it, its value is always valid
++  //ASAP capable field is reserved in initial FTM request, so if true, parameters are not valid
++  if (m_ftm_params.GetAsapCapable ())
++    {
++      NS_LOG_ERROR ("FTM session denied! ASAP capable field has been set. It is reserved in the FTM request.");
++      return false;
++    }
++  //ASAP and TSF no pref do not need to be checked here
++  if (m_ftm_params.GetFtmsPerBurst () == 0)
++    {
++      m_ftm_params.SetFtmsPerBurst (m_default_ftm_params.GetFtmsPerBurst ());
++    }
++  //Format and bandwidth is not used, so we do not need to check it
++
++  //if number of bursts exponent is 0, then we only have one burst and the burst period field is reserved
++  //so if burst period is set to something, the parameters are invalid
++  if (m_ftm_params.GetNumberOfBurstsExponent () == 0 && m_ftm_params.GetBurstPeriod () != 0)
++    {
++      NS_LOG_ERROR ("FTM session denied! This is caused by the number of bursts exponent being 0 and "
++          "the burst period not being 0. Both of them need to be 0 in this case.");
++      return false;
++    }
++  if (m_ftm_params.GetBurstPeriod () == 0 && m_ftm_params.GetNumberOfBurstsExponent () > 0)
++    {
++      m_ftm_params.SetBurstPeriod (m_default_ftm_params.GetBurstPeriod ());
++    }
++  //validate if burst duration is enough to fit all packets with min delta ftm spacing
++  //if it is not enough, we cant accept this session
++  unsigned int min_required_burst_duration = (m_ftm_params.GetFtmsPerBurst() + 1) * m_ftm_params.GetMinDeltaFtm() * 100;
++  if (min_required_burst_duration > m_ftm_params.DecodeBurstDuration())
++    {
++      NS_LOG_ERROR ("FTM session denied! This may be caused by a too small burst duration, too many FTMs per burst "
++          "for the specified burst duration or a too large min delta FTM for the specified burst duration and "
++          "FTMs per burst.");
++      return false;
++    }
++  if (m_ftm_params.GetFtmsPerBurst() == 1 && m_ftm_params.GetNumberOfBurstsExponent() == 0)
++    {
++      NS_LOG_ERROR ("FTM session denied! Can not do anything useful with 1 FTM per burst and 1 burst.");
++      return false;
++    }
++  return true;
++}
++
++/*
++ * default ftm params for initiator of session
++ */
++void
++FtmSession::CreateDefaultFtmParams (void)
++{
++  FtmParams ftm_params;
++  ftm_params.SetStatusIndication(FtmParams::RESERVED);
++  ftm_params.SetStatusIndicationValue(0);
++  ftm_params.SetNumberOfBurstsExponent(1); //2 bursts
++  ftm_params.SetBurstDuration(6); //4ms burst duration, this needs to be larger due to long processing delay until transmission
++
++  ftm_params.SetMinDeltaFtm(4); //400us between frames
++  ftm_params.SetPartialTsfTimer(0);
++  ftm_params.SetPartialTsfNoPref(true);
++  ftm_params.SetAsapCapable(false);
++  ftm_params.SetAsap(true);
++  ftm_params.SetFtmsPerBurst(2);
++
++  ftm_params.SetFormatAndBandwidth(0);
++  ftm_params.SetBurstPeriod(2); //200ms between burst periods
++
++  m_default_ftm_params = ftm_params;
++}
++
++void
++FtmSession::SetDefaultFtmParams (FtmParams params)
++{
++  m_default_ftm_params = params;
++}
++
++void
++FtmSession::SetDefaultFtmParamsHolder (Ptr<FtmParamsHolder> params)
++{
++  SetDefaultFtmParams (params->GetFtmParams ());
++}
++
++void
++FtmSession::UseDefaultFtmParams (void)
++{
++  m_ftm_params = m_default_ftm_params;
++}
++
++void
++FtmSession::SessionBegin (void)
++{
++  Ptr<Packet> packet = Create<Packet>();
++
++  WifiActionHeader hdr;
++  WifiActionHeader::ActionValue action;
++
++  if (m_session_type == FTM_INITIATOR)
++    {
++      FtmRequestHeader ftm_req_hdr;
++      ftm_req_hdr.SetTrigger(1);
++
++      ftm_req_hdr.SetFtmParams(m_ftm_params);
++
++      packet->AddHeader(ftm_req_hdr);
++
++      action.publicAction = WifiActionHeader::FTM_REQUEST;
++      hdr.SetAction(WifiActionHeader::PUBLIC_ACTION, action);
++      packet->AddHeader(hdr);
++
++      Time check_active = MilliSeconds(50);
++      m_session_active_check_event = Simulator::Schedule(check_active, &FtmSession::CheckSessionActive, this);
++//      std::cout << "inactive timeout start at t=" << Simulator::Now().GetSeconds() << std::endl;
++    }
++  else if (m_session_type == FTM_RESPONDER)
++    {
++      m_next_burst_period = MilliSeconds(m_ftm_params.GetBurstPeriod() * 100);
++      m_next_ftm_packet = MicroSeconds(m_ftm_params.GetMinDeltaFtm() * 100);
++
++      TsfSyncInfo tsf_sync;
++      packet->AddHeader (tsf_sync);
++
++      FtmResponseHeader ftm_res_hdr;
++      ftm_res_hdr.SetDialogToken(m_current_dialog_token);
++
++      // session expire timer
++      // extend burst duration for expiration to have some tolerance
++      Time session_expire = MicroSeconds(m_ftm_params.DecodeBurstDuration() * 6);
++
++      if (m_ftm_params.GetAsap())
++        {
++          uint8_t dialog_token = ftm_res_hdr.GetDialogToken();
++          Ptr<FtmDialog> new_dialog = CreateNewDialog (dialog_token);
++          m_current_dialog = new_dialog;
++          m_ftm_dialogs.insert({dialog_token, new_dialog});
++
++          m_current_burst_end = Simulator::Now() + MicroSeconds(m_ftm_params.DecodeBurstDuration());
++
++          m_number_of_bursts_remaining--;
++          m_ftms_per_burst_remaining--;
++
++          m_next_packet_event = Simulator::Schedule(m_next_ftm_packet, &FtmSession::SendNextFtmPacket, this);
++          if (m_number_of_bursts_remaining > 0)
++            {
++              m_next_burst_event = Simulator::Schedule(m_next_burst_period, &FtmSession::StartNextBurst, this);
++            }
++          m_ftm_params.SetPartialTsfNoPref (false);
++        }
++      else
++        {
++          if (m_ftm_params.GetPartialTsfNoPref ())
++            {
++              m_ftm_params.SetPartialTsfNoPref (false);
++              m_ftm_params.SetPartialTsfTimer (500);
++            }
++          Time burst_begin = MilliSeconds (m_ftm_params.GetPartialTsfTimer());
++          m_next_burst_event = Simulator::Schedule(burst_begin, &FtmSession::StartNextBurst, this);
++          session_expire += burst_begin;
++        }
++      ftm_res_hdr.SetFtmParams(m_ftm_params);
++      packet->AddHeader(ftm_res_hdr);
++
++      action.publicAction = WifiActionHeader::FTM_RESPONSE;
++      hdr.SetAction(WifiActionHeader::PUBLIC_ACTION, action);
++      packet->AddHeader(hdr);
++
++      session_expire += m_number_of_bursts_remaining * m_next_burst_period;
++//      std::cout << "session expiration:" << session_expire.GetSeconds() << std::endl;
++      m_session_expire_event = Simulator::Schedule(session_expire, &FtmSession::SessionExpired, this);
++    }
++  else
++    {
++      NS_FATAL_ERROR ("Session has not been initialized!");
++    }
++
++  WifiMacHeader mac_hdr;
++  mac_hdr.SetAddr1(m_partner_addr);
++
++  send_packet(packet, mac_hdr);
++}
++
++void
++FtmSession::SendNextFtmPacket (void)
++{
++  if (!m_session_active)
++    {
++      return;
++    }
++  if(m_ftms_per_burst_remaining > 0 && Simulator::Now() < m_current_burst_end)
++    {
++      if (!CheckTimestampSet () && m_timestamp_set_checks_next_frame < 10)
++        {
++          m_next_packet_event = Simulator::Schedule(m_next_ftm_packet / 4, &FtmSession::SendNextFtmPacket, this);
++          m_timestamp_set_checks_next_frame++;
++          return;
++        }
++      bool add_tsf_sync = false;
++      if (m_ftms_per_burst_remaining == m_ftm_params.GetFtmsPerBurst())
++        {
++          add_tsf_sync = true;
++        }
++      m_ftms_per_burst_remaining--;
++
++      m_previous_dialog_token = m_current_dialog_token;
++      m_current_dialog_token++;
++      if (m_current_dialog_token == 0)
++        {
++          m_current_dialog_token = 1;
++          m_dialog_token_overflow = true;
++        }
++      if (m_dialog_token_overflow)
++        {
++          DeleteDialog (m_current_dialog_token);
++        }
++
++      Ptr<FtmDialog> new_dialog = CreateNewDialog(m_current_dialog_token);
++      m_current_dialog = new_dialog;
++      m_ftm_dialogs.insert({m_current_dialog_token, new_dialog});
++
++      Ptr<FtmDialog> previous_dialog = FindDialog (m_previous_dialog_token);
++      FtmResponseHeader ftm_res_hdr;
++      ftm_res_hdr.SetDialogToken(m_current_dialog_token);
++      if(previous_dialog != 0)
++        {
++          ftm_res_hdr.SetFollowUpDialogToken(m_previous_dialog_token);
++          ftm_res_hdr.SetTimeOfDeparture(previous_dialog->t1);
++          ftm_res_hdr.SetTimeOfArrival(previous_dialog->t4);
++        }
++      if (m_ftms_per_burst_remaining <= 0 && m_number_of_bursts_remaining <= 0)
++        {
++          ftm_res_hdr.SetDialogToken(0);
++        }
++      Ptr<Packet> packet = Create<Packet> ();
++      if (add_tsf_sync)
++        {
++          TsfSyncInfo tsf_sync;
++          packet->AddHeader (tsf_sync);
++        }
++      packet->AddHeader(ftm_res_hdr);
++
++      WifiActionHeader hdr;
++      WifiActionHeader::ActionValue action;
++      action.publicAction = WifiActionHeader::FTM_RESPONSE;
++      hdr.SetAction(WifiActionHeader::PUBLIC_ACTION, action);
++      packet->AddHeader(hdr);
++
++      WifiMacHeader mac_hdr;
++      mac_hdr.SetAddr1(m_partner_addr);
++      send_packet(packet, mac_hdr);
++
++      m_next_packet_event = Simulator::Schedule(m_next_ftm_packet, &FtmSession::SendNextFtmPacket, this);
++    }
++  else if (m_ftms_per_burst_remaining <= 0 && m_number_of_bursts_remaining <= 0)
++    {
++      EndSession ();
++    }
++
++  /*
++   * Case for when session is over its time limit but we still have remaining FTMs per burst.
++   * We send the last frame to end the session, this will happen when the burst period is over.
++   * We overdraw the time constraints. This is unavoidable due to queuing delays.
++   * To make the most out of the session we make sure the ending frame also has some useful
++   * information for the initiator, rather than just ending the session without new information
++   * to maybe not overdraw the time constraint as much. Not perfect but at least useful.
++   */
++  else if(Simulator::Now() >= m_current_burst_end && m_number_of_bursts_remaining <= 0
++          && m_ftms_per_burst_remaining > 0)
++    {
++      // wait some time for time stamp to update, if not after 10 tries, continue
++      if (!CheckTimestampSet () && m_timestamp_set_checks_last_frame < 10)
++        {
++          m_next_packet_event = Simulator::Schedule(m_next_ftm_packet, &FtmSession::SendNextFtmPacket, this);
++          m_timestamp_set_checks_last_frame++;
++          return;
++        }
++      /*
++       * Our previous dialog is the last successfully received dialog. As there wont be a next dialog,
++       * we do not have to create a new one and advance the dialog token. This is the last dialog of the session.
++       */
++      Ptr<FtmDialog> previous_dialog = FindDialog (m_current_dialog_token);
++      FtmResponseHeader ftm_res_hdr;
++      ftm_res_hdr.SetDialogToken(0);
++      ftm_res_hdr.SetFollowUpDialogToken(m_current_dialog_token);
++      ftm_res_hdr.SetTimeOfDeparture(previous_dialog->t1);
++      ftm_res_hdr.SetTimeOfArrival(previous_dialog->t4);
++
++      Ptr<Packet> packet = Create<Packet> ();
++      packet->AddHeader(ftm_res_hdr);
++
++      WifiActionHeader hdr;
++      WifiActionHeader::ActionValue action;
++      action.publicAction = WifiActionHeader::FTM_RESPONSE;
++      hdr.SetAction(WifiActionHeader::PUBLIC_ACTION, action);
++      packet->AddHeader(hdr);
++
++      WifiMacHeader mac_hdr;
++      mac_hdr.SetAddr1(m_partner_addr);
++      send_packet(packet, mac_hdr);
++
++      EndSession ();
++    }
++}
++
++void
++FtmSession::StartNextBurst (void)
++{
++  if (m_number_of_bursts_remaining > 0 && m_session_active)
++    {
++      m_number_of_bursts_remaining--;
++      m_ftms_per_burst_remaining = m_ftm_params.GetFtmsPerBurst();
++      m_current_burst_end = Simulator::Now() + MicroSeconds(m_ftm_params.DecodeBurstDuration());
++
++      if (m_session_type == FTM_INITIATOR)
++        {
++          SendTrigger();
++        }
++      if (m_number_of_bursts_remaining > 0)
++        {
++          m_next_burst_event = Simulator::Schedule(m_next_burst_period, &FtmSession::StartNextBurst, this);
++        }
++    }
++}
++
++void
++FtmSession::SetSessionOverCallback (Callback<void, FtmSession> callback)
++{
++  m_session_over_callback_set = true;
++  session_over_callback = callback;
++}
++
++void
++FtmSession::SetSessionOverCallbackManager (Callback<void, Mac48Address> callback)
++{
++  session_over_ftm_manager_callback = callback;
++}
++
++void
++FtmSession::SetBlockSessionCallback (Callback<void, Mac48Address, Time> callback)
++{
++  block_session = callback;
++}
++
++void
++FtmSession::SetT1 (uint8_t dialog_token, uint64_t timestamp)
++{
++  Ptr<FtmDialog> dialog = FindDialog (dialog_token);
++  if(dialog != 0)
++    {
++      dialog->t1 = timestamp;
++    }
++}
++
++void
++FtmSession::SetT2 (uint8_t dialog_token, uint64_t timestamp)
++{
++  Ptr<FtmDialog> dialog = FindDialog (dialog_token);
++  if(dialog == 0)
++    {
++      dialog = CreateNewDialog(dialog_token);
++      m_ftm_dialogs.insert({dialog_token, dialog});
++    }
++  dialog->t2 = timestamp;
++}
++
++void
++FtmSession::SetT3 (uint8_t dialog_token, uint64_t timestamp)
++{
++  Ptr<FtmDialog> dialog = FindDialog (dialog_token);
++  if(dialog != 0)
++    {
++      dialog->t3 = timestamp;
++    }
++}
++
++void
++FtmSession::SetT4 (uint8_t dialog_token, uint64_t timestamp)
++{
++  Ptr<FtmDialog> dialog = FindDialog (dialog_token);
++  if(dialog != 0)
++    {
++      dialog->t4 = timestamp;
++    }
++}
++
++void
++FtmSession::SetSignalStrength(uint8_t dialog_token, double sig_str)
++{
++  Ptr<FtmDialog> dialog = FindDialog (dialog_token);
++  if(dialog != 0)
++    {
++      dialog->signal_strength = sig_str;
++    }
++}
++
++Ptr<FtmSession::FtmDialog>
++FtmSession::FindDialog (uint8_t dialog_token)
++{
++  auto search = m_ftm_dialogs.find (dialog_token);
++  if (search != m_ftm_dialogs.end())
++    {
++      return search->second;
++    }
++  return 0;
++}
++
++void
++FtmSession::DeleteDialog (uint8_t dialog_token)
++{
++  m_ftm_dialogs.erase (dialog_token);
++}
++
++Ptr<FtmSession::FtmDialog>
++FtmSession::CreateNewDialog (uint8_t dialog_token)
++{
++  Ptr<FtmDialog> new_dialog = Create<FtmDialog> ();
++  new_dialog->dialog_token = dialog_token;
++  new_dialog->t1 = 0;
++  new_dialog->t2 = 0;
++  new_dialog->t3 = 0;
++  new_dialog->t4 = 0;
++  return new_dialog;
++}
++
++std::map<uint8_t, Ptr<FtmSession::FtmDialog>>
++FtmSession::GetFtmDialogs (void)
++{
++  return m_ftm_dialogs;
++}
++
++int64_t
++FtmSession::GetMeanRTT (void)
++{
++  if (m_rtt_list.size () == 0)
++    {
++      return 0;
++    }
++  int64_t avg_rtt = 0;
++  for(int64_t curr : m_rtt_list)
++    {
++      avg_rtt += curr;
++    }
++  avg_rtt /= (int64_t) m_rtt_list.size ();
++  return avg_rtt;
++}
++
++std::list<int64_t>
++FtmSession::GetIndividualRTT (void)
++{
++  return m_rtt_list;
++}
++
++double
++FtmSession::GetMeanSignalStrength (void)
++{
++  if (m_sig_str_list.size () == 0)
++    {
++      return 0.0;
++    }
++  double avg_sig_str = 0;
++  for(double curr : m_sig_str_list)
++    {
++      avg_sig_str += curr;
++    }
++  avg_sig_str /= m_sig_str_list.size ();
++  return avg_sig_str;
++}
++
++std::list<double>
++FtmSession::GetIndividualSignalStrength (void)
++{
++  return m_sig_str_list;
++}
++
++void
++FtmSession::CalculateRTT (Ptr<FtmDialog> dialog)
++{
++  int64_t rtt = 0;
++  //check if all timestamps set, if not, rtt is 0
++  if (CheckTimeStampEqualZero(dialog)) {
++      m_rtt_list.push_back (rtt);
++      m_sig_str_list.push_back (0);
++//      std::cout << "time stamp is zero" << std::endl;
++      return;
++  }
++  int64_t diff_t4_t1;
++  int64_t diff_t3_t2;
++  if (dialog->t4 < dialog->t1) //time stamp overflow
++    {
++      diff_t4_t1 = (0xFFFFFFFFFFFF - dialog->t1) + dialog->t4;
++    }
++  else
++    {
++      diff_t4_t1 = dialog->t4 - dialog->t1;
++    }
++  if (dialog->t3 < dialog->t2) //time stamp overflow
++    {
++      diff_t3_t2 = (0xFFFFFFFFFFFF - dialog->t2) + dialog->t3;
++    }
++  else
++    {
++      diff_t3_t2 = dialog->t3 - dialog->t2;
++    }
++  rtt = diff_t4_t1 - diff_t3_t2;
++
++  //need to remove the duration twice, because we received twice per dialog
++  //and otherwise readings are 8us off
++  rtt -= 2 * m_preamble_detection_duration;
++
++  //add the error given by the current error model, by default error model is disabled
++  rtt += m_ftm_error_model->GetFtmError(dialog->signal_strength);
++
++  m_rtt_list.push_back (rtt);
++  m_sig_str_list.push_back (dialog->signal_strength);
++
++  if (m_live_rtt_enabled)
++    {
++      live_rtt (rtt);
++    }
++}
++
++bool
++FtmSession::CheckTimeStampEqualZero (Ptr<FtmDialog> dialog)
++{
++  if (dialog->t1 == 0 || dialog->t2 == 0 || dialog->t3 == 0 || dialog->t4 == 0)
++    {
++      return true;
++    }
++  return false;
++}
++
++bool
++FtmSession::CheckTimestampSet (void)
++{
++  if (m_current_dialog == 0)
++    {
++      return true;
++    }
++  if (m_current_dialog->t1 == 0 || m_current_dialog->t4 == 0)
++    {
++      return false;
++    }
++  return true;
++}
++
++void
++FtmSession::TriggerReceived (void)
++{
++  if (m_session_active && Simulator::Now() < m_current_burst_end)
++    {
++      SendNextFtmPacket ();
++    }
++//  else if (!m_session_active)
++//    {
++//      //ignore packet
++//    }
++}
++
++void
++FtmSession::CheckSessionActive (void)
++{
++  if (!m_session_active)
++    {
++//      std::cout << "inactive at t=" << Simulator::Now().GetSeconds() << std::endl;
++      EndSession();
++    }
++}
++
++void
++FtmSession::SessionExpired (void)
++{
++  if (m_session_active)
++    {
++      // m_session_type = 0 initiator, 1 = responder
++//      std::cout << "expired at t=" << Simulator::Now().GetSeconds() << " type=" << m_session_type << std::endl;
++      EndSession();
++    }
++}
++
++void
++FtmSession::EndSession (void)
++{
++  m_session_active = false;
++//  if (m_session_type == FTM_RESPONDER) std::cout << test_value << std::endl;
++//  if (m_session_over_callback_set && m_session_type == FTM_INITIATOR) //to fix break from session_override
++  if (m_session_over_callback_set)
++    {
++      session_over_callback (*this);
++    }
++  if (!Simulator::IsExpired(m_session_expire_event))
++    {
++      Simulator::Cancel(m_session_expire_event);
++    }
++  if (!Simulator::IsExpired(m_session_active_check_event))
++    {
++      Simulator::Cancel(m_session_active_check_event);
++    }
++  if (!Simulator::IsExpired(m_next_burst_event))
++    {
++      Simulator::Cancel(m_next_burst_event);
++    }
++  if (!Simulator::IsExpired(m_next_packet_event))
++    {
++      Simulator::Cancel(m_next_packet_event);
++    }
++
++  session_over_ftm_manager_callback (m_partner_addr);
++}
++
++void
++FtmSession::DenySession (void)
++{
++  Ptr<Packet> packet = Create<Packet> ();
++  FtmResponseHeader ftm_res;
++  FtmParams ftm_params;
++  ftm_params.SetStatusIndication(FtmParams::REQUEST_INCAPABLE);
++  ftm_res.SetFtmParams(ftm_params);
++  packet->AddHeader(ftm_res);
++
++  WifiActionHeader action_hdr;
++  WifiActionHeader::ActionValue action;
++  action.publicAction = WifiActionHeader::FTM_RESPONSE;
++  action_hdr.SetAction(WifiActionHeader::PUBLIC_ACTION, action);
++  packet->AddHeader(action_hdr);
++
++  WifiMacHeader mac_hdr;
++  mac_hdr.SetAddr1(m_partner_addr);
++  send_packet (packet, mac_hdr);
++  EndSession ();
++}
++
++void
++FtmSession::SendTrigger (void)
++{
++  Ptr<Packet> packet = Create<Packet> ();
++  FtmRequestHeader ftm_req;
++  ftm_req.SetTrigger(1);
++  packet->AddHeader(ftm_req);
++
++  WifiActionHeader action_hdr;
++  WifiActionHeader::ActionValue action;
++  action.publicAction = WifiActionHeader::FTM_REQUEST;
++  action_hdr.SetAction(WifiActionHeader::PUBLIC_ACTION, action);
++  packet->AddHeader(action_hdr);
++
++  WifiMacHeader mac_hdr;
++  mac_hdr.SetAddr1(m_partner_addr);
++  send_packet (packet, mac_hdr);
++}
++
++void
++FtmSession::SetFtmErrorModel (Ptr<FtmErrorModel> error_model)
++{
++  m_ftm_error_model = error_model;
++}
++
++void
++FtmSession::EnableLiveRTTFeedback (Callback<void, int64_t> callback)
++{
++  m_live_rtt_enabled = true;
++  live_rtt = callback;
++}
++
++void
++FtmSession::DisableLiveRTTFeedback (void)
++{
++  m_live_rtt_enabled = false;
++}
++
++void
++FtmSession::SetOverrideCallback (Callback<void, Mac48Address, FtmRequestHeader> callback)
++{
++  session_override = callback;
++}
++
++} /* namespace ns3 */
+diff -Naur ns-3.35/src/wifi/model/ftm-session.h ns-3.35-ftm/src/wifi/model/ftm-session.h
+--- ns-3.35/src/wifi/model/ftm-session.h	1970-01-01 01:00:00
++++ ns-3.35-ftm/src/wifi/model/ftm-session.h	2023-03-03 12:13:20
+@@ -0,0 +1,440 @@
++/* -*-  Mode: C++; c-file-style: "gnu"; indent-tabs-mode:nil; -*- */
++/*
++ *
++ * Copyright (C) 2022 Christos Laskos
++ *
++ * This program is free software; you can redistribute it and/or
++ * modify it under the terms of the GNU General Public License
++ * as published by the Free Software Foundation; either version 2
++ * of the License, or (at your option) any later version.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
++ */
++
++#ifndef FTM_SESSION_H_
++#define FTM_SESSION_H_
++
++#include "ns3/object.h"
++#include "ns3/mac48-address.h"
++#include "ns3/packet.h"
++#include "ns3/wifi-mac-header.h"
++#include "ns3/ftm-header.h"
++#include "ns3/nstime.h"
++#include "ns3/ftm-error-model.h"
++
++
++namespace ns3 {
++
++/**
++ * \brief the FTM session implementation.
++ * \ingroup FTM
++ *
++ * This class represents the FTM session. It is bound to a specific partner and manages all the FTM frames
++ * that are exchanged with that partner. Once the session with a partner finishes and a session over callback is
++ * specified on the initiator side, it returns itself to the user. This way the RTT can be accessed.
++ */
++class FtmSession : public Object
++{
++public:
++  /**
++   * \brief Get the type ID.
++   * \return the object TypeId
++   */
++  static TypeId GetTypeId (void);
++
++  FtmSession ();
++  virtual
++  ~FtmSession ();
++
++  /**
++   * The session types.
++   */
++  enum SessionType {
++    FTM_INITIATOR,
++    FTM_RESPONDER,
++    FTM_UNINITIALIZED
++  };
++
++  /**
++   * \brief FTM dialog implementation.
++   * \ingroup FTM
++   *
++   * This represents a complete dialog exchange between initiator and responder.
++   * It includes the dialog token, all its time stamps, and the signal strength.
++   */
++  class FtmDialog : public SimpleRefCount<FtmDialog>
++  {
++  public:
++    uint8_t dialog_token;
++    uint64_t t1;
++    uint64_t t2;
++    uint64_t t3;
++    uint64_t t4;
++    double signal_strength;
++  };
++
++  /**
++   * Initializes the session with the needed parameters to create a basic FTM session.
++   *
++   * \param partner_addr the Mac48Address of the partner
++   * \param type the SessionType of this session, either initiator or responder
++   * \param callback the callback to the FtmManager to send packets
++   */
++  void InitSession (Mac48Address partner_addr, SessionType type, Callback <void, Ptr<Packet>, WifiMacHeader> callback);
++
++  /**
++   * Set the preamble detection duration from the physical layer. This is later used in RTT calculations.
++   *
++   * \param duration the preamble detection duration
++   */
++  void SetPreambleDetectionDuration (Time duration);
++
++  /**
++   * Set the callback when the session ends. This function should be used by the user to specify
++   * the function which is called, when the session ends.
++   *
++   * \param callback the user function callback
++   */
++  void SetSessionOverCallback (Callback<void, FtmSession> callback);
++
++  /**
++   * Set the session over callback of the manager. Used to remove sessions that have ended.
++   *
++   * \param callback the manager session over function
++   */
++  void SetSessionOverCallbackManager (Callback<void, Mac48Address> callback);
++
++  /**
++   * Set the block session callback of the manager. Used to not accept new sessions if a previous
++   * session request has failed and a timeout has been specified by the responder.
++   *
++   * \param callback the manager block function
++   */
++  void SetBlockSessionCallback (Callback<void, Mac48Address, Time> callback);
++
++  /**
++   * Set the FTM parameters to be used in this session.
++   *
++   * \param params the FtmParams
++   */
++  void SetFtmParams (FtmParams params);
++
++  /**
++   * Returns the FTM parameters of the session.
++   *
++   * \return the FtmParams
++   */
++  FtmParams GetFtmParams (void);
++
++  /**
++   * Processes a received FTM request frame.
++   *
++   * \param ftm_req the FTM request
++   */
++  void ProcessFtmRequest (FtmRequestHeader ftm_req);
++
++  /**
++   * Processes a received FTM response frame.
++   *
++   * \param ftm_res the FTM response
++   */
++  void ProcessFtmResponse (FtmResponseHeader ftm_res);
++
++  /**
++   * Starts the FTM session. This should be called by the user after the setup of the session has been completed.
++   * Session setup may include setting: FTM parameters, Error model, Session over callback and live RTT feedback.
++   */
++  void SessionBegin (void);
++
++  /**
++   * Sets T1.
++   *
++   * \param dialog_token the dialog token
++   * \param timestamp the time stamp
++   */
++  void SetT1 (uint8_t dialog_token, uint64_t timestamp);
++
++  /**
++   * Sets T2.
++   *
++   * \param dialog_token the dialog token
++   * \param timestamp the time stamp
++   */
++  void SetT2 (uint8_t dialog_token, uint64_t timestamp);
++
++  /**
++   * Sets T3.
++   *
++   * \param dialog_token the dialog token
++   * \param timestamp the time stamp
++   */
++  void SetT3 (uint8_t dialog_token, uint64_t timestamp);
++
++  /**
++   * Sets T4.
++   *
++   * \param dialog_token the dialog token
++   * \param timestamp the time stamp
++   */
++  void SetT4 (uint8_t dialog_token, uint64_t timestamp);
++
++  /**
++   * Set the signal strength for the dialog specified
++   * @param dialog_token the dialog token
++   * @param sig_str the signal strength
++   */
++  void SetSignalStrength (uint8_t dialog_token, double sig_str);
++
++  /**
++   * Returns the map with all saved FTM dialogs. Includes a maximum of the last 255 dialogs.
++   *
++   * \return the FtmDialog map
++   */
++  std::map<uint8_t, Ptr<FtmDialog>> GetFtmDialogs (void);
++
++  /**
++   * Returns the mean RTT.
++   *
++   * \return the mean RTT
++   */
++  int64_t GetMeanRTT (void);
++
++  /**
++   * Returns a list with all the RTTs.
++   *
++   * \return list of RTTs
++   */
++  std::list<int64_t> GetIndividualRTT (void);
++
++  /**
++   * Returns the mean signal strength.
++   *
++   * \return the mean signal strength
++   */
++  double GetMeanSignalStrength (void);
++
++  /**
++   * Returns a list with all the signal strengths.
++   *
++   * \return list of signal strengths
++   */
++  std::list<double> GetIndividualSignalStrength (void);
++
++  /**
++   * Set the FtmErrorModel for this session.
++   *
++   * \param error_model the FtmErrorModel
++   */
++  void SetFtmErrorModel (Ptr<FtmErrorModel> error_model);
++
++  /**
++   * Enables live RTT feedback. This means the RTT is given to the specified function, immediately after calculation.
++   *
++   * \param callback the callback for live RTT
++   */
++  void EnableLiveRTTFeedback (Callback<void, int64_t> callback);
++
++  /**
++   * Disabled the live RTT feedback. Only useful after EnableLiveRTTFeedback has been called.
++   */
++  void DisableLiveRTTFeedback (void);
++
++  /**
++   * Set the callback for over riding the session. This is called when a FTM request comes in with
++   * FTM parameters specified after the session has already started.
++   *
++   * \param callback the callback to the manager over ride function
++   */
++  void SetOverrideCallback (Callback<void, Mac48Address, FtmRequestHeader> callback);
++
++  /**
++   * Set the default parameters for this session. These are used when no parameters are set.
++   *
++   * \param params the FtmParams
++   */
++  void SetDefaultFtmParams (FtmParams params);
++
++  /**
++   * Set the default parameters for this session. These are used when no parameters are set.
++   * This method is used by the attribute system so a user can specify default FTM parameters for all created sessions,
++   * without needing to call the method every time. The FtmParamsHolder object is used only here, for this
++   * special case.
++   *
++   * \param params the FtmParamsHolder object which includes the FtmParams to be used
++   */
++  void SetDefaultFtmParamsHolder (Ptr<FtmParamsHolder> params);
++
++private:
++  Mac48Address m_partner_addr; //!< The partner MAC address.
++  SessionType m_session_type; //!< The session type.
++  FtmParams m_ftm_params;  //!< The FtmParams.
++  FtmParams m_default_ftm_params;  //!< The default FtmParams.
++  uint64_t m_preamble_detection_duration;  //!< The preamble detection duration.
++
++  Ptr<FtmDialog> m_current_dialog;  //!< The current dialog.
++  uint8_t m_current_dialog_token;  //!< The current dialog token.
++  uint8_t m_previous_dialog_token;  //!< The previous dialog token.
++  uint32_t m_number_of_bursts_remaining; //!< The remaining bursts.
++  uint8_t m_ftms_per_burst_remaining; //!< The remaining FTMs for the current burst.
++  uint8_t m_timestamp_set_checks_next_frame; //!< The number of times we checked if the time stamp is set for the next packet.
++  uint8_t m_timestamp_set_checks_last_frame; //!< The number of times we checked if the time stamp is set for the final packet if session overdrawn.
++  Time m_current_burst_end; //!< The time when the current burst ends.
++  Time m_next_burst_period; //!< The time when the next burst starts.
++  Time m_next_ftm_packet; //!< The time when the next FTM packet is send.
++  EventId m_session_expire_event; //!< Session expire event id
++  EventId m_session_active_check_event; //!< Session active check event id
++  EventId m_next_burst_event; //!< next burst event id
++  EventId m_next_packet_event; //!< next packet event id
++
++  /**
++   * If the dialog tokens overflowed, if true the old dialog with the same token, gets deleted.
++   */
++  bool m_dialog_token_overflow;
++
++  bool m_session_active; //!< If the session is active.
++
++  bool m_live_rtt_enabled; //!< If live RTT is enabled.
++
++  bool m_session_over_callback_set; //!< If a session over callback has been specified.
++
++  Ptr<FtmErrorModel> m_ftm_error_model; //!< The FTM error model.
++
++  std::list<int64_t> m_rtt_list; //!< The RTT list.
++
++  std::list<double> m_sig_str_list; //!< The signal strength list.
++
++  std::map<uint8_t, Ptr<FtmDialog>> m_ftm_dialogs; //!< The FTM dialog map.
++
++  Callback <void, Ptr<Packet>, WifiMacHeader> send_packet; //!< Send packet callback.
++  Callback<void, Mac48Address> session_over_ftm_manager_callback; //!< Session over in the FtmManager callback.
++  Callback<void, FtmSession> session_over_callback; //!< Session over user callback.
++  Callback<void, Mac48Address, Time> block_session; //!< Block session callback.
++  Callback<void, int64_t> live_rtt; //!< Live RTT callback.
++
++  /**
++   * Creates the default FtmParams
++   */
++  void CreateDefaultFtmParams (void);
++
++  /**
++   * Sets the default FtmParams as the active FtmParams
++   */
++  void UseDefaultFtmParams (void);
++
++  /**
++   * Checks if the FTM parameters are valid.
++   *
++   * \return true if valid, false otherwise
++   */
++  bool ValidateFtmParams (void);
++
++  /**
++   * Checks if the time stamps are set. Used before sending a new packet, as it only makes sense to send
++   * the next packet if the previous packet time stamps are set.
++   *
++   * \return true if time stamps are set, false otherwise
++   */
++  bool CheckTimestampSet (void);
++
++  /**
++   * Sends the next FTM packet.
++   */
++  void SendNextFtmPacket (void);
++
++  /**
++   * Starts the next burst.
++   */
++  void StartNextBurst (void);
++
++  /**
++   * Sends the trigger frame to the responder.
++   */
++  void SendTrigger (void);
++
++  /**
++   * Finds the dialog with the specified dialog token.
++   *
++   * \param dialog_token the dialog token
++   *
++   * \return the FtmDialog if the token has been found, 0 otherwise
++   */
++  Ptr<FtmDialog> FindDialog (uint8_t dialog_token);
++
++  /**
++   * Deletes the FTM dialog that has the specified dialog token.
++   *
++   * \param dialog_token the dialog token
++   */
++  void DeleteDialog (uint8_t dialog_token);
++
++  /**
++   * Creates a new empty dialog with the specified dialog token.
++   *
++   * \param dialog_token the dialog token
++   *
++   * \return the new FtmDialog
++   */
++  Ptr<FtmDialog> CreateNewDialog (uint8_t dialog_token);
++
++  /**
++   * Called when a trigger frame has been received.
++   */
++  void TriggerReceived (void);
++
++  /**
++   * Called 50 milliseconds after FTM request was send to mac layer.
++   * Checks if session is active, if not, session will end.
++   */
++  void CheckSessionActive (void);
++
++  /**
++   * Called when session expiration timer has ran out and ends the session if still active.
++   */
++  void SessionExpired (void);
++
++  /**
++   * Routine to end the session.
++   */
++  void EndSession (void);
++
++  /**
++   * Denies the incoming session.
++   */
++  void DenySession (void);
++
++  /**
++   * Calculates the RTT for the given dialog.
++   *
++   * \param dialog the FtmDialog to calculate the RTT of
++   */
++  void CalculateRTT (Ptr<FtmDialog> dialog);
++
++  /**
++   * Checks if time stamps in dialog are 0. Used during RTT calculation. If at least one time stamp is 0, RTT is 0.
++   *
++   * \param dialog the FtmDialog to check
++   * \return true if at least one zero, false if all non zero
++   */
++  bool CheckTimeStampEqualZero (Ptr<FtmDialog> dialog);
++
++  Callback<void, Mac48Address, FtmRequestHeader> session_override; //!< The session over ride callback to the manager.
++
++  /**
++   * Even number of callbacks break the code following declaration, odd number works. So this code fix callback
++   * is in place. The callback only breaks the following declaration on the responder side and writes weird values
++   * into the following declaration. Thus breaking the code without an explanation.
++   */
++  Callback<void> code_fix_callback;
++//  int test_value = 0;
++};
++
++} /* namespace ns3 */
++
++#endif /* FTM_SESSION_H_ */
+diff -Naur ns-3.35/src/wifi/model/mgt-headers.cc ns-3.35-ftm/src/wifi/model/mgt-headers.cc
+--- ns-3.35/src/wifi/model/mgt-headers.cc	2023-03-03 12:08:37
++++ ns-3.35-ftm/src/wifi/model/mgt-headers.cc	2023-03-03 12:13:20
+@@ -1200,6 +1200,11 @@
+         m_actionValue = static_cast<uint8_t> (action.blockAck);
+         break;
+       }
++    case PUBLIC_ACTION:
++      {
++        m_actionValue = static_cast<uint8_t> (action.publicAction);
++        break;
++      }
+     case MESH:
+       {
+         m_actionValue = static_cast<uint8_t> (action.meshAction);
+@@ -1229,6 +1234,8 @@
+     {
+     case BLOCK_ACK:
+       return BLOCK_ACK;
++    case PUBLIC_ACTION:
++      return PUBLIC_ACTION;
+     case MESH:
+       return MESH;
+     case MULTIHOP:
+@@ -1345,6 +1352,22 @@
+           retval.selfProtectedAction = PEER_LINK_OPEN; /* quiet compiler */
+         }
+       break;
++
++    case PUBLIC_ACTION: //Extension for FTM.
++      switch (m_actionValue)
++      {
++        case FTM_REQUEST:
++          retval.publicAction = FTM_REQUEST;
++          break;
++        case FTM_RESPONSE:
++          retval.publicAction = FTM_RESPONSE;
++          break;
++        default:
++          NS_FATAL_ERROR ("Unknown public action code");
++          retval.selfProtectedAction = PEER_LINK_OPEN; /* quiet compiler */
++      }
++      break;
++
+     default:
+       NS_FATAL_ERROR ("Unsupported mesh action");
+       retval.selfProtectedAction = PEER_LINK_OPEN; /* quiet compiler */
+@@ -1375,6 +1398,10 @@
+   if (value == BLOCK_ACK)
+     {
+       return "BlockAck";
++    }
++  else if (value == PUBLIC_ACTION)
++    {
++      return "PublicAction";
+     }
+   else if (value == MESH)
+     {
+diff -Naur ns-3.35/src/wifi/model/mgt-headers.h ns-3.35-ftm/src/wifi/model/mgt-headers.h
+--- ns-3.35/src/wifi/model/mgt-headers.h	2023-03-03 12:08:37
++++ ns-3.35-ftm/src/wifi/model/mgt-headers.h	2023-03-03 12:13:20
+@@ -896,6 +896,7 @@
+   enum CategoryValue //table 8-38 staring from IEEE 802.11, Part11, (Year 2012)
+   {
+     BLOCK_ACK = 3,
++    PUBLIC_ACTION = 4,          //Category Public Action, added for FTM support
+     MESH = 13,                  //Category: Mesh
+     MULTIHOP = 14,              //not used so far
+     SELF_PROTECTED = 15,        //Category: Self Protected
+@@ -948,13 +949,24 @@
+     BLOCK_ACK_DELBA = 2
+   };
+ 
++  /**
++   * Public Action fields for FTM
++   * See 802.11-2016 Table 9-307
++   */
++  enum PublicActionValue
++  {
++    FTM_REQUEST = 0x20,
++    FTM_RESPONSE = 0x21
++  };
+ 
++
+   /**
+    * typedef for union of different ActionValues
+    */
+   typedef union
+   {
+     MeshActionValue meshAction; ///< mesh action
++    PublicActionValue publicAction; //< public Action used for FTM
+     MultihopActionValue multihopAction; ///< multi hop action
+     SelfProtectedActionValue selfProtectedAction; ///< self protected action
+     BlockAckActionValue blockAck; ///< block ack
+diff -Naur ns-3.35/src/wifi/model/regular-wifi-mac.cc ns-3.35-ftm/src/wifi/model/regular-wifi-mac.cc
+--- ns-3.35/src/wifi/model/regular-wifi-mac.cc	2023-03-03 12:08:37
++++ ns-3.35-ftm/src/wifi/model/regular-wifi-mac.cc	2023-03-03 12:14:03
+@@ -72,6 +72,10 @@
+   SetupEdcaQueue (AC_VI);
+   SetupEdcaQueue (AC_BE);
+   SetupEdcaQueue (AC_BK);
++
++  m_ftm_enabled = false;
++  m_ftm_enable_later = false;
++  m_ftm_manager = 0;
+ }
+ 
+ RegularWifiMac::~RegularWifiMac ()
+@@ -119,6 +123,8 @@
+   m_channelAccessManager->Dispose ();
+   m_channelAccessManager = 0;
+   
++  m_ftm_manager = 0;
++
+   WifiMac::DoDispose ();
+ }
+ 
+@@ -552,6 +558,12 @@
+   m_channelAccessManager->SetupPhyListener (phy);
+   NS_ASSERT (m_feManager != 0);
+   m_feManager->SetWifiPhy (phy);
++
++  if (m_ftm_enable_later)
++    {
++      EnableFtm();
++      m_ftm_enable_later = false;
++    }
+ }
+ 
+ Ptr<WifiPhy>
+@@ -785,7 +797,8 @@
+     {
+       //There is currently only any reason for Management Action
+       //frames to be flying about if we are a QoS STA.
+-      NS_ASSERT (m_qosSupported);
++      //FTM does not need QoS to transmit its frames, moved to blockAck case
++//      NS_ASSERT (m_qosSupported);
+ 
+       WifiActionHeader actionHdr;
+       packet->RemoveHeader (actionHdr);
+@@ -793,7 +806,8 @@
+       switch (actionHdr.GetCategory ())
+         {
+         case WifiActionHeader::BLOCK_ACK:
+-
++          {
++          NS_ASSERT (m_qosSupported);
+           switch (actionHdr.GetAction ().blockAck)
+             {
+             case WifiActionHeader::BLOCK_ACK_ADDBA_REQUEST:
+@@ -862,6 +876,31 @@
+               NS_FATAL_ERROR ("Unsupported Action field in Block Ack Action frame");
+               return;
+             }
++          }
++        case WifiActionHeader::PUBLIC_ACTION: //Take care of FTM frames.
++          {
++            NS_ASSERT_MSG (m_ftm_enabled, "Received Public Action frame but FTM is not enabled!");
++            switch (actionHdr.GetAction().publicAction)
++            {
++              case WifiActionHeader::FTM_REQUEST:
++                {
++                  FtmRequestHeader ftm_req;
++                  packet->RemoveHeader (ftm_req);
++                  m_ftm_manager->ReceivedFtmRequest (from, ftm_req);
++                  return;
++                }
++              case WifiActionHeader::FTM_RESPONSE:
++                {
++                  FtmResponseHeader ftm_res;
++                  packet->RemoveHeader (ftm_res);
++                  m_ftm_manager->ReceivedFtmResponse (from, ftm_res);
++                  return;
++                }
++              default:
++                NS_FATAL_ERROR("Unsupported Public Action frame received");
++                return;
++            }
++          }
+         default:
+           NS_FATAL_ERROR ("Unsupported Action frame received");
+           return;
+@@ -1045,6 +1084,12 @@
+                    PointerValue (),
+                    MakePointerAccessor (&RegularWifiMac::GetBKQueue),
+                    MakePointerChecker<QosTxop> ())
++    .AddAttribute ("FTM_Enabled",
++                   "Used to enable support of FTM exchanges.",
++                   BooleanValue (false),
++                   MakeBooleanAccessor (&RegularWifiMac::SetFtmEnabled,
++                                        &RegularWifiMac::GetFtmEnabled),
++                   MakeBooleanChecker ())
+     .AddTraceSource ("TxOkHeader",
+                      "The header of successfully transmitted packet.",
+                      MakeTraceSourceAccessor (&RegularWifiMac::m_txOkCallback),
+@@ -1208,6 +1253,63 @@
+         return 0;
+     }
+   return maxSize;
++}
++
++void
++RegularWifiMac::SetFtmEnabled (bool enabled)
++{
++  if (enabled)
++    {
++      if (GetWifiPhy() == 0)
++        {
++          m_ftm_enable_later = true;
++          return;
++        }
++      EnableFtm ();
++    }
++  else if (!enabled)
++    {
++      DisableFtm ();
++    }
++}
++
++bool
++RegularWifiMac::GetFtmEnabled (void) const
++{
++  return m_ftm_enabled;
++}
++
++void
++RegularWifiMac::EnableFtm (void)
++{
++  NS_LOG_FUNCTION (this);
++  m_ftm_enabled = true;
++  m_ftm_manager = CreateObject<FtmManager> (GetWifiPhy (), GetTxop ());
++  m_ftm_manager->SetMacAddress(GetAddress());
++  Time::Unit resolution = Time::GetResolution();
++  if (resolution != Time::PS && resolution != Time::FS)
++    {
++      NS_LOG_WARN ("FTM enabled but time resolution not set to PS or FS, FTM results will be less accurate!");
++    }
++}
++
++void
++RegularWifiMac::DisableFtm (void)
++{
++  NS_LOG_FUNCTION (this);
++  m_ftm_enabled = false;
++  m_ftm_manager = 0;
++}
++
++Ptr<FtmSession>
++RegularWifiMac::NewFtmSession (Mac48Address partner)
++{
++  NS_LOG_FUNCTION (this << partner);
++  if (m_ftm_enabled)
++    {
++      return m_ftm_manager->CreateNewSession(partner, FtmSession::FTM_INITIATOR);
++    }
++  return 0;
+ }
+ 
+ } //namespace ns3
+diff -Naur ns-3.35/src/wifi/model/regular-wifi-mac.h ns-3.35-ftm/src/wifi/model/regular-wifi-mac.h
+--- ns-3.35/src/wifi/model/regular-wifi-mac.h	2023-03-03 12:08:37
++++ ns-3.35-ftm/src/wifi/model/regular-wifi-mac.h	2023-03-03 12:14:29
+@@ -24,6 +24,7 @@
+ #include "wifi-mac.h"
+ #include "qos-txop.h"
+ #include "ssid.h"
++#include "ftm-manager.h"
+ #include <set>
+ #include <unordered_map>
+ 
+@@ -209,6 +210,40 @@
+    */
+   uint16_t GetMaxAmsduSize (AcIndex ac) const;
+ 
++  /**
++   * Enable or disable FTM. Used for the attribute system. Calls EnableFtm and DisableFtm.
++   * Direct calls to EnableFtm and DisableFtm work as well.
++   *
++   * \param enabled true if FTM should be enabled, false otherwise
++   */
++  void SetFtmEnabled (bool enabled);
++
++  /**
++   * Return whether FTM is enabled or disabled
++   *
++   * \return true if FTM is enabled, false if disabled
++   */
++  bool GetFtmEnabled (void) const;
++
++  /**
++   * Used to enable FTM support on this WifiMac
++   */
++  void EnableFtm (void);
++
++  /**
++   * Used to disable FTM support on this WifiMac
++   */
++  void DisableFtm (void);
++
++  /**
++   * Used to create a new FTM Session as initiator with the specified partner as the responder
++   *
++   * \param partner the MAC address of the STA that should be used as a responder
++   *
++   * \return a smart pointer to the newly created FtmSession or 0 if creation failed
++   */
++  Ptr<FtmSession> NewFtmSession (Mac48Address partner);
++
+ protected:
+   void DoInitialize () override;
+   void DoDispose () override;
+@@ -240,6 +275,8 @@
+   channel access function */
+   EdcaQueues m_edca;
+ 
++  Ptr<FtmManager> m_ftm_manager; //!< FTM Manager for this WifiMac
++
+   /**
+    * Accessor for the AC_VO channel access function
+    *
+@@ -528,6 +565,13 @@
+ 
+   bool m_shortSlotTimeSupported; ///< flag whether short slot time is supported
+   bool m_ctsToSelfSupported;     ///< flag indicating whether CTS-To-Self is supported
++
++  bool m_ftm_enabled; //!< Is set to \c true if this WifiMac has FTM enabled
++   /**
++    * This is used when the attribute system is used to enable FTM and WifiPhy has not yet been set.
++    * This enables FTM as soon as the WifiPhy object has been set.
++    */
++  bool m_ftm_enable_later;
+ };
+ 
+ } //namespace ns3
+diff -Naur ns-3.35/src/wifi/wscript ns-3.35-ftm/src/wifi/wscript
+--- ns-3.35/src/wifi/wscript	2023-03-03 12:08:37
++++ ns-3.35-ftm/src/wifi/wscript	2023-03-03 12:18:38
+@@ -129,6 +129,10 @@
+         'model/ht/ht-phy.cc',
+         'model/vht/vht-phy.cc',
+         'model/he/he-phy.cc',
++        'model/ftm-manager.cc',
++        'model/ftm-header.cc',
++        'model/ftm-session.cc',
++        'model/ftm-error-model.cc',
+         'helper/wifi-radio-energy-model-helper.cc',
+         'helper/athstats-helper.cc',
+         'helper/wifi-helper.cc',
+@@ -299,6 +303,10 @@
+         'model/ht/ht-phy.h',
+         'model/vht/vht-phy.h',
+         'model/he/he-phy.h',
++        'model/ftm-manager.h',
++        'model/ftm-header.h',
++        'model/ftm-session.h',
++        'model/ftm-error-model.h',
+         'helper/wifi-radio-energy-model-helper.h',
+         'helper/athstats-helper.h',
+         'helper/wifi-helper.h',

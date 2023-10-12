@@ -1,4 +1,4 @@
-#!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
+#!/usr/bin/scl enable devtoolset-8 rh-python38 -- /bin/bash -l
 
 NS3_DIR="${NS3_DIR:=$HOME/ns-3-dev}"
 TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
@@ -22,4 +22,4 @@ WARMUP_TIME=$(( N_WIFI + 4))
 FUZZ_TIME=$(( N_WIFI / 2 + 2 ))
 LOSS_MODEL="Nakagami"
 
-./ns3.36.1-stations-optimized --mobilityModel="RWPM" --manager="$MANAGER" --managerName="$MANAGER_NAME" --nodeSpeed="$NODE_SPEED" --nWifi="$N_WIFI" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"
+./stations --mobilityModel="RWPM" --manager="$MANAGER" --managerName="$MANAGER_NAME" --nodeSpeed="$NODE_SPEED" --nWifi="$N_WIFI" --simulationTime="$SIM_TIME" --warmupTime="$WARMUP_TIME" --fuzzTime="$FUZZ_TIME" --lossModel="$LOSS_MODEL" --RngRun="$SEED" --csvPath="$CSV_PATH"
