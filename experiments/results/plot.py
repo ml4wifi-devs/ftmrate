@@ -64,7 +64,7 @@ def get_throughput(xs: np.ndarray, df: pd.DataFrame) -> Tuple:
 
 
 def get_data_rate(xs: np.ndarray, df: pd.DataFrame) -> Tuple:
-    runs = [df[(df['run'] == run) & (df['device'] == 'sta')] for run in df['run'].unique()]
+    runs = [df[(df['run'] == run) & (df['device'] == 'ap')] for run in df['run'].unique()]
     rates = [np.interp(xs, run['time'].values, run['rate'].values) for run in runs]
     return get_ci(rates)
 
@@ -88,7 +88,7 @@ def single_plot(
     plt.plot(xs, ftmrate_mean, label='FTMRate w/ KF', color=colors[3])
     plt.fill_between(xs, ftmrate_low, ftmrate_high, alpha=0.3, color=colors[3], linewidth=0)
 
-    plt.plot(xs, iwlwifi_mean, label='iwlwifi', color=colors[0])
+    plt.plot(xs, iwlwifi_mean, label='iwl-mvm-rs', color=colors[0])
     plt.fill_between(xs, iwlwifi_low, iwlwifi_high, alpha=0.3, color=colors[0], linewidth=0)
 
     plt.xlim(0, experiment_time)
