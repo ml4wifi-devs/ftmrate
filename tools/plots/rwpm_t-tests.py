@@ -36,6 +36,4 @@ def plot_results(velocity: float) -> None:
 
 if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
-
-    for velocity in [0., 1.4]:
-        plot_results(velocity)
+    plot_results(velocity=1.4)

@@ -21,28 +21,23 @@ def plot_results(ax: plt.Axes, velocity: float) -> None:
 
     ax.set_ylim((0, 90))
     ax.set_yticks([0, 15, 30, 45, 60, 75, 90])
-
     ax.set_ylabel('Aggregate throughput [Mb/s]')
+
     ax.set_xlabel('')
+    ax.set_xticklabels(ALL_MANAGERS.values())
+    plt.setp(ax.xaxis.get_majorticklabels(), rotation=30, ha="right")
 
     ax.set_axisbelow(True)
     ax.grid(axis='y')
+    ax.legend()
 
 
 if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
-    fig, axes = plt.subplots(2, 1, sharex='col')
+    plt.rcParams["figure.figsize"] = (COLUMN_WIDTH, COLUMN_HIGHT / 2)
 
-    for velocity, ax in zip([0., 1.4], axes):
-        plot_results(ax, velocity)
-
-    axes[0].tick_params('x', labelbottom=False, bottom=False)
-    axes[1].set_xticklabels(ALL_MANAGERS.values())
-    plt.setp(axes[1].xaxis.get_majorticklabels(), rotation=30, ha="right")
-    axes[1].legend()
-
-    axes[0].set_title('Static stations')
-    axes[1].set_title('Mobile stations')
+    _, ax = plt.subplots()
+    plot_results(ax, velocity=1.4)
 
     plt.savefig(f'rwpm-thr.pdf', bbox_inches='tight')
     plt.clf()
