@@ -14,9 +14,21 @@ POWER_CHANGE = {
     8: [2.82367, 5.699, 9.50922, 10.3887, 15.7729, 30.8061, 46.7867]
 }
 
+ALL_MANAGERS = {
+    'Minstrel': 'Minstrel',
+    'TS': 'Thompson sampling',
+    'KF': 'FTMRate w/ KF',
+    'Oracle': 'Oracle'
+}
+
 
 def plot_results(ax: plt.Axes, delta: float, interval: float, velocity: float) -> None:
-    colors = pl.cm.viridis(np.linspace(0., 1., len(ALL_MANAGERS) - 1))
+    colors = pl.cm.viridis(np.linspace(0., 1., 5))
+    colors_map = {
+        'Minstrel': colors[0],
+        'TS': colors[1],
+        'KF': colors[3],
+    }
 
     df = pd.read_csv(DATA_FILE)
     df = df[(df.mobility == 'Moving') & (df.delta == delta) & (df.interval == interval) & (df.velocity == velocity)]
@@ -27,8 +39,8 @@ def plot_results(ax: plt.Axes, delta: float, interval: float, velocity: float) -
         if manager == 'Oracle':
             ax.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
         else:
-            ax.plot(mean.index, mean, marker='o', markersize=1, label=manager_name, c=colors[i])
-            ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
+            ax.plot(mean.index, mean, marker='o', markersize=1, label=manager_name, c=colors_map[manager])
+            ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors_map[manager], linewidth=0.0)
 
     for i, x in enumerate(POWER_CHANGE[interval]):
         ax.axvline(x, linestyle='--', c='r', alpha=0.4, label='Power change' if i == 0 else None)
