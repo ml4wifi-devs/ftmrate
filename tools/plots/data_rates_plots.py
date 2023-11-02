@@ -3,13 +3,13 @@ import jax.numpy as jnp
 import matplotlib.pyplot as plt
 
 from common import PLOT_PARAMS, COLUMN_WIDTH
-from ml4wifi.utils.wifi_specs import expected_rates, wifi_modes_rates
+from ml4wifi.utils.wifi_specs import expected_rates, wifi_modes_rates, DEFAULT_TX_POWER
 
 
 def plot_data_rates() -> None:
     n_points = 200
     distance = jnp.linspace(0., 60., n_points)
-    exp_rates = jax.vmap(expected_rates)(distance)
+    exp_rates = jax.vmap(expected_rates(DEFAULT_TX_POWER))(distance)
 
     for mode, (exp_rate, data_rate) in enumerate(zip(exp_rates.T, wifi_modes_rates)):
         plt.plot(distance, exp_rate, c='C0', linestyle='solid' if mode % 2 == 1 else 'dashdot')

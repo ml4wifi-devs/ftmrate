@@ -10,7 +10,6 @@ from ml4wifi.agents.exponential_smoothing import ManagersContainer as Exponentia
 from ml4wifi.agents.kalman_filter import ManagersContainer as KalmanFilter
 from ml4wifi.agents.particle_filter import ManagersContainer as ParticleFilter
 
-from ml4wifi.utils.wifi_specs import ideal_mcs
 from ml4wifi.envs.ns3_ai_structures import Env, Act
 
 
@@ -45,9 +44,11 @@ def main() -> None:
     parser.add_argument('--channelWidth', default=20, type=int)
     parser.add_argument('--csvPath', default='results.csv', type=str)
     parser.add_argument('--dataRate', default=125, type=int)
+    parser.add_argument('--delta', default=0, type=float)
     parser.add_argument('--distance', default=0., type=float)
+    parser.add_argument('--enableRtsCts', default='False', type=str)
     parser.add_argument('--fuzzTime', default=5., type=float)
-    parser.add_argument('--logsPath', type=str)
+    parser.add_argument('--interval', default=2, type=float)
     parser.add_argument('--lossModel', default='Nakagami', type=str)
     parser.add_argument('--managerName', type=str)
     parser.add_argument('--mcs', type=int)
@@ -87,7 +88,10 @@ def main() -> None:
     NS3_ARGS['channelWidth'] = args.channelWidth
     NS3_ARGS['csvPath'] = args.csvPath
     NS3_ARGS['dataRate'] = args.dataRate
+    NS3_ARGS['delta'] = args.delta
+    NS3_ARGS['enableRtsCts'] = True if args.enableRtsCts == 'True' else False
     NS3_ARGS['fuzzTime'] = args.fuzzTime
+    NS3_ARGS['interval'] = args.interval
     NS3_ARGS['lossModel'] = args.lossModel
     NS3_ARGS['managerName'] = args.managerName if args.managerName else args.ml_manager
     NS3_ARGS['minGI'] = args.minGI
@@ -119,6 +123,12 @@ def main() -> None:
         NS3_ARGS['measurementsInterval'] = args.measurementsInterval
         NS3_ARGS['startPosition'] = args.startPosition
         NS3_ARGS['velocity'] = args.velocity
+    
+    elif args.scenario == 'hidden':
+        pname = 'stations'
+        NS3_ARGS['distance'] = args.distance
+        NS3_ARGS['mobilityModel'] = 'Hidden'
+        NS3_ARGS['nWifi'] = args.nWifi
 
     else:
         raise ArgumentError(None, 'Bad scenario selected')
@@ -129,12 +139,6 @@ def main() -> None:
         print(f'\nNs3 args:')
         for key, val in sorted(NS3_ARGS.items(), key=lambda x: x[0]):
             print(f'  {key}: {val}')
-
-
-    # Save training logs to file
-    if args.logsPath:
-        logs_file = open(args.logsPath, 'w+')
-        logs_file.write('time,distance,station_id,last_mcs,ideal_mcs\n')
 
 
     # Shared memory settings
@@ -157,22 +161,11 @@ def main() -> None:
                 if data is None:
                     break
 
-                if args.logsPath and data.env.time >= args.warmupTime and data.env.type == 1:
-                    logs_file.write(
-                        f'{data.env.time},'
-                        f'{data.env.distance},'
-                        f'{data.env.station_id},'
-                        f'{data.env.mode},'
-                        f'{ideal_mcs(data.env.distance)}\n')
-
                 data.act = managers_container.do(data.env, data.act)
 
         ns3_process.wait()
     finally:
         del exp
-
-        if args.logsPath:
-            logs_file.close()
 
 
 if __name__ == '__main__':

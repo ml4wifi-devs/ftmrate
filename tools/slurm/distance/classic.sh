@@ -1,7 +1,7 @@
 #!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
 
 NS3_DIR="${NS3_DIR:=$HOME/ns-3-dev}"
-TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
 
 cd "$NS3_DIR"
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$NS3_DIR/build/lib
