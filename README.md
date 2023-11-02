@@ -1,6 +1,11 @@
 # FTMRate
 
-FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM to improve the per-frame selection of modulation and coding schemes.
+[![DOI](https://img.shields.io/badge/DOI-10.1109/WoWMoM57956.2023.00039-blue.svg)](https://ieeexplore.ieee.org/document/10195443)
+[![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.7875867.svg)](https://doi.org/10.5281/zenodo.7875867)
+
+FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the IEEE 802.11 fine time measurement (FTM) protocol to improve the per-frame selection of modulation and coding schemes. Its detailed operation and a performance analysis can be found in:
+
+- Wojciech Ciezobka, Maksymilian Wojnar, Katarzyna Kosek-Szott, Szymon Szott, and Krzysztof Rusek. "FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks." 24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM), 2023. [[preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443)]
 
 ## Installation
 
@@ -19,7 +24,7 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 	pip install -e .
 	```
 
-3.  **Attention!** To enable GPU acceleration for JAX, run command (this is an example command, for more info, see the official JAX [installation guide](https://github.com/google/jax#pip-installation-gpu-cuda)):
+3.  **Attention!** To enable GPU acceleration for JAX, run this additional command (For more info, see the official JAX [installation guide](https://github.com/google/jax#installation)):
 	```
 	pip install "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 	```
@@ -116,7 +121,7 @@ We provide two ways of generating article results. One requires the Slurm worklo
 ### Using the Slurm workload manager
 
 To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
-To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article, you need to run
+To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article ([preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443), [Zenodo](https://zenodo.org/records/7875867)), you need to run
 ```
 sbatch ftmrate/tools/slurm/run-classic-scenarios.sh
 sbatch ftmrate/tools/slurm/run-ml-scenarios.sh
@@ -157,11 +162,17 @@ In case you don't have access to a slurm-managed cluster, we provide a slurm-les
 	tools/slurm/generate-plots.sh
 	```
 
+# How to reference FTMRate?
 
-# Ares
-
-Shared repository on ares is located in group space:
-`/net/pr2/projects/plgrid/plggml4wifi/ftmrate`
-
-In order to run your experiment you can schedule your script or add makefile entry and use `plgrunmake.sh`
-In this case use the name of your target as job name (`-J`)
+```
+@INPROCEEDINGS{ciezobka2023ftmrate,
+  author={Ciezobka, Wojciech and Wojnar, Maksymilian and Kosek-Szott, Katarzyna and Szott, Szymon and Rusek, Krzysztof},
+  booktitle={2023 IEEE 24th International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM)}, 
+  title={{FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks}}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={242--251},
+  doi={10.1109/WoWMoM57956.2023.00039}
+}
+```
