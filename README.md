@@ -20,8 +20,8 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the I
 
 2. Go to project root directory and checkout to the `wifi_ftm_ns3` branch:
 	```
-	cd ftmrate wifi_ftm_ns3
-	git checkout 
+	cd ftmrate
+	git checkout wifi_ftm_ns3
 	```
 
 4. Install requirements:
@@ -99,13 +99,13 @@ The ns3-ai module interconnects ns-3 and FTMRate (or any other python-writen sof
 The memory can be accessed by both sides, thus making the connection. Read more about ns3-ai at the
 [official repository](https://github.com/hust-diangroup/ns3-ai).
 
-1.  Clone our ns3-ai fork into ns-3's `contrib` directory
+1.  Clone ns3-ai into ns-3's `contrib` directory
 	```
 	cd $YOUR_NS3_PATH/contrib/
 	git clone https://github.com/m-wojnar/ns3-ai.git
 	```
 
-2. Go to ns3-ai directory and checkout the *ml4wifi* branch:
+2. Go to ns3-ai directory and install the ns3-ai Python interface:
 	```
 	cd "$YOUR_NS3_PATH/contrib/ns3-ai/"
 	pip install --user "$YOUR_NS3_PATH/contrib/ns3-ai/py_interface"
