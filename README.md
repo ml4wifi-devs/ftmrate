@@ -10,12 +10,12 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 1. Clone the repository:
 	```
-	git clone https://github.com/ml4wifi-devs/ftmrate_internal.git
+	git clone https://github.com/ml4wifi-devs/ftmrate.git
 	```
 
 2. Go to project root directory and install requirements:
 	```
-	cd ftmrate_internal
+	cd ftmrate
 	pip install -e .
 	```
 
@@ -115,15 +115,15 @@ We provide two ways of generating article results. One requires the Slurm worklo
 
 ### Using the Slurm workload manager
 
-To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate_internal/tools/slurm/` directory.  
+To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
 To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article, you need to run
 ```
-sbatch ftmrate_internal/tools/slurm/run-classic-scenarios.sh
-sbatch ftmrate_internal/tools/slurm/run-ml-scenarios.sh
+sbatch ftmrate/tools/slurm/run-classic-scenarios.sh
+sbatch ftmrate/tools/slurm/run-ml-scenarios.sh
 ```
 to collect results into CSV format  and
 ```
-sbatch ftmrate_internal/tools/generate-plots.sh
+sbatch ftmrate/tools/generate-plots.sh
 ```
 to aggregate results into matplotlib plots.
 
@@ -161,7 +161,7 @@ In case you don't have access to a slurm-managed cluster, we provide a slurm-les
 # Ares
 
 Shared repository on ares is located in group space:
-`/net/pr2/projects/plgrid/plggml4wifi/ftmrate_internal`
+`/net/pr2/projects/plgrid/plggml4wifi/ftmrate`
 
 In order to run your experiment you can schedule your script or add makefile entry and use `plgrunmake.sh`
 In this case use the name of your target as job name (`-J`)
