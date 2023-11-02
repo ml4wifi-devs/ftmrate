@@ -5,6 +5,7 @@ from ctypes import *
 class Env(Structure):
     _pack_ = 1
     _fields_ = [
+        ('power', c_double),
         ('time', c_double),
         ('distance', c_double),
         ('station_id', c_uint32),

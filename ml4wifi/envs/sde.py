@@ -6,7 +6,7 @@ import chex
 import sympy as sm
 from sympy.abc import tau, t
 
-from ml4wifi.params_fit import SIGMA_V, SIGMA_X
+from ml4wifi.params_fit import SIGMA_V, SIGMA_R
 
 DynamicArray = Callable[[chex.Scalar], chex.Array]
 Params = List[sm.Symbol]
@@ -85,12 +85,12 @@ class ContinuousLocalLinearTrend(OrnsteinUhlenbeckProcess):
     def __init__(self):
         super().__init__(beta=-sm.ImmutableMatrix([[0, 1], [0, 0]]),
                          sigma=sm.ImmutableMatrix(
-                             [[sm.Symbol('\sigma_x'), 0], [0, sm.Symbol('\sigma_v')]]))
+                             [[sm.Symbol('\sigma_r'), 0], [0, sm.Symbol('\sigma_v')]]))
 
     def jaxify(self, cholesky: bool = True) -> Tuple[DynamicArray, DynamicArray]:
         transition_fn, transition_cov_fn, _ = super().jaxify(cholesky)
 
-        transition_fn = ft.partial(transition_fn, SIGMA_V, SIGMA_X)
-        transition_cov_fn = ft.partial(transition_cov_fn, SIGMA_V, SIGMA_X)
+        transition_fn = ft.partial(transition_fn, SIGMA_V, SIGMA_R)
+        transition_cov_fn = ft.partial(transition_cov_fn, SIGMA_V, SIGMA_R)
 
         return transition_fn, transition_cov_fn

@@ -8,15 +8,19 @@
 #include "ns3/wifi-utils.h"
 #include "oracle-wifi-manager.h"
 
+#define DEFAULT_NOISE (-93.97)
+#define REFERENCE_LOSS 46.6777
+#define EXPONENT 3.0
+
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("OracleWifiManager");
 
 NS_OBJECT_ENSURE_REGISTERED (OracleWifiManager);
 
-double lookupTable[] = {7.85, 7.91, 15.79, 17.49,
-                        24.76, 28.21, 32.94, 84.21,
-                        84.21, 4106., 4106., std::numeric_limits<double>::infinity()};
+double minSnrTable[] = { 36.467, 36.368, 27.361, 26.029,
+                         21.500, 19.801, 17.781, 5.552,
+                         5.552, -45.090, -45.090, std::numeric_limits<double>::infinity() };
 
 TypeId
 OracleWifiManager::GetTypeId (void)
@@ -32,6 +36,10 @@ OracleWifiManager::GetTypeId (void)
     .AddAttribute ("Distance", "Current distance between STA and AP [m]",
                    DoubleValue (0.),
                    MakeDoubleAccessor (&OracleWifiManager::m_distance),
+                   MakeDoubleChecker<double_t> ())
+    .AddAttribute ("Power", "Current transmission power [dBm]",
+                   DoubleValue (16.0206),
+                   MakeDoubleAccessor (&OracleWifiManager::m_power),
                    MakeDoubleChecker<double_t> ())
   ;
   return tid;
@@ -107,19 +115,31 @@ OracleWifiManager::DoReportFinalDataFailed (WifiRemoteStation *station)
   NS_LOG_FUNCTION (this << station);
 }
 
+double
+OracleWifiManager::DistanceToSnr (double distance, double power)
+{
+  // SIGNAL - NOISE - PROPAGATION LOSS
+  return power - DEFAULT_NOISE - (REFERENCE_LOSS + 10 * EXPONENT * log10 (distance));
+}
+
+uint8_t
+OracleWifiManager::GetBestMcs ()
+{
+  uint8_t modeIdx = 0;
+  while (modeIdx < 11 && DistanceToSnr (m_distance, m_power) < minSnrTable[modeIdx])
+    {
+      modeIdx++;
+    }
+
+  return 11 - modeIdx;
+}
+
 WifiTxVector
 OracleWifiManager::DoGetDataTxVector (WifiRemoteStation *st)
 {
   NS_LOG_FUNCTION (this << st);
 
-  uint8_t modeIdx = 0;
-  while (modeIdx < 11 && lookupTable[modeIdx] < m_distance)
-    {
-      modeIdx++;
-    }
-
-  WifiMode mode ("HeMcs" + std::to_string (11 - modeIdx));
-
+  WifiMode mode ("HeMcs" + std::to_string (GetBestMcs ()));
   return WifiTxVector (
       mode,
       GetDefaultTxPowerLevel (),

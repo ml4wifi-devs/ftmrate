@@ -4,6 +4,8 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 ## Installation
 
+**Note:** if you want to run FTMRate in an in-band scenario, please follow the instructions in the `wifi_ftm_ns3` branch.
+
 ### FTMRate Repository
 
 1. Clone the repository:
@@ -13,40 +15,38 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM t
 
 2. Go to project root directory and install requirements:
 	```
+	cd ftmrate_internal
 	pip install -e .
 	```
 
-3.  **Attention!** To enable GPU acceleration for jax, run this additional command (For more info, see the official JAX [installation guide](https://github.com/google/jax#pip-installation-gpu-cuda)):
+3.  **Attention!** To enable GPU acceleration for JAX, run command (this is an example command, for more info, see the official JAX [installation guide](https://github.com/google/jax#pip-installation-gpu-cuda)):
 	```
-	pip install "jax[cuda11_cudnn82]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
+	pip install "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 	```
 
 ### ns-3 network simulator
 
-To fully benefit from FTMRate, the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by clonning the official gitlab repository and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
+To fully benefit from FTMRate, the ns-3 network simulator needs to be installed on your machine. We show you how to install the ns-3 by downloading the official distribution and integrate it with our FTMRate solution. You can read more on ns-3 installation process in the
 [official installation notes](https://www.nsnam.org/wiki/Installation).
 
-1. Clone the ns-3-dev repository:
+1. Download and unzip ns-3.36.1:
 	```
-	git clone https://gitlab.com/nsnam/ns-3-dev.git
+	wget https://www.nsnam.org/releases/ns-allinone-3.36.1.tar.bz2
+	tar -xf ns-allinone-3.36.1.tar.bz2
+	mv ns-allinone-3.36.1/ns-3.36.1 $YOUR_NS3_PATH
 	```
-2. Set the repository to the 3.36.1 version:
-	```
-	cd $YOUR_NS3_PATH
-	git reset --hard 7004d1a6
-	```
-3. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
+2. Copy FTMRate contrib modules and simulation scenarios to the ns-3-dev directory:
 	```
 	cp -r $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/contrib/* $YOUR_NS3_PATH/contrib/
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/scratch/* $YOUR_NS3_PATH/scratch/
 	```
-4. Build ns-3:
+3. Build ns-3:
 	```
 	cd $YOUR_NS3_PATH
 	./ns3 configure --build-profile=optimized --enable-examples --enable-tests
 	./ns3 build
 	```
-5. Once you have built ns-3 (with examples enabled), you can test if the installation was successfull by running an example simulation:
+4. Once you have built ns-3 (with examples enabled), you can test if the installation was successful by running an example simulation:
 	```
 	./ns3 run wifi-simple-adhoc
 	```
@@ -75,7 +75,7 @@ To flawlessly synchronize files between the FTMRate repository and the ns-3 inst
 
 The ns3-ai module interconnects ns-3 and FTMRate (or any other python-writen software) by transferring data through a shared memory pool. 
 The memory can be accessed by both sides, thus making the connection. Read more about ns3-ai at the
-[official repository](https://github.com/hust-diangroup/ns3-ai).  **Attention!** ns3-ai (as of 2022-10-25) is not compatible with ns-3.36 or later. We have forked and modified the official ns3-ai repository to make it compatible with the 3.36 version. In order to install our compatible version folow the steps below.
+[official repository](https://github.com/hust-diangroup/ns3-ai).  **Attention!** ns3-ai (as of 2022-10-25) is not compatible with the CMake based ns-3 versions. We have forked and modified the official ns3-ai repository to make it compatible with the 3.36.1 version. In order to install our compatible version follow the steps below.
 
 1.  Clone our ns3-ai fork into ns-3's `contrib` directory
 	```
@@ -115,22 +115,22 @@ We provide two ways of generating article results. One requires the Slurm worklo
 
 ### Using the Slurm workload manager
 
-To produce reliable results, many independant simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
-To collect results from multiple WiFi scenarios so to reproduce our results presented in our [article](LINK_TO_OUR_ARTICLE), you need to run
+To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate_internal/tools/slurm/` directory.  
+To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article, you need to run
 ```
-sbatch ftmrate/tools/slurm/run-classic-scenarios.sh
-sbatch ftmrate/tools/slurm/run-ml-scenarios.sh
+sbatch ftmrate_internal/tools/slurm/run-classic-scenarios.sh
+sbatch ftmrate_internal/tools/slurm/run-ml-scenarios.sh
 ```
 to collect results into CSV format  and
 ```
-sbatch ftmrate/tools/generate-plots.sh
+sbatch ftmrate_internal/tools/generate-plots.sh
 ```
 to aggregate results into matplotlib plots.
 
 #### Tuning hardware
 
 When using GPU in slurm, you need to empirically determine the optimal number of tasks running per node. We store this value in
-`TASKS_PER_NODE` variable in *run-ml-scenarios.sh* file. If set to high - a lack of memory might be encountered, if set to low - the computation efficiency would be suboptimal. The variable value is passed directly to the `sbatch` command as the `--ntasks-per-node` parameter. While working with our machines, the optimal number turned out to be about 5, so we suggest to start searching from that value.
+`TASKS_PER_NODE` variable in *run-ml-scenarios.sh* file. If set too high - a lack of memory might be encountered, if set too low - the computation efficiency would be suboptimal. The variable value is passed directly to the `sbatch` command as the `--ntasks-per-node` parameter. While working with our machines, the optimal number turned out to be about 5, so we suggest to start searching from that value.
 
 ### Without slurm
 
@@ -152,8 +152,16 @@ In case you don't have access to a slurm-managed cluster, we provide a slurm-les
 	./tools/extras/sbatch ./tools/slurm/run-ml-scenarios.sh
 	./tools/extras/sbatch ./tools/slurm/run-classic-scenarios.sh
 	```
-3. Agregate results:
+3. Aggregate results:
 	```
 	tools/slurm/generate-plots.sh
 	```
 
+
+# Ares
+
+Shared repository on ares is located in group space:
+`/net/pr2/projects/plgrid/plggml4wifi/ftmrate_internal`
+
+In order to run your experiment you can schedule your script or add makefile entry and use `plgrunmake.sh`
+In this case use the name of your target as job name (`-J`)
