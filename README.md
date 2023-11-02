@@ -93,7 +93,7 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 	cd "$YOUR_NS3_PATH/contrib/ns3-ai/"
 	git checkout ml4wifi
 	```
-3. Install the ns3-ai python interface:
+3. Install the ns3-ai Python interface:
 	```
 	pip install --user "$YOUR_NS3_PATH/contrib/ns3-ai/py_interface"
 	```
@@ -118,13 +118,23 @@ exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=True)
 We provide two ways of generating article results. One requires the Slurm workload manager to parallelize and accelerate this process. The other does not, but we treat this option as a proof of concept. To reproduce plots from the article with the `generate-plots.sh` script, you need a working TeX installation on your machine. To read how to enable LaTeX rendering in matplotlib see 
 [this guide](https://matplotlib.org/stable/tutorials/text/usetex.html).
 
+It is recommended to set these environmental variables, otherwise our scripts may not discover appropriate paths:
+```
+export TOOLS_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/tools
+export ML4WIFI_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/ml4wifi
+export NS3_DIR=$YOUR_NS3_PATH
+```
+You should also update your Python path
+```
+export PYTHONPATH=$PYTHONPATH:$YOUR_PATH_TO_FTMRATE_ROOT
+```
+
 ### Using the Slurm workload manager
 
 To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
 To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article ([preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443), [Zenodo](https://zenodo.org/records/7875867)), you need to run
 ```
-sbatch ftmrate/tools/slurm/run-classic-scenarios.sh
-sbatch ftmrate/tools/slurm/run-ml-scenarios.sh
+sbatch ftmrate/tools/slurm/run-all-scenarios.sh
 ```
 to collect results into CSV format  and
 ```
@@ -139,28 +149,12 @@ When using GPU in slurm, you need to empirically determine the optimal number of
 
 ### Without slurm
 
-In case you don't have access to a slurm-managed cluster, we provide a slurm-less option to run all the simulations locally. Note that it would take an enormous amount of computation time to gather statistically reliable results, hence this slurm-less option is recommended only for soft tests with appropriately adjusted simulation parameters (in `tools/slurm/run-ml-scenarios.sh` and `tools/slurm/run-classic-scenarios.sh`). Nevertheless, to reproduce our article results without slurm, do the following steps.
+In case you don't have access to a slurm-managed cluster, we provide a slurm-less option to run all the simulations locally. Note that it would take an enormous amount of computation time to gather statistically reliable results, hence this slurm-less option is recommended only for soft tests with appropriately adjusted simulation parameters (in `tools/slurm/run-ml-scenarios.sh` and `tools/slurm/run-classic-scenarios.sh`). Nevertheless, to reproduce our article results without slurm, run simulations with our substituted `sbatch` script:
 
-1. It is recommended to set these environmental variables, otherwise our scripts may not discover appropriate paths:
-	```
-	export TOOLS_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/tools
-	export ML4WIFI_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/ml4wifi
-	export NS3_DIR=$YOUR_NS3_PATH
-	```
-	You should also update your Python path
-	```
-	export PYTHONPATH=$PYTHONPATH:$YOUR_PATH_TO_FTMRATE_ROOT
-	```
-2. Run simulations with our substituted `sbatch` script:
-	```
-	cd $YOUR_PATH_TO_FTMRATE_ROOT
-	./tools/extras/sbatch ./tools/slurm/run-ml-scenarios.sh
-	./tools/extras/sbatch ./tools/slurm/run-classic-scenarios.sh
-	```
-3. Aggregate results:
-	```
-	tools/slurm/generate-plots.sh
-	```
+```
+cd $YOUR_PATH_TO_FTMRATE_ROOT
+./tools/extras/sbatch ./tools/slurm/run-all-scenarios.sh
+```
 
 # How to reference FTMRate?
 
