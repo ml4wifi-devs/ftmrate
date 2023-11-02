@@ -1,25 +1,35 @@
 # FTMRate
 
-FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses FTM to improve the per-frame selection of modulation and coding schemes.
+[![DOI](https://img.shields.io/badge/DOI-10.1109/WoWMoM57956.2023.00039-blue.svg)](https://ieeexplore.ieee.org/document/10195443)
+[![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.7875867.svg)](https://doi.org/10.5281/zenodo.7875867)
+
+FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the IEEE 802.11 fine time measurement (FTM) protocol to improve the per-frame selection of modulation and coding schemes. Its detailed operation and a performance analysis can be found in:
+
+- Wojciech Ciezobka, Maksymilian Wojnar, Katarzyna Kosek-Szott, Szymon Szott, and Krzysztof Rusek. "FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks." 24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM), 2023. [[preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443)]
 
 ## Installation
 
-**Note:** if you want to run FTMRate in an out-of-band scenario, please follow the instructions in the `main` branch.
+**Note:** if you want to run FTMRate in an in-band scenario, please follow the instructions in the `main` branch.
 
 ### FTMRate Repository
 
 1. Clone the repository:
 	```
-	git clone https://github.com/ml4wifi-devs/ftmrate_internal.git
+	git clone https://github.com/ml4wifi-devs/ftmrate.git
 	```
 
-2. Go to project root directory and install requirements:
+2. Go to project root directory and checkout to the `wifi_ftm_ns3` branch:
 	```
-	cd ftmrate_internal
+	cd ftmrate wifi_ftm_ns3
+	git checkout 
+	```
+
+4. Install requirements:
+	```
 	pip install -e .
 	```
 
-3.  **Attention!** To enable GPU acceleration for JAX, run command (this is an example command, for more info, see the official JAX [installation guide](https://github.com/google/jax#pip-installation-gpu-cuda)):
+5.  **Attention!** To enable GPU acceleration for JAX, run this additional command (For more info, see the official JAX [installation guide](https://github.com/google/jax#installation)):
 	```
 	pip install "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 	```
@@ -36,7 +46,7 @@ To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network si
 	mv ns-allinone-3.35/ns-3.35 $YOUR_NS3_PATH
 	```
 2. Apply patch:
-    ```
+	```
 	cp $YOUR_PATH_TO_FTMRATE_ROOT/ns3_files/ns-3.35-to-wifi-ftm-ns3.patch $YOUR_NS3_PATH
 	cd $YOUR_NS3_PATH
 	patch -p1 -i ns-3.35-to-wifi-ftm-ns3.patch
@@ -66,7 +76,7 @@ To fully benefit from FTMRate, the wifi-ftm-ns3 extension of the ns-3 network si
 To flawlessly synchronize files between the FTMRate repository and the ns-3 installation, you can create symbolic links to the corresponding folders.
 **Attention!** backup of all files in the `contrib` and `scratch` directories as creating symbolic links will require deleting these folders!
 
-1. Remove `contrib` and `scratch` folders and remove the modified files from `src`:
+1. Remove `contrib` and `scratch` folders:
 	```
     cd $YOUR_NS3_PATH
     rm -rf contrib
@@ -89,12 +99,13 @@ The ns3-ai module interconnects ns-3 and FTMRate (or any other python-writen sof
 The memory can be accessed by both sides, thus making the connection. Read more about ns3-ai at the
 [official repository](https://github.com/hust-diangroup/ns3-ai).
 
-1.  Clone ns3-ai into ns-3's `contrib` directory
+1.  Clone our ns3-ai fork into ns-3's `contrib` directory
 	```
 	cd $YOUR_NS3_PATH/contrib/
-	git clone git@github.com:hust-diangroup/ns3-ai.git
+	git clone https://github.com/m-wojnar/ns3-ai.git
 	```
-2. Install the ns3-ai python interface:
+
+2. Go to ns3-ai directory and checkout the *ml4wifi* branch:
 	```
 	cd "$YOUR_NS3_PATH/contrib/ns3-ai/"
 	pip install --user "$YOUR_NS3_PATH/contrib/ns3-ai/py_interface"
@@ -105,32 +116,33 @@ The memory can be accessed by both sides, thus making the connection. Read more 
 	./waf configure -d optimized --enable-examples --enable-tests --disable-werror --disable-python
 	./waf
 	```
- 
-Using our fork of ns3-ai, use can run ns-3 simulations in optimized or debug mode. To select mode change `debug` flag in ns3-ai `Experiment` declaration:
-```python
-exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=False)
-```
-
-```python
-exp = Experiment(mempool_key, mem_size, scenario, ns3_path, debug=True)
-```
 
 ## Reproducing results
 
 We provide two ways of generating article results. One requires the Slurm workload manager to parallelize and accelerate this process. The other does not, but we treat this option as a proof of concept. To reproduce plots from the article with the `generate-plots.sh` script, you need a working TeX installation on your machine. To read how to enable LaTeX rendering in matplotlib see 
 [this guide](https://matplotlib.org/stable/tutorials/text/usetex.html).
 
+It is recommended to set these environmental variables, otherwise our scripts may not discover appropriate paths:
+```
+export TOOLS_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/tools
+export ML4WIFI_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/ml4wifi
+export NS3_DIR=$YOUR_NS3_PATH
+```
+You should also update your Python path
+```
+export PYTHONPATH=$PYTHONPATH:$YOUR_PATH_TO_FTMRATE_ROOT
+```
+
 ### Using the Slurm workload manager
 
-To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate_internal/tools/slurm/` directory.  
-To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article, you need to run
+To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
+To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article ([preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443), [Zenodo](https://zenodo.org/records/7875867)), you need to run
 ```
-sbatch ftmrate_internal/tools/slurm/run-classic-scenarios.sh
-sbatch ftmrate_internal/tools/slurm/run-ml-scenarios.sh
+sbatch ftmrate/tools/slurm/run-all-scenarios.sh
 ```
 to collect results into CSV format  and
 ```
-sbatch ftmrate_internal/tools/generate-plots.sh
+sbatch ftmrate/tools/generate-plots.sh
 ```
 to aggregate results into matplotlib plots.
 
@@ -141,34 +153,24 @@ When using GPU in slurm, you need to empirically determine the optimal number of
 
 ### Without slurm
 
-In case you don't have access to a slurm-managed cluster, we provide a slurm-less option to run all the simulations locally. Note that it would take an enormous amount of computation time to gather statistically reliable results, hence this slurm-less option is recommended only for soft tests with appropriately adjusted simulation parameters (in `tools/slurm/run-ml-scenarios.sh` and `tools/slurm/run-classic-scenarios.sh`). Nevertheless, to reproduce our article results without slurm, do the following steps.
+In case you don't have access to a slurm-managed cluster, we provide a slurm-less option to run all the simulations locally. Note that it would take an enormous amount of computation time to gather statistically reliable results, hence this slurm-less option is recommended only for soft tests with appropriately adjusted simulation parameters (in `tools/slurm/run-ml-scenarios.sh` and `tools/slurm/run-classic-scenarios.sh`). Nevertheless, to reproduce our article results without slurm, run simulations with our substituted `sbatch` script:
 
-1. It is recommended to set these environmental variables, otherwise our scripts may not discover appropriate paths:
-	```
-	export TOOLS_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/tools
-	export ML4WIFI_DIR=$YOUR_PATH_TO_FTMRATE_ROOT/ml4wifi
-	export NS3_DIR=$YOUR_NS3_PATH
-	```
-	You should also update your Python path
-	```
-	export PYTHONPATH=$PYTHONPATH:$YOUR_PATH_TO_FTMRATE_ROOT
-	```
-2. Run simulations with our substituted `sbatch` script:
-	```
-	cd $YOUR_PATH_TO_FTMRATE_ROOT
-	./tools/extras/sbatch ./tools/slurm/run-ml-scenarios.sh
-	./tools/extras/sbatch ./tools/slurm/run-classic-scenarios.sh
-	```
-3. Aggregate results:
-	```
-	tools/slurm/generate-plots.sh
-	```
+```
+cd $YOUR_PATH_TO_FTMRATE_ROOT
+./tools/extras/sbatch ./tools/slurm/run-all-scenarios.sh
+```
 
+# How to reference FTMRate?
 
-# Ares
-
-Shared repository on ares is located in group space:
-`/net/pr2/projects/plgrid/plggml4wifi/ftmrate_internal`
-
-In order to run your experiment you can schedule your script or add makefile entry and use `plgrunmake.sh`
-In this case use the name of your target as job name (`-J`)
+```
+@INPROCEEDINGS{ciezobka2023ftmrate,
+  author={Ciezobka, Wojciech and Wojnar, Maksymilian and Kosek-Szott, Katarzyna and Szott, Szymon and Rusek, Krzysztof},
+  booktitle={2023 IEEE 24th International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM)}, 
+  title={{FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks}}, 
+  year={2023},
+  volume={},
+  number={},
+  pages={242--251},
+  doi={10.1109/WoWMoM57956.2023.00039}
+}
+```
