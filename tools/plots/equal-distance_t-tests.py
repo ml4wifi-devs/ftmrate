@@ -36,5 +36,5 @@ if __name__ == '__main__':
 
     n_wifi_to_compare = 4
 
-    for distance in [0, 20]:
+    for distance in [1, 20]:
         plot_results(distance, n_wifi_to_compare)

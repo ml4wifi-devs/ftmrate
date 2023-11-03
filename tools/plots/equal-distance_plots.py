@@ -6,7 +6,7 @@ import pandas as pd
 from tools.plots.common import *
 
 
-MAX_N_WIFI = 30
+MAX_N_WIFI = 16
 
 
 def plot_results(ax: plt.Axes, distance: float) -> None:
@@ -14,6 +14,7 @@ def plot_results(ax: plt.Axes, distance: float) -> None:
 
     df = pd.read_csv(DATA_FILE)
     df = df[(df.mobility == 'Distance') & (df.distance == distance)]
+    df = df[df.nWifi == df.nWifiReal]
 
     for i, (manager, manager_name) in enumerate(ALL_MANAGERS.items()):
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'nWifiReal')
@@ -37,10 +38,11 @@ if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
     fig, axes = plt.subplots(2, 1, sharex='col')
 
-    for distance, ax in zip([0, 20], axes):
+    for distance, ax in zip([1, 20], axes):
         plot_results(ax, distance)
 
     axes[0].tick_params('x', labelbottom=False, bottom=False)
+    axes[1].set_xticks(range(0, MAX_N_WIFI + 1, 2))
     axes[1].set_xlabel('Number of stations')
     axes[1].legend()
 

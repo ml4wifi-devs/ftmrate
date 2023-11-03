@@ -11,6 +11,7 @@ namespace ns3 {
 // ns3-ai structures
 struct sEnv
 {
+  double power;
   double time;
   double distance;
   uint32_t station_id;
@@ -59,6 +60,7 @@ private:
 
   WifiMode m_ctlMode;   // Wi-Fi mode for RTS frames
   double m_distance;    // current distance between STA and AP
+  double m_power;       // current tx power
   Ns3AIRL<sEnv, sAct> *m_env;
 };
 
