@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='ml4wifi',
-    version='1.0.0',
+    version='2.0.0',
     packages=find_packages(include=[
         'ml4wifi',
         'ml4wifi.*'
