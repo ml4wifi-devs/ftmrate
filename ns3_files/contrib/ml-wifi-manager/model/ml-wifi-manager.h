@@ -15,6 +15,8 @@ struct sEnv
   double time;
   double distance;
   uint32_t station_id;
+  uint16_t n_successful;
+  uint16_t n_failed;
   uint8_t mode;
   uint8_t type;
 } Packed;

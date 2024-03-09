@@ -9,6 +9,8 @@ class Env(Structure):
         ('time', c_double),
         ('distance', c_double),
         ('station_id', c_uint32),
+        ('n_successful', c_uint16),
+        ('n_failed', c_uint16),
         ('mode', c_uint8),
         ('type', c_uint8)
     ]
