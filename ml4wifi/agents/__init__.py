@@ -65,7 +65,7 @@ class BaseManagersContainer:
 
         return key, state, m_state, jnp.argmax(rates_mean)
 
-    def do(self, env: Env, act: Act) -> Act:
+    def do(self, env: Env, act: Act, ampdu: bool) -> Act:
         if env.type == 0:       # New station created
             act.station_id = sta_id = len(self.states)
             self.key, init_key = jax.random.split(self.key)
@@ -73,18 +73,20 @@ class BaseManagersContainer:
             self.measurements[sta_id] = self.measurements_manager.init()
 
         elif env.type == 1:     # Sample new MCS
-            sta_id = env.station_id
-            self.key, self.states[sta_id], self.measurements[sta_id], mode = \
-                self.select_mcs(
-                    self.key,
-                    self.states[sta_id],
-                    self.measurements[sta_id],
-                    env.distance,
-                    env.power,
-                    env.time
-                )
+            # TODO: Verify if the filtration below is needed.
+            if (ampdu and env.report_source == 2) or (not ampdu and env.report_source < 2):
+                sta_id = env.station_id
+                self.key, self.states[sta_id], self.measurements[sta_id], mode = \
+                    self.select_mcs(
+                        self.key,
+                        self.states[sta_id],
+                        self.measurements[sta_id],
+                        env.distance,
+                        env.power,
+                        env.time
+                    )
 
-            act.mode = mode
-            act.station_id = sta_id     # Only for check
+                act.mode = mode
+                act.station_id = sta_id     # Only for check
 
         return act

@@ -161,7 +161,7 @@ def main() -> None:
                 if data is None:
                     break
 
-                data.act = managers_container.do(data.env, data.act)
+                data.act = managers_container.do(data.env, data.act, args.ampdu)
 
         ns3_process.wait()
     finally:
