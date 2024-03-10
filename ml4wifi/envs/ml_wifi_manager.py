@@ -67,6 +67,8 @@ def main() -> None:
     parser.add_argument('--simulationTime', default=20., type=float)
     parser.add_argument('--startPosition', default=0., type=float)
     parser.add_argument('--velocity', default=1., type=float)
+    parser.add_argument('--wallInterval', default=0., type=float)
+    parser.add_argument('--wallLoss', default=10., type=float)
     parser.add_argument('--warmupTime', default=10., type=int)
 
     # Other arguments
@@ -144,7 +146,9 @@ def main() -> None:
         NS3_ARGS['measurementsInterval'] = args.measurementsInterval
         NS3_ARGS['startPosition'] = args.startPosition
         NS3_ARGS['velocity'] = args.velocity
-    
+        NS3_ARGS['wallInterval'] = args.wallInterval
+        NS3_ARGS['wallLoss'] = args.wallLoss
+
     elif args.scenario == 'hidden':
         pname = 'stations'
         NS3_ARGS['distance'] = args.distance

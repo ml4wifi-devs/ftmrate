@@ -4,6 +4,7 @@
 #include <string>
 
 #include "ns3/applications-module.h"
+#include "ns3/buildings-module.h"
 #include "ns3/core-module.h"
 #include "ns3/flow-monitor-module.h"
 #include "ns3/internet-module.h"
@@ -72,6 +73,8 @@ main (int argc, char *argv[])
   uint32_t channelWidth = 20;
   uint32_t minGI = 3200;
   double startPosition = 0.;
+  double wallInterval = 0.;
+  double wallLoss = 10.;
 
   // Parse command line arguments
   CommandLine cmd;
@@ -93,6 +96,8 @@ main (int argc, char *argv[])
   cmd.AddValue ("simulationTime", "Duration of simulation (s)", simulationTime);
   cmd.AddValue ("startPosition", "Starting position of main station on X axis (m)", startPosition);
   cmd.AddValue ("velocity", "Station velocity (m/s)", velocity);
+  cmd.AddValue ("wallInterval", "Position of the wall from the AP (m)", wallInterval);
+  cmd.AddValue ("wallLoss", "Loss of the wall (dB)", wallLoss);
   cmd.AddValue ("warmupTime", "Duration of warmup stage (s)", warmupTime);
   cmd.Parse (argc, argv);
 
@@ -122,6 +127,8 @@ main (int argc, char *argv[])
             << "- mobility model: Moving" << std::endl
             << "- velocity: " << velocity << " m/s" << std::endl
             << "- startPosition: " << startPosition << " m" << std::endl
+            << "- wallInterval: " << wallInterval << " m" << std::endl
+            << "- wallLoss: " << wallLoss << " dB" << std::endl
             << std::endl;
 
   // Create AP and station
@@ -153,9 +160,41 @@ main (int argc, char *argv[])
 
   std::cout << std::endl;
 
+  // Place a building
+  if (wallInterval > 0.)
+    {
+      double finalPosition = simulationTime * velocity + startPosition;
+      uint32_t rooms = (uint32_t) ((finalPosition + wallInterval) / wallInterval);
+
+      Ptr<Building> b = CreateObject<Building>();
+      b->SetBoundaries(Box(0., rooms * wallInterval, -5., 5., -5., 5.));
+      b->SetBuildingType(Building::Office);
+      b->SetExtWallsType(Building::ConcreteWithoutWindows);
+      b->SetNRoomsX(rooms);
+
+      BuildingsHelper::Install (wifiApNode);
+      BuildingsHelper::Install (wifiStaNode);
+    }
+
   // Configure wireless channel
-  YansWifiPhyHelper phy;
-  YansWifiChannelHelper channelHelper = YansWifiChannelHelper::Default ();
+  YansWifiChannelHelper channelHelper;
+
+  if (wallInterval > 0)
+    {
+      channelHelper.SetPropagationDelay("ns3::ConstantSpeedPropagationDelayModel");
+      channelHelper.AddPropagationLoss ("ns3::HybridBuildingsPropagationLossModel",
+                                        "Frequency", DoubleValue (5418e6),
+                                        "ShadowSigmaOutdoor", DoubleValue (0.),
+                                        "ShadowSigmaIndoor", DoubleValue (0.),
+                                        "ShadowSigmaExtWalls", DoubleValue (0.),
+                                        "InternalWallLoss", DoubleValue (wallLoss),
+                                        "CitySize", StringValue ("Small"),
+                                        "Environment", StringValue ("OpenAreas"));
+    }
+  else
+    {
+      channelHelper = YansWifiChannelHelper::Default ();
+    }
 
   if (lossModel == "Nakagami")
     {
@@ -167,6 +206,8 @@ main (int argc, char *argv[])
       std::cerr << "Selected incorrect loss model!";
       return 1;
     }
+
+  YansWifiPhyHelper phy;
   phy.SetChannel (channelHelper.Create ());
 
   // Configure two power levels
