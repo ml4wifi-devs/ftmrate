@@ -8,7 +8,7 @@ from tensorflow_probability.substrates import jax as tfp
 from tensorflow_probability.substrates.jax.experimental.mcmc import SequentialMonteCarlo, SequentialMonteCarloResults, \
     WeightedParticles
 
-from ml4wifi.agents import BaseAgent, BaseManagersContainer
+from ml4wifi.agents.base_managers_container import BaseAgent, BaseManagersContainer
 from ml4wifi.envs import ContinuousLocalLinearTrend
 from ml4wifi.utils.distributions import FiniteDiscreteQ
 from ml4wifi.utils.wifi_specs import distance_noise
