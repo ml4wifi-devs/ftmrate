@@ -63,7 +63,7 @@ class BaseManagersContainer:
 
         self.select_mcs = jax.jit(partial(select_mcs, agent=self.agent, measurements_manager=self.measurements_manager))
 
-    def do(self, env: Env, act: Act, ampdu: bool) -> Act:
+    def do(self, env: Env, act: Act) -> Act:
         if env.type == 0:       # New station created
             act.station_id = sta_id = len(self.states)
             self.key, init_key = jax.random.split(self.key)
@@ -73,15 +73,11 @@ class BaseManagersContainer:
         elif env.type == 1:     # Sample new MCS
             sta_id = env.station_id
 
-            # TODO: Verify if the filtration below is needed.
-            if (ampdu and env.report_source == 2) or (not ampdu and env.report_source < 2):
-                self.key, self.states[sta_id], self.measurements[sta_id], mode = \
-                    self.select_mcs(
-                        self.key, self.states[sta_id], self.measurements[sta_id],
-                        env.distance, env.power, env.time, env.n_successful, env.n_failed, env.mode
-                    )
-            else:
-                mode = env.mode
+            self.key, self.states[sta_id], self.measurements[sta_id], mode = \
+                self.select_mcs(
+                    self.key, self.states[sta_id], self.measurements[sta_id],
+                    env.distance, env.power, env.time, env.n_successful, env.n_failed, env.mode
+                )
 
             act.mode = mode
             act.station_id = sta_id     # Only for check

@@ -8,8 +8,6 @@
 #include "ns3/wifi-utils.h"
 #include "ml-wifi-manager.h"
 
-#define SAMPLE_INTERVAL 0.01
-
 namespace ns3 {
 
 NS_LOG_COMPONENT_DEFINE ("MlWifiManager");
