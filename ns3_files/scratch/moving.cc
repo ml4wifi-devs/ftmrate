@@ -190,8 +190,6 @@ main (int argc, char *argv[])
                                         "InternalWallLoss", DoubleValue (wallLoss),
                                         "CitySize", StringValue ("Small"),
                                         "Environment", StringValue ("OpenAreas"));
-
-      Config::SetDefault("ns3::IdealWifiManager::BerThreshold", DoubleValue(1e-20));
     }
   else
     {

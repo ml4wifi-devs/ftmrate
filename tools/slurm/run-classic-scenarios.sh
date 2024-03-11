@@ -196,18 +196,10 @@ run_hybrid_moving() {
   START=0
   END=$(( N_REP - 1 ))
 
-  HYBRID_MANAGERS=("ns3::ThompsonSamplingWifiManager" "ns3::IdealWifiManager")
-  HYBRID_MANAGERS_NAMES=("TS" "Ideal")
-  HYBRID_MANAGERS_LEN=${#HYBRID_MANAGERS[@]}
+  MANAGER="ns3::ThompsonSamplingWifiManager"
+  MANAGER_NAME="TS"
 
-  for (( i = 0; i < HYBRID_MANAGERS_LEN; i++ )); do
-    MANAGER=${HYBRID_MANAGERS[$i]}
-    MANAGER_NAME=${HYBRID_MANAGERS_NAMES[$i]}
-
-    sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$WALL_INTERVAL" "$WALL_LOSS"
-
-    SHIFT=$(( SHIFT + VELOCITIES_LEN * N_REP ))
-  done
+  sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$WALL_INTERVAL" "$WALL_LOSS"
 }
 
 ### Run section

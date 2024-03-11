@@ -239,14 +239,23 @@ run_hybrid_moving() {
   WALL_INTERVAL=5
   WALL_LOSS=3
 
-  MANAGER="thr_kf"
-  MANAGER_NAME="THR_KF"
+  MANAGERS_HYBRID=("kf" "thr_kf")
+  MANAGERS_HYBRID_NAMES=("KF" "THR_KF")
+  MANAGERS_HYBRID_LEN=${#MANAGERS_HYBRID[@]}
 
   START=0
   END=$(( N_REP - 1 ))
-  MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
 
-  sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$MEMPOOL_SHIFT" "$WALL_INTERVAL" "$WALL_LOSS"
+  for (( i = 0; i < MANAGERS_HYBRID_LEN; i++ )); do
+    MANAGER=${MANAGERS_HYBRID[$i]}
+    MANAGER_NAME=${MANAGERS_HYBRID_NAMES[$i]}
+
+    MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
+
+    sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$MEMPOOL_SHIFT" "$WALL_INTERVAL" "$WALL_LOSS"
+
+    SHIFT=$(( SHIFT + N_REP ))
+  done
 }
 
 ### Run section
