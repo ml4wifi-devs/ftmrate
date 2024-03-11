@@ -68,7 +68,7 @@ def main() -> None:
     parser.add_argument('--startPosition', default=0., type=float)
     parser.add_argument('--velocity', default=1., type=float)
     parser.add_argument('--wallInterval', default=0., type=float)
-    parser.add_argument('--wallLoss', default=10., type=float)
+    parser.add_argument('--wallLoss', default=3., type=float)
     parser.add_argument('--warmupTime', default=10., type=int)
 
     # Other arguments

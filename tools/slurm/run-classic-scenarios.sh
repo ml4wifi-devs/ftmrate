@@ -183,6 +183,33 @@ run_power_moving() {
   done
 }
 
+run_hybrid_moving() {
+  N_REP=15
+
+  VELOCITY="0.5"
+  SIM_TIME=51
+  INTERVAL="0.5"
+
+  WALL_INTERVAL=5
+  WALL_LOSS=3
+
+  START=0
+  END=$(( N_REP - 1 ))
+
+  HYBRID_MANAGERS=("ns3::ThompsonSamplingWifiManager" "ns3::IdealWifiManager")
+  HYBRID_MANAGERS_NAMES=("TS" "Ideal")
+  HYBRID_MANAGERS_LEN=${#HYBRID_MANAGERS[@]}
+
+  for (( i = 0; i < HYBRID_MANAGERS_LEN; i++ )); do
+    MANAGER=${HYBRID_MANAGERS[$i]}
+    MANAGER_NAME=${HYBRID_MANAGERS_NAMES[$i]}
+
+    sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$WALL_INTERVAL" "$WALL_LOSS"
+
+    SHIFT=$(( SHIFT + VELOCITIES_LEN * N_REP ))
+  done
+}
+
 ### Run section
 
 echo -e "\nQueue equal distance (d=1) scenario"
@@ -214,6 +241,9 @@ run_rwpm 0                        # Fig. 11 (top)
 
 echo -e "\nQueue mobile stations scenario"
 run_rwpm "1.4"                    # Fig. 11 (bottom)
+
+echo -e "\nQueue hybrid moving station (v=0.5) scenario with walls"
+run_hybrid_moving
 
 ## Legacy scenarios
 

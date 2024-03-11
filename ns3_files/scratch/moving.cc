@@ -74,7 +74,7 @@ main (int argc, char *argv[])
   uint32_t minGI = 3200;
   double startPosition = 0.;
   double wallInterval = 0.;
-  double wallLoss = 10.;
+  double wallLoss = 3.;
 
   // Parse command line arguments
   CommandLine cmd;
@@ -190,6 +190,8 @@ main (int argc, char *argv[])
                                         "InternalWallLoss", DoubleValue (wallLoss),
                                         "CitySize", StringValue ("Small"),
                                         "Environment", StringValue ("OpenAreas"));
+
+      Config::SetDefault("ns3::IdealWifiManager::BerThreshold", DoubleValue(1e-20));
     }
   else
     {
