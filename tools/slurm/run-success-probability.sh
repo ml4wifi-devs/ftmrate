@@ -1,6 +1,6 @@
 #!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
 
-TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 
 MIN_SNR=5
 MAX_SNR=55

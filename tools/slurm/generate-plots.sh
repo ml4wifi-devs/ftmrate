@@ -1,6 +1,6 @@
 #!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
 
-TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 export PYTHONPATH="$PYTHONPATH:$TOOLS_DIR"
 
 bash $TOOLS_DIR/outputs/combine_csv_files.sh

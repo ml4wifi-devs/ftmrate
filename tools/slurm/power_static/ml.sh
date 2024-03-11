@@ -1,10 +1,10 @@
 #!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
 
-ML4WIFI_DIR="${ML4WIFI_DIR:=$HOME/ftmrate_internal/ml4wifi}"
-TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
+ML4WIFI_DIR="${ML4WIFI_DIR:=$HOME/ftmrate/ml4wifi}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 
 cd "$ML4WIFI_DIR/envs"
-export PYTHONPATH=$HOME/ftmrate_internal/
+export PYTHONPATH=$HOME/ftmrate/
 
 SEED_SHIFT=$1
 MANAGER=$2

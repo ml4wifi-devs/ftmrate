@@ -13,7 +13,7 @@ PASSWORD = 'opus'
 HOME_DIR = '/home/opus'
 
 AP_CMD = "tcpdump -i mon0 -e 'ether host 00:c2:c6:e6:9a:ec' -w mcs"
-STA_CMD = f"{HOME_DIR}/ftmrate_venv/bin/python3.8 {HOME_DIR}/ftmrate_internal/experiments/success_probability/send_frames_sta.py --mcs "
+STA_CMD = f"{HOME_DIR}/ftmrate_venv/bin/python3.8 {HOME_DIR}/ftmrate/experiments/success_probability/send_frames_sta.py --mcs "
 
 
 def measure(distance, measurement, mcs_vals):

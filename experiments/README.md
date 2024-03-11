@@ -13,12 +13,12 @@ be taken at shorter distances.
 
 1. Clone the repository:
 	```bash
-	git clone https://github.com/ml4wifi-devs/ftmrate_internal.git
+	git clone https://github.com/ml4wifi-devs/ftmrate.git
 	```
 
 2. Go to the `experiments` directory and install requirements:
 	```bash
-	cd ftmrate_internal/experiments
+	cd ftmrate/experiments
 	pip install -r requirements.txt
 	```
 

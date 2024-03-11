@@ -6,7 +6,7 @@ import pandas as pd
 from scipy.stats import t, ttest_ind
 
 
-TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate_internal/tools'))
+TOOLS_DIR = os.getenv('TOOLS_DIR', os.path.join(os.path.expanduser("~"), 'ftmrate/tools'))
 DATA_FILE = os.path.join(TOOLS_DIR, 'outputs', 'all_results.csv')
 
 ALL_MANAGERS = {
