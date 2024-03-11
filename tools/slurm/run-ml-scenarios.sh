@@ -201,14 +201,16 @@ run_hybrid_equal_distance() {
   N_POINTS=9
   DISTANCE=$1
 
-  MANAGER="thr_kf"
-  MANAGER_NAME="THR_KF"
-
   THRESHOLDS=("0.8" "0.7" "0.6")
-  THRESHOLDS_LEN=${#THRESHOLDS[@]}
+  MANAGERS_HYBRID=("thr_kf" "thr_kf" "thr_kf")
+  MANAGERS_HYBRID_NAMES=("THR_KF_08" "THR_KF_07" "THR_KF_06")
+  MANAGERS_HYBRID_LEN=${#MANAGERS_HYBRID[@]}
 
-  for (( i = 0; i < THRESHOLDS_LEN; i++ )); do
+  for (( i = 0; i < MANAGERS_HYBRID_LEN; i++ )); do
     THRESHOLD=${THRESHOLDS[$i]}
+    MANAGER=${MANAGERS_HYBRID[$i]}
+    MANAGER_NAME=${MANAGERS_HYBRID_NAMES[$i]}
+
     ARRAY_SHIFT=0
 
     for (( j = 0; j < N_POINTS; j++)); do
