@@ -17,6 +17,16 @@ ALL_MANAGERS = {
     'PF': 'FTMRate w/ PF',
     'Oracle': 'Oracle'
 }
+
+MARKERS = {
+    'Minstrel': 'o',
+    'TS': 's',
+    'ES': 'v',
+    'KF': '^',
+    'PF': '>',
+    'Oracle': ''
+}
+
 MIN_REPS = 4
 CONFIDENCE_INTERVAL = 0.99
 
