@@ -24,8 +24,9 @@ def plot_results(distance: float) -> None:
 
         manager_name = ALL_MANAGERS.get(manager, 'FTM overhead')
         linestype = '--' if manager == 'OracleFTM' else '-'
+        markersize = 3 if manager == 'OracleFTM' else 2
 
-        plt.plot(mean.index, difference, marker='o', markersize=2, label=manager_name, c=c, linestyle=linestype)
+        plt.plot(mean.index, difference, marker=MARKERS[manager], markersize=markersize, label=manager_name, c=c, linestyle=linestype)
 
     plt.xlim((0, MAX_N_WIFI))
     plt.xticks(range(0, MAX_N_WIFI + 1, 2))

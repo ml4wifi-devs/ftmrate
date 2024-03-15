@@ -27,7 +27,7 @@ def plot_results(ax: plt.Axes, delta: float, interval: float, velocity: float) -
         if manager == 'Oracle':
             ax.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
         else:
-            ax.plot(mean.index, mean, marker='o', markersize=1, label=manager_name, c=colors[i])
+            ax.plot(mean.index, mean, marker=MARKERS[manager], markersize=1, label=manager_name, c=colors[i])
             ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
 
     for i, x in enumerate(POWER_CHANGE[interval]):
