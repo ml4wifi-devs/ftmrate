@@ -11,6 +11,7 @@ from ml4wifi.agents.kalman_filter import ManagersContainer as KalmanFilter
 from ml4wifi.agents.particle_filter import ManagersContainer as ParticleFilter
 from ml4wifi.agents.thompson_sampling import ManagersContainer as ThompsonSampling
 from ml4wifi.agents.hybrid_threshold import ManagersContainer as HybridThreshold
+from ml4wifi.agents.hybrid_mab import ManagersContainer as HybridMAB
 
 from ml4wifi.envs.ns3_ai_structures import Env, Act
 
@@ -21,7 +22,8 @@ MANAGERS = {
     'kf': KalmanFilter,
     'pf': ParticleFilter,
     'ts': ThompsonSampling,
-    'thr': HybridThreshold
+    'thr': HybridThreshold,
+    'mab': HybridMAB
 }
 
 # Simulation parameters for different scenarios
