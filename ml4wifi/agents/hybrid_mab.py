@@ -4,7 +4,7 @@ from typing import Any, Tuple, Callable
 
 import jax
 import jax.numpy as jnp
-from chex import dataclass, Scalar, PRNGKey
+from chex import dataclass, Scalar, Array, PRNGKey
 
 from ml4wifi.agents.base_managers_container import BaseAgent, BaseManagersContainer, select_ftmrate_mcs
 from ml4wifi.agents.exponential_smoothing import exponential_smoothing
@@ -14,27 +14,122 @@ from ml4wifi.agents.thompson_sampling import thompson_sampling
 from ml4wifi.utils.measurement_manager import MeasurementState, MeasurementManager, measurement_manager
 from ml4wifi.utils.wifi_specs import wifi_modes_rates
 
+@dataclass
+class MABState:
+    alpha: Array
+    beta: Array
+    time: Scalar
+
+
+def mab(decay: Scalar = 1.0) -> BaseAgent:
+    def init(key: PRNGKey) -> MABState:
+        """
+        Returns the Thompson sampling agent initial state.
+
+        Parameters
+        ----------
+        key : PRNGKey
+            JAX random generator key
+
+        Returns
+        -------
+        state : ThompsonSamplingState
+            Initial Thompson sampling agent state
+        """
+
+        return MABState(
+            alpha=jnp.zeros(2),
+            beta=jnp.zeros(2),
+            time=0.0
+        )
+
+    def update(
+            state: MABState,
+            action: jnp.int32,
+            n_successful: jnp.int32,
+            n_failed: jnp.int32,
+            time: Scalar
+    ) -> MABState:
+        """
+        Performs one step of the Thompson sampling, returns the updated state of the agent.
+        The agent uses exponential smoothing to update the success and failure rates.
+
+        Parameters
+        ----------
+        state : ThompsonSamplingState
+            Previous agent state
+        action : int
+            Previously selected manager
+        n_successful : int
+            Number of successfully transmitted frames
+        n_failed : int
+            Number of failed transmitted frames
+        time : float
+            Current time
+
+        Returns
+        -------
+        state : ThompsonSamplingState
+            Updated Thompson sampling agent state
+        """
+
+        smoothing = jnp.exp(-decay * (time - state.time))
+
+        return MABState(
+            alpha=(state.alpha * smoothing).at[action].add(n_successful),
+            beta=(state.beta * smoothing).at[action].add(n_failed),
+            time=time
+        )
+
+    def sample(
+            state: MABState,
+            key: PRNGKey,
+    ) -> jnp.int32:
+        """
+        Samples the best MCS based on the Thompson sampling algorithm.
+
+        Parameters
+        ----------
+        state : ThompsonSamplingState
+            Agent state
+        key : PRNGKey
+            JAX random generator key
+        context : Array
+            Context of the environment
+
+        Returns
+        -------
+        mcs : int
+            Selected MCS
+        """
+
+        success_prob = jax.random.beta(key, state.alpha + 1, state.beta + 1)
+        return jnp.argmax(success_prob)
+
+    return BaseAgent(
+        init=jax.jit(init),
+        update=jax.jit(update),
+        sample=jax.jit(sample)
+    )
+
 
 @dataclass
-class HybridThresholdState:
+class HybridMABState:
+    mab_state: Any
     ftmrate_state: Any
     backup_state: Any
-    main_rate: jnp.int32
-    backup_rate: jnp.int32
-    success_history: deque
+    last_manager: jnp.int8
+    ftmrate_rate: jnp.int32
 
 
-def hybrid_threshold(
+def hybrid_mab(
+        mab_agent: BaseAgent,
         main_agent: BaseAgent,
         backup_agent: BaseAgent,
         select_ftmrate_mcs: Callable,
-        history_length: int,
-        threshold: float,
-        backup_retransmissions: int,
-        main_retransmissions: int
 ) -> BaseAgent:
 
-    def init(key: PRNGKey) -> HybridThresholdState:
+    def init(key: PRNGKey) -> HybridMABState:
         """
         Initializes the agent state.
 
@@ -49,18 +144,18 @@ def hybrid_threshold(
             Initial agent state
         """
 
-        ftmrate_key, backup_key = jax.random.split(key)
+        mab_key, ftmrate_key, backup_key = jax.random.split(key, 3)
 
-        return HybridThresholdState(
+        return HybridMABState(
+            mab_state=mab_agent.init(mab_key),
             ftmrate_state=main_agent.init(ftmrate_key),
             backup_state=backup_agent.init(backup_key),
-            main_rate=0,
-            backup_rate=0,
-            success_history=deque(maxlen=history_length)
+            last_manager=0,
+            ftmrate_rate=11
         )
 
     def update(
-            state: HybridThresholdState,
+            state: HybridMABState,
             m_state: MeasurementState,
             key: PRNGKey,
             distance: Scalar,
@@ -69,7 +164,7 @@ def hybrid_threshold(
             n_successful: jnp.int32,
             n_failed: jnp.int32,
             mode: jnp.int32
-    ) -> HybridThresholdState:
+    ) -> HybridMABState:
         """
         Updates the state of the internal agents, selects the MCS and updates the state of the hybrid agent.
         Main and backup rates are updated based on the success history and the threshold.
@@ -101,42 +196,23 @@ def hybrid_threshold(
             Updated agent state
         """
 
-        ftmrate_key, backup_key = jax.random.split(key)
+        mab_key, ftmrate_key, backup_key = jax.random.split(key, 3)
 
+        mab_state = mab_agent.update(state.mab_state, mode, n_successful, n_failed, time)
         _, ftmrate_state, _, ftmrate_rate = select_ftmrate_mcs(
             ftmrate_key, state.ftmrate_state, m_state, distance, tx_power, time, n_successful, n_failed, mode
         )
         backup_state = backup_agent.update(state.backup_state, mode, n_successful, n_failed, time)
-        backup_rate = backup_agent.sample(backup_state, backup_key, wifi_modes_rates)
 
-        if n_successful > n_failed:
-            n_all_successful = sum(res[0] for res in state.success_history)
-            n_all_failed = sum(res[1] for res in state.success_history)
-
-            if n_all_successful + n_all_failed > 0:
-                tau = n_all_successful / (n_all_successful + n_all_failed)
-            else:
-                tau = 1.0
-
-            if tau > threshold:
-                main_rate, backup_rate = ftmrate_rate, backup_rate
-            else:
-                main_rate, backup_rate = backup_rate, ftmrate_rate
-        else:
-            main_rate, backup_rate = state.main_rate, state.backup_rate
-
-        history = state.success_history
-        history.append((n_successful, n_failed))
-
-        return HybridThresholdState(
+        return HybridMABState(
+            mab_state=mab_state,
             ftmrate_state=ftmrate_state,
             backup_state=backup_state,
-            main_rate=main_rate,
-            backup_rate=backup_rate,
-            success_history=history
+            last_manager=state.last_manager,
+            ftmrate_rate=ftmrate_rate
         )
 
-    def sample(state: HybridThresholdState,) -> jnp.int32:
+    def sample(state: HybridMABState, key: PRNGKey) -> jnp.int32:
         """
         Returns MCS according to the previous transmission plan and the success history.
 
@@ -144,6 +220,8 @@ def hybrid_threshold(
         ----------
         state : HybridThresholdState
             Agent state
+        key : PRNGKey
+            JAX random generator key
 
         Returns
         -------
@@ -151,19 +229,13 @@ def hybrid_threshold(
             Selected MCS
         """
 
-        idx = 1
+        mab_key, backup_key = jax.random.split(key)
 
-        for i in range(idx, min(len(state.success_history), main_retransmissions + idx)):
-            if state.success_history[-i][0] > state.success_history[-i][1]:
-                return state.main_rate
-
-        idx += main_retransmissions
-
-        for i in range(idx, min(len(state.success_history), backup_retransmissions + idx)):
-            if state.success_history[-i][0] > state.success_history[-i][1]:
-                return state.backup_rate
-
-        return 0
+        manager_action = mab_agent.sample(state.mab_state, mab_key)
+        if manager_action == 0:
+            return state.ftmrate_rate
+        else:
+            return backup_agent.sample(state.backup_state, backup_key, wifi_modes_rates)
 
     return BaseAgent(
         init=init,
@@ -186,9 +258,9 @@ def select_hybrid_mcs(
         measurements_manager: MeasurementManager
 ) -> Tuple[PRNGKey, Any, MeasurementState, jnp.int32]:
 
-    key, update_key, noise_key = jax.random.split(key, 3)
+    key, update_key, sample_key, noise_key = jax.random.split(key, 4)
     state = agent.update(state, m_state, update_key, distance, tx_power, time, n_successful, n_failed, mode)
-    mcs = agent.sample(state)
+    mcs = agent.sample(state, sample_key)
     m_state, _ = measurements_manager.update(m_state, distance, time, noise_key)
     return key, state, m_state, mcs
 
@@ -198,11 +270,10 @@ class ManagersContainer(BaseManagersContainer):
             self,
             seed: int,
             ftmrate_agent: str,
-            history_length: int,
-            threshold: float,
-            backup_retransmissions: int,
-            main_retransmissions: int
+            mab_decay: Scalar
     ) -> None:
+        
+        mab_agent = mab(mab_decay)
 
         if ftmrate_agent == 'es':
             ftmrate_agent = exponential_smoothing
@@ -224,8 +295,8 @@ class ManagersContainer(BaseManagersContainer):
             partial(select_ftmrate_mcs, agent=ftmrate_agent, measurements_manager=self.measurements_manager)
         )
 
-        self.agent = hybrid_threshold(
-            ftmrate_agent, backup_agent, select_ftmrate_mcs_fn, history_length, threshold, backup_retransmissions, main_retransmissions
+        self.agent = hybrid_mab(
+            mab_agent, ftmrate_agent, backup_agent, select_ftmrate_mcs_fn
         )
         self.states = {}
 

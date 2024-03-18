@@ -78,6 +78,7 @@ def main() -> None:
     parser.add_argument('--backup_retransmissions', default=2, type=int)
     parser.add_argument('--historyLength', default=25, type=int)
     parser.add_argument('--threshold', default=0.7, type=float)
+    parser.add_argument('--mab_decay', default=1.0, type=float)
     parser.add_argument('--verbose', default=False, action='store_true')
 
     args = parser.parse_args()
@@ -90,13 +91,21 @@ def main() -> None:
     # Set manager type
     if '_' in args.ml_manager:
         ml_manager, ftmrate_agent = args.ml_manager.split('_')
-        kwargs = dict(
-            backup_retransmissions=args.backup_retransmissions,
-            main_retransmissions=args.main_retransmissions,
-            ftmrate_agent=ftmrate_agent,
-            history_length=args.historyLength,
-            threshold=args.threshold
-        )
+        if ml_manager == 'thr':
+            kwargs = dict(
+                backup_retransmissions=args.backup_retransmissions,
+                main_retransmissions=args.main_retransmissions,
+                ftmrate_agent=ftmrate_agent,
+                history_length=args.historyLength,
+                threshold=args.threshold
+            )
+        elif ml_manager == 'mab':
+            kwargs = dict(
+                ftmrate_agent=ftmrate_agent,
+                mab_decay=args.mab_decay
+            )
+        else:
+            raise ArgumentError(None, f"'{ml_manager}' is not in available as a hybrid approach. Choose 'thr' or 'mab'")
     else:
         ml_manager = args.ml_manager
         kwargs = dict()
