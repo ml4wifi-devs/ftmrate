@@ -33,7 +33,7 @@ def mab(decay: Scalar = 1.0) -> BaseAgent:
 
         Returns
         -------
-        state : ThompsonSamplingState
+        state : MABState
             Initial Thompson sampling agent state
         """
 
@@ -56,7 +56,7 @@ def mab(decay: Scalar = 1.0) -> BaseAgent:
 
         Parameters
         ----------
-        state : ThompsonSamplingState
+        state : MABState
             Previous agent state
         action : int
             Previously selected manager
@@ -69,7 +69,7 @@ def mab(decay: Scalar = 1.0) -> BaseAgent:
 
         Returns
         -------
-        state : ThompsonSamplingState
+        state : MABState
             Updated Thompson sampling agent state
         """
 
@@ -90,17 +90,15 @@ def mab(decay: Scalar = 1.0) -> BaseAgent:
 
         Parameters
         ----------
-        state : ThompsonSamplingState
+        state : MABState
             Agent state
         key : PRNGKey
             JAX random generator key
-        context : Array
-            Context of the environment
 
         Returns
         -------
-        mcs : int
-            Selected MCS
+        manager_id : int
+            Selected manager
         """
 
         success_prob = jax.random.beta(key, state.alpha + 1, state.beta + 1)
@@ -140,7 +138,7 @@ def hybrid_mab(
 
         Returns
         -------
-        state : HybridThresholdState
+        state : HybridMABState
             Initial agent state
         """
 
@@ -171,7 +169,7 @@ def hybrid_mab(
 
         Parameters
         ----------
-        state : HybridThresholdState
+        state : HybridMABState
             Previous agent state
         m_state : MeasurementState
             Measurement state
@@ -192,13 +190,13 @@ def hybrid_mab(
 
         Returns
         -------
-        state : HybridThresholdState
+        state : HybridMABState
             Updated agent state
         """
 
         mab_key, ftmrate_key, backup_key = jax.random.split(key, 3)
 
-        mab_state = mab_agent.update(state.mab_state, mode, n_successful, n_failed, time)
+        mab_state = mab_agent.update(state.mab_state, state.last_manager, n_successful, n_failed, time)
         _, ftmrate_state, _, ftmrate_rate = select_ftmrate_mcs(
             ftmrate_key, state.ftmrate_state, m_state, distance, tx_power, time, n_successful, n_failed, mode
         )
@@ -212,13 +210,13 @@ def hybrid_mab(
             ftmrate_rate=ftmrate_rate
         )
 
-    def sample(state: HybridMABState, key: PRNGKey) -> jnp.int32:
+    def sample(state: HybridMABState, key: PRNGKey) -> Tuple[jnp.int32, HybridMABState]:
         """
         Returns MCS according to the previous transmission plan and the success history.
 
         Parameters
         ----------
-        state : HybridThresholdState
+        state : HybridMABState
             Agent state
         key : PRNGKey
             JAX random generator key
@@ -227,15 +225,25 @@ def hybrid_mab(
         -------
         mcs : int
             Selected MCS
+        state : HybridMABState
+            Updated agent state
         """
 
         mab_key, backup_key = jax.random.split(key)
 
         manager_action = mab_agent.sample(state.mab_state, mab_key)
         if manager_action == 0:
-            return state.ftmrate_rate
+            mcs = state.ftmrate_rate
         else:
-            return backup_agent.sample(state.backup_state, backup_key, wifi_modes_rates)
+            mcs = backup_agent.sample(state.backup_state, backup_key, wifi_modes_rates)
+        
+        return mcs, HybridMABState(
+                mab_state=state.mab_state,
+                ftmrate_state=state.ftmrate_state,
+                backup_state=state.backup_state,
+                last_manager=manager_action,
+                ftmrate_rate=state.ftmrate_rate
+            )
 
     return BaseAgent(
         init=init,
@@ -260,7 +268,7 @@ def select_hybrid_mcs(
 
     key, update_key, sample_key, noise_key = jax.random.split(key, 4)
     state = agent.update(state, m_state, update_key, distance, tx_power, time, n_successful, n_failed, mode)
-    mcs = agent.sample(state, sample_key)
+    mcs, state = agent.sample(state, sample_key)
     m_state, _ = measurements_manager.update(m_state, distance, time, noise_key)
     return key, state, m_state, mcs
 
