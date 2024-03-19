@@ -7,12 +7,13 @@ from tools.plots.common import *
 
 
 MAX_N_WIFI = 16
-
 MANAGERS = {
-    'THR_KF_06': r'Hybrid w/ KF, $\tau=0.6$',
-    'THR_KF_07': r'Hybrid w/ KF, $\tau=0.7$',
     'Oracle': 'Oracle',
-    'THR_KF_08': r'Hybrid w/ KF, $\tau=0.8$'
+    'TS': 'Thompson sampling',
+    'Minstrel': 'Minstrel',
+    'MAB_KF': 'MAB w/ KF',
+    'THR_KF_06': r'Hybrid w/ KF, $\tau=0.6$',
+    'KF': 'FTMRate w/ KF',
 }
 
 
@@ -24,6 +25,8 @@ def plot_results() -> None:
     df = df[df.nWifi == df.nWifiReal]
 
     for i, (manager, manager_name) in enumerate(MANAGERS.items()):
+        # if manager in ['THR_KF_06', 'Minstrel']:
+        #     continue
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'nWifiReal')
 
         if manager == 'Oracle':

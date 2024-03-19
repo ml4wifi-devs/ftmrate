@@ -8,10 +8,12 @@ from tools.plots.common import *
 
 MAX_DISTANCE = 25
 MANAGERS = {
-    'KF': 'FTMRate w/ KF',
-    'TS': 'Thompson sampling',
     'Oracle': 'Oracle',
-    'THR_KF': 'Hybrid w/ KF'
+    'TS': 'Thompson sampling',
+    'Minstrel': 'Minstrel',
+    'MAB_KF': 'MAB w/ KF',
+    'THR_KF': 'Hybrid w/ KF',
+    'KF': 'FTMRate w/ KF',
 }
 WALLS = [5, 10, 15, 20]
 
@@ -23,6 +25,8 @@ def plot_results() -> None:
     df = df[(df.mobility == 'Moving') & (df.velocity == 0.5)]
 
     for i, (manager, manager_name) in enumerate(MANAGERS.items()):
+        # if manager in ['THR_KF', 'Minstrel']:
+        #     continue
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'distance')
 
         if manager == 'Oracle':

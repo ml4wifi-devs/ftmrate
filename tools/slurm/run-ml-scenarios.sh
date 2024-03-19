@@ -201,9 +201,9 @@ run_hybrid_equal_distance() {
   N_POINTS=9
   DISTANCE=$1
 
-  THRESHOLDS=("0.8" "0.7" "0.6")
-  MANAGERS_HYBRID=("thr_kf" "thr_kf" "thr_kf")
-  MANAGERS_HYBRID_NAMES=("THR_KF_08" "THR_KF_07" "THR_KF_06")
+  THRESHOLDS=("0.8" "0.7" "0.6" "0.1")
+  MANAGERS_HYBRID=("thr_kf" "thr_kf" "thr_kf" "mab_kf")
+  MANAGERS_HYBRID_NAMES=("THR_KF_08" "THR_KF_07" "THR_KF_06" "MAB_KF")
   MANAGERS_HYBRID_LEN=${#MANAGERS_HYBRID[@]}
 
   for (( i = 0; i < MANAGERS_HYBRID_LEN; i++ )); do
@@ -241,8 +241,8 @@ run_hybrid_moving() {
   WALL_INTERVAL=5
   WALL_LOSS=3
 
-  MANAGERS_HYBRID=("kf" "thr_kf")
-  MANAGERS_HYBRID_NAMES=("KF" "THR_KF")
+  MANAGERS_HYBRID=("kf" "thr_kf" "mab_kf")
+  MANAGERS_HYBRID_NAMES=("KF" "THR_KF" "MAB_KF")
   MANAGERS_HYBRID_LEN=${#MANAGERS_HYBRID[@]}
 
   START=0
