@@ -24,6 +24,7 @@ MARKERS = {
     'ES': 'v',
     'KF': '^',
     'PF': '>',
+    'MAB_KF': 'd',
     'Oracle': ''
 }
 

@@ -10,30 +10,31 @@ MAX_DISTANCE = 25
 MANAGERS = {
     'Oracle': 'Oracle',
     'TS': 'Thompson sampling',
-    'Minstrel': 'Minstrel',
     'MAB_KF': 'MAB w/ KF',
-    'THR_KF': 'Hybrid w/ KF',
     'KF': 'FTMRate w/ KF',
 }
 WALLS = [5, 10, 15, 20]
 
 
 def plot_results() -> None:
-    colors = pl.cm.viridis(np.linspace(0.0, 0.75, len(MANAGERS)))
+    colors = pl.cm.viridis(np.linspace(0., 1., 5))
+    colors_map = {
+        'MAB_KF': "tab:red",
+        'TS': colors[1],
+        'KF': colors[3],
+    }
 
     df = pd.read_csv(DATA_FILE)
     df = df[(df.mobility == 'Moving') & (df.velocity == 0.5)]
 
     for i, (manager, manager_name) in enumerate(MANAGERS.items()):
-        # if manager in ['THR_KF', 'Minstrel']:
-        #     continue
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'distance')
 
         if manager == 'Oracle':
             plt.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
         else:
-            plt.plot(mean.index, mean, marker='o', markersize=1, label=manager_name, c=colors[i])
-            plt.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
+            plt.plot(mean.index, mean, marker=MARKERS[manager], markersize=0.5, label=manager_name, c=colors_map[manager])
+            plt.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors_map[manager], linewidth=0.0)
 
     for i, x in enumerate(WALLS):
         plt.axvline(x, linestyle='--', c='r', alpha=0.7, label='Wall' if i == 0 else None)

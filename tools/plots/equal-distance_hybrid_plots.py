@@ -10,30 +10,31 @@ MAX_N_WIFI = 16
 MANAGERS = {
     'Oracle': 'Oracle',
     'TS': 'Thompson sampling',
-    'Minstrel': 'Minstrel',
     'MAB_KF': 'MAB w/ KF',
-    'THR_KF_06': r'Hybrid w/ KF, $\tau=0.6$',
     'KF': 'FTMRate w/ KF',
 }
 
 
 def plot_results() -> None:
-    colors = pl.cm.viridis(np.linspace(0., 0.75, len(MANAGERS)))
+    colors = pl.cm.viridis(np.linspace(0., 1., 5))
+    colors_map = {
+        'MAB_KF': "tab:red",
+        'TS': colors[1],
+        'KF': colors[3],
+    }
 
     df = pd.read_csv(DATA_FILE)
     df = df[(df.mobility == 'Distance') & (df.distance == 1.)]
     df = df[df.nWifi == df.nWifiReal]
 
     for i, (manager, manager_name) in enumerate(MANAGERS.items()):
-        # if manager in ['THR_KF_06', 'Minstrel']:
-        #     continue
         mean, ci_low, ci_high = get_thr_ci(df[df.manager == manager], 'nWifiReal')
 
         if manager == 'Oracle':
             plt.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
         else:
-            plt.plot(mean.index, mean, marker='o', markersize=2, label=manager_name, c=colors[i])
-            plt.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors[i], linewidth=0.0)
+            plt.plot(mean.index, mean, marker=MARKERS[manager], markersize=2, label=manager_name, c=colors_map[manager])
+            plt.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors_map[manager], linewidth=0.0)
 
     plt.xlim((0, MAX_N_WIFI))
     plt.xticks(range(0, MAX_N_WIFI + 1, 2))
