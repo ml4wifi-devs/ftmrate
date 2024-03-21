@@ -8,7 +8,6 @@ from tools.plots.common import *
 
 MAX_DISTANCE = 25
 MANAGERS = {
-    'Oracle': 'Oracle',
     'TS': 'Thompson sampling',
     'MAB_KF': 'MAB w/ KF',
     'KF': 'FTMRate w/ KF',
@@ -33,7 +32,7 @@ def plot_results() -> None:
         if manager == 'Oracle':
             plt.plot(mean.index, mean, linestyle='--', c='gray', label=manager_name)
         else:
-            plt.plot(mean.index, mean, marker=MARKERS[manager], markersize=0.5, label=manager_name, c=colors_map[manager])
+            plt.plot(mean.index, mean, marker=MARKERS[manager], markersize=1, label=manager_name, c=colors_map[manager])
             plt.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors_map[manager], linewidth=0.0)
 
     for i, x in enumerate(WALLS):
@@ -52,7 +51,7 @@ def plot_results() -> None:
 
 if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
-    plt.rcParams['figure.figsize'] = (COLUMN_WIDTH, 2 * COLUMN_WIDTH / (1 + np.sqrt(5)))
+    plt.rcParams['figure.figsize'] = (COLUMN_WIDTH, COLUMN_HIGHT / 2)
 
     plot_results()
 

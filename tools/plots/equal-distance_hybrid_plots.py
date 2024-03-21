@@ -49,7 +49,7 @@ def plot_results() -> None:
 
 if __name__ == '__main__':
     plt.rcParams.update(PLOT_PARAMS)
-    plt.rcParams['figure.figsize'] = (COLUMN_WIDTH, 2 * COLUMN_WIDTH / (1 + np.sqrt(5)))
+    plt.rcParams['figure.figsize'] = (COLUMN_WIDTH, COLUMN_HIGHT / 2)
 
     plot_results()
 
