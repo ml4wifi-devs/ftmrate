@@ -9,6 +9,9 @@ from py_interface import *
 from ml4wifi.agents.exponential_smoothing import ManagersContainer as ExponentialSmoothing
 from ml4wifi.agents.kalman_filter import ManagersContainer as KalmanFilter
 from ml4wifi.agents.particle_filter import ManagersContainer as ParticleFilter
+from ml4wifi.agents.thompson_sampling import ManagersContainer as ThompsonSampling
+from ml4wifi.agents.hybrid_threshold import ManagersContainer as HybridThreshold
+from ml4wifi.agents.hybrid_mab import ManagersContainer as HybridMAB
 
 from ml4wifi.envs.ns3_ai_structures import Env, Act
 
@@ -17,7 +20,10 @@ from ml4wifi.envs.ns3_ai_structures import Env, Act
 MANAGERS = {
     'es': ExponentialSmoothing,
     'kf': KalmanFilter,
-    'pf': ParticleFilter
+    'pf': ParticleFilter,
+    'ts': ThompsonSampling,
+    'thr': HybridThreshold,
+    'mab': HybridMAB
 }
 
 # Simulation parameters for different scenarios
@@ -63,11 +69,18 @@ def main() -> None:
     parser.add_argument('--simulationTime', default=20., type=float)
     parser.add_argument('--startPosition', default=0., type=float)
     parser.add_argument('--velocity', default=1., type=float)
+    parser.add_argument('--wallInterval', default=0., type=float)
+    parser.add_argument('--wallLoss', default=3., type=float)
     parser.add_argument('--warmupTime', default=10., type=int)
 
     # Other arguments
+    parser.add_argument('--main_retransmissions', default=2, type=int)
+    parser.add_argument('--backup_retransmissions', default=2, type=int)
+    parser.add_argument('--historyLength', default=25, type=int)
+    parser.add_argument('--threshold', default=0.7, type=float)
+    parser.add_argument('--mab_decay', default=1.0, type=float)
     parser.add_argument('--verbose', default=False, action='store_true')
-    
+
     args = parser.parse_args()
 
     # Adjust the ns-3 path
@@ -76,10 +89,31 @@ def main() -> None:
 
 
     # Set manager type
-    if args.ml_manager not in MANAGERS:
-        raise ArgumentError(None, f"'{args.ml_manager}' is not in available managers set")
+    if '_' in args.ml_manager:
+        ml_manager, ftmrate_agent = args.ml_manager.split('_')
+        if ml_manager == 'thr':
+            kwargs = dict(
+                backup_retransmissions=args.backup_retransmissions,
+                main_retransmissions=args.main_retransmissions,
+                ftmrate_agent=ftmrate_agent,
+                history_length=args.historyLength,
+                threshold=args.threshold
+            )
+        elif ml_manager == 'mab':
+            kwargs = dict(
+                ftmrate_agent=ftmrate_agent,
+                mab_decay=args.mab_decay
+            )
+        else:
+            raise ArgumentError(None, f"'{ml_manager}' is not in available as a hybrid approach. Choose 'thr' or 'mab'")
+    else:
+        ml_manager = args.ml_manager
+        kwargs = dict()
 
-    managers_container = MANAGERS[args.ml_manager](args.seed)
+    if ml_manager not in MANAGERS:
+        raise ArgumentError(None, f"'{ml_manager}' is not in available managers set")
+
+    managers_container = MANAGERS[ml_manager](args.seed, **kwargs)
 
 
     # Set common arguments
@@ -93,7 +127,7 @@ def main() -> None:
     NS3_ARGS['fuzzTime'] = args.fuzzTime
     NS3_ARGS['interval'] = args.interval
     NS3_ARGS['lossModel'] = args.lossModel
-    NS3_ARGS['managerName'] = args.managerName if args.managerName else args.ml_manager
+    NS3_ARGS['managerName'] = args.managerName if args.managerName else ml_manager
     NS3_ARGS['minGI'] = args.minGI
     NS3_ARGS['packetSize'] = args.packetSize
     NS3_ARGS['simulationTime'] = args.simulationTime
@@ -123,7 +157,9 @@ def main() -> None:
         NS3_ARGS['measurementsInterval'] = args.measurementsInterval
         NS3_ARGS['startPosition'] = args.startPosition
         NS3_ARGS['velocity'] = args.velocity
-    
+        NS3_ARGS['wallInterval'] = args.wallInterval
+        NS3_ARGS['wallLoss'] = args.wallLoss
+
     elif args.scenario == 'hidden':
         pname = 'stations'
         NS3_ARGS['distance'] = args.distance

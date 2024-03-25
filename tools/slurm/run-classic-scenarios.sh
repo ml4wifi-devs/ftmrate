@@ -1,6 +1,6 @@
 #!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l
 
-TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate_internal/tools}"
+TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 
 MANAGERS=("ns3::MinstrelHtWifiManager" "ns3::ThompsonSamplingWifiManager" "ns3::OracleWifiManager")
 MANAGERS_NAMES=("Minstrel" "TS" "Oracle")
@@ -183,6 +183,25 @@ run_power_moving() {
   done
 }
 
+run_hybrid_moving() {
+  N_REP=15
+
+  VELOCITY="0.5"
+  SIM_TIME=51
+  INTERVAL="0.5"
+
+  WALL_INTERVAL=5
+  WALL_LOSS=3
+
+  START=0
+  END=$(( N_REP - 1 ))
+
+  MANAGER="ns3::ThompsonSamplingWifiManager"
+  MANAGER_NAME="TS"
+
+  sbatch -p gpu --array=$START-$END "$TOOLS_DIR/slurm/moving/classic.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$VELOCITY" "$SIM_TIME" "$INTERVAL" "$WALL_INTERVAL" "$WALL_LOSS"
+}
+
 ### Run section
 
 echo -e "\nQueue equal distance (d=1) scenario"
@@ -214,6 +233,9 @@ run_rwpm 0                        # Fig. 11 (top)
 
 echo -e "\nQueue mobile stations scenario"
 run_rwpm "1.4"                    # Fig. 11 (bottom)
+
+echo -e "\nQueue hybrid moving station (v=0.5) scenario with walls"
+run_hybrid_moving
 
 ## Legacy scenarios
 

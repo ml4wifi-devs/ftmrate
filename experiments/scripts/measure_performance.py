@@ -20,8 +20,8 @@ DATE = datetime.now().strftime('%Y%m%d-%H%M%S')
 AP_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e  'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/ap-{DATE}.pcap"
 STA_MONITOR_CMD = f"nohup tcpdump -i mon0 -s 65000 -e 'ether host 00:c2:c6:e6:9e:d9 or ether host 00:c2:c6:e6:9a:ec' -w {HOME_DIR}/sta-{DATE}.pcap"
 
-STA_TRANSMIT_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_send_frames.sh {HOME_DIR}"
-STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate_internal/experiments/scripts/run_ftmrate.sh {HOME_DIR} &> {HOME_DIR}/ftmrate_log-{DATE} &"
+STA_TRANSMIT_CMD = f"nohup {HOME_DIR}/ftmrate/experiments/scripts/run_send_frames.sh {HOME_DIR}"
+STA_FTMRATE_CMD = f"nohup {HOME_DIR}/ftmrate/experiments/scripts/run_ftmrate.sh {HOME_DIR} &> {HOME_DIR}/ftmrate_log-{DATE} &"
 
 SLEEP_CMD = "sleep " + str(TIMEOUT)
 

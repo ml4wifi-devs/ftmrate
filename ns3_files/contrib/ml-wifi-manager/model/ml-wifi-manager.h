@@ -15,8 +15,11 @@ struct sEnv
   double time;
   double distance;
   uint32_t station_id;
+  uint16_t n_successful;
+  uint16_t n_failed;
   uint8_t mode;
-  uint8_t type;
+  uint8_t type;             // 0: New station created, 1: Sample new MCS
+  uint8_t report_source;    // 0: DoReportDataFailed, 1: DoReportDataOk, 2: DoReportAmpduTxStatus
 } Packed;
 
 struct sAct
@@ -56,7 +59,8 @@ private:
   WifiTxVector DoGetDataTxVector (WifiRemoteStation *station) override;
   WifiTxVector DoGetRtsTxVector (WifiRemoteStation *station) override;
 
-  void SampleMode(MlWifiRemoteStation *station);
+  void SampleMode(MlWifiRemoteStation *station, uint16_t nSuccessful, uint16_t nFailed, uint8_t report_source);
+  void SampleModeWrapper (WifiRemoteStation *station, uint16_t nSuccessful, uint16_t nFailed, uint8_t report_source);
 
   WifiMode m_ctlMode;   // Wi-Fi mode for RTS frames
   double m_distance;    // current distance between STA and AP

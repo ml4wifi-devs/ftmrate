@@ -9,8 +9,11 @@ class Env(Structure):
         ('time', c_double),
         ('distance', c_double),
         ('station_id', c_uint32),
+        ('n_successful', c_uint16),
+        ('n_failed', c_uint16),
         ('mode', c_uint8),
-        ('type', c_uint8)
+        ('type', c_uint8),              # 0: New station created, 1: Sample new MCS
+        ('report_source', c_uint8)      # 0: DoReportDataFailed, 1: DoReportDataOk, 2: DoReportAmpduTxStatus
     ]
 
 
