@@ -1,4 +1,3 @@
-from collections import deque
 from functools import partial
 from typing import Any, Tuple, Callable
 
@@ -14,101 +13,12 @@ from ml4wifi.agents.thompson_sampling import thompson_sampling
 from ml4wifi.utils.measurement_manager import MeasurementState, MeasurementManager, measurement_manager
 from ml4wifi.utils.wifi_specs import wifi_modes_rates
 
+
 @dataclass
 class MABState:
     alpha: Array
     beta: Array
     time: Scalar
-
-
-def mab(decay: Scalar = 1.0) -> BaseAgent:
-    def init(key: PRNGKey) -> MABState:
-        """
-        Returns the Thompson sampling agent initial state.
-
-        Parameters
-        ----------
-        key : PRNGKey
-            JAX random generator key
-
-        Returns
-        -------
-        state : MABState
-            Initial Thompson sampling agent state
-        """
-
-        return MABState(
-            alpha=jnp.zeros(2),
-            beta=jnp.zeros(2),
-            time=0.0
-        )
-
-    def update(
-            state: MABState,
-            action: jnp.int32,
-            n_successful: jnp.int32,
-            n_failed: jnp.int32,
-            time: Scalar
-    ) -> MABState:
-        """
-        Performs one step of the Thompson sampling, returns the updated state of the agent.
-        The agent uses exponential smoothing to update the success and failure rates.
-
-        Parameters
-        ----------
-        state : MABState
-            Previous agent state
-        action : int
-            Previously selected manager
-        n_successful : int
-            Number of successfully transmitted frames
-        n_failed : int
-            Number of failed transmitted frames
-        time : float
-            Current time
-
-        Returns
-        -------
-        state : MABState
-            Updated Thompson sampling agent state
-        """
-
-        smoothing = jnp.exp(-decay * (time - state.time))
-
-        return MABState(
-            alpha=(state.alpha * smoothing).at[action].add(n_successful),
-            beta=(state.beta * smoothing).at[action].add(n_failed),
-            time=time
-        )
-
-    def sample(
-            state: MABState,
-            key: PRNGKey,
-    ) -> jnp.int32:
-        """
-        Samples the best MCS based on the Thompson sampling algorithm.
-
-        Parameters
-        ----------
-        state : MABState
-            Agent state
-        key : PRNGKey
-            JAX random generator key
-
-        Returns
-        -------
-        manager_id : int
-            Selected manager
-        """
-
-        success_prob = jax.random.beta(key, state.alpha + 1, state.beta + 1)
-        return jnp.argmax(success_prob)
-
-    return BaseAgent(
-        init=jax.jit(init),
-        update=jax.jit(update),
-        sample=jax.jit(sample)
-    )
 
 
 @dataclass
@@ -231,7 +141,7 @@ def hybrid_mab(
 
         mab_key, backup_key = jax.random.split(key)
 
-        manager_action = mab_agent.sample(state.mab_state, mab_key)
+        manager_action = mab_agent.sample(state.mab_state, mab_key, jnp.ones(2))
         if manager_action == 0:
             mcs = state.ftmrate_rate
         else:
@@ -281,7 +191,7 @@ class ManagersContainer(BaseManagersContainer):
             mab_decay: Scalar
     ) -> None:
         
-        mab_agent = mab(mab_decay)
+        mab_agent = thompson_sampling(mab_decay, n_arms=2)
 
         if ftmrate_agent == 'es':
             ftmrate_agent = exponential_smoothing

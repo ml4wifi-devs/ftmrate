@@ -16,7 +16,7 @@ class ThompsonSamplingState:
     time: Scalar
 
 
-def thompson_sampling(decay: Scalar = 1.0) -> BaseAgent:
+def thompson_sampling(decay: Scalar = 1.0, n_arms: int = 12) -> BaseAgent:
     def init(key: PRNGKey) -> ThompsonSamplingState:
         """
         Returns the Thompson sampling agent initial state.
@@ -33,8 +33,8 @@ def thompson_sampling(decay: Scalar = 1.0) -> BaseAgent:
         """
 
         return ThompsonSamplingState(
-            alpha=jnp.zeros(12),
-            beta=jnp.zeros(12),
+            alpha=jnp.zeros(n_arms),
+            beta=jnp.zeros(n_arms),
             time=0.0
         )
 
@@ -54,7 +54,7 @@ def thompson_sampling(decay: Scalar = 1.0) -> BaseAgent:
         state : ThompsonSamplingState
             Previous agent state
         action : int
-            Previously selected MCS
+            Previously selected arm
         n_successful : int
             Number of successfully transmitted frames
         n_failed : int
@@ -82,7 +82,7 @@ def thompson_sampling(decay: Scalar = 1.0) -> BaseAgent:
             context: Array
     ) -> jnp.int32:
         """
-        Samples the best MCS based on the Thompson sampling algorithm.
+        Samples the best arm based on the Thompson sampling algorithm.
 
         Parameters
         ----------
@@ -95,8 +95,8 @@ def thompson_sampling(decay: Scalar = 1.0) -> BaseAgent:
 
         Returns
         -------
-        mcs : int
-            Selected MCS
+        action : int
+            Selected action
         """
 
         success_prob = jax.random.beta(key, state.alpha + 1, state.beta + 1)
