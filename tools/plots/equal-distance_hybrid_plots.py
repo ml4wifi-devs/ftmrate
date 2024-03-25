@@ -8,9 +8,8 @@ from tools.plots.common import *
 
 MAX_N_WIFI = 16
 MANAGERS = {
-    'Oracle': 'Oracle',
     'TS': 'Thompson sampling',
-    'MAB_KF': 'MAB w/ KF',
+    'MAB_KF': 'Hybrid w/ KF',
     'KF': 'FTMRate w/ KF',
 }
 
@@ -44,7 +43,7 @@ def plot_results() -> None:
     plt.ylabel('Aggregate throughput [Mb/s]')
 
     plt.grid()
-    plt.legend()
+    plt.legend(loc='lower left')
 
 
 if __name__ == '__main__':

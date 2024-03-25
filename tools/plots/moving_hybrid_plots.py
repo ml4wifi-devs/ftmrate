@@ -9,7 +9,7 @@ from tools.plots.common import *
 MAX_DISTANCE = 25
 MANAGERS = {
     'TS': 'Thompson sampling',
-    'MAB_KF': 'MAB w/ KF',
+    'MAB_KF': 'Hybrid w/ KF',
     'KF': 'FTMRate w/ KF',
 }
 WALLS = [5, 10, 15, 20]
