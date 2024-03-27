@@ -2,7 +2,7 @@ import jax
 import tensorflow_probability.substrates.jax as tfp
 from chex import dataclass, Scalar, PRNGKey
 
-from ml4wifi.agents import BaseAgent, BaseManagersContainer
+from ml4wifi.agents.base_managers_container import BaseAgent, BaseManagersContainer
 from ml4wifi.utils.distributions import DeterministicQ
 from ml4wifi.params_fit import ES_ALPHA, ES_BETA
 

@@ -3,7 +3,7 @@ import jax.numpy as jnp
 from chex import Array, Scalar, dataclass, PRNGKey
 from tensorflow_probability.substrates import jax as tfp
 
-from ml4wifi.agents import BaseAgent, BaseManagersContainer
+from ml4wifi.agents.base_managers_container import BaseAgent, BaseManagersContainer
 from ml4wifi.envs import ContinuousLocalLinearTrend
 from ml4wifi.params_fit import KF_SENSOR_NOISE
 

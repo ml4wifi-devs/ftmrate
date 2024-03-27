@@ -16,9 +16,12 @@ struct sEnv
   double time;
   double distance;
   uint32_t station_id;
+  uint16_t n_successful;
+  uint16_t n_failed;
   uint8_t mode;
-  uint8_t type;
   bool ftm_completed;
+  uint8_t type;             // 0: New station created, 1: Sample new MCS
+  uint8_t report_source;    // 0: DoReportDataFailed, 1: DoReportDataOk, 2: DoReportAmpduTxStatus
 } Packed;
 
 struct sAct
@@ -62,7 +65,8 @@ private:
   void SetWifiNetDevice (Ptr<WifiNetDevice> device);
   Ptr<WifiNetDevice> GetWifiNetDevice (void) const;
 
-  void SampleMode(MlWifiRemoteStation *station);
+  void SampleMode(MlWifiRemoteStation *station, uint16_t nSuccessful, uint16_t nFailed, uint8_t report_source);
+  void SampleModeWrapper (WifiRemoteStation *station, uint16_t nSuccessful, uint16_t nFailed, uint8_t report_source);
   void FtmBurst ();
   void FtmSessionOver (FtmSession session);
 

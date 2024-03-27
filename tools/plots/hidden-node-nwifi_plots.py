@@ -39,7 +39,7 @@ def plot_results(ax: plt.Axes, distance: int) -> None:
             ax.plot(mean.index, mean, marker=marker, markersize=2, label=manager_name, c=colors_map[manager])
             ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors_map[manager], linewidth=0.0)
 
-    ax.set_xlim((2, 16))
+    ax.set_xlim((0, 16))
     ax.set_ylim((0, 25))
     ax.set_ylabel('Aggregate throughput [Mb/s]')
     ax.grid()
@@ -57,7 +57,7 @@ if __name__ == '__main__':
     ax.xaxis.set_major_locator(plt.MultipleLocator(2))
 
     lines = plt.gca().get_lines()
-    legend1 = plt.legend([lines[i] for i in [1, 0]], [lines[i].get_label() for i in [1, 0]], loc="lower left", fontsize=6, title='Thompson Sampling')
+    legend1 = plt.legend([lines[i] for i in [1, 0]], [lines[i].get_label() for i in [1, 0]], loc="lower left", fontsize=6, title='Thompson sampling')
     legend2 = plt.legend([lines[i] for i in [3, 2]], [lines[i].get_label() for i in [3, 2]], loc="upper right", fontsize=6, title='FTMRate w/ KF')
     plt.gca().add_artist(legend1)
 

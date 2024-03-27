@@ -10,7 +10,7 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the I
 
 ## Installation
 
-**Note:** if you want to run FTMRate in an in-band scenario, please follow the instructions in the `main` branch.
+**Note:** if you want to run FTMRate in an out-of-band scenario, please follow the instructions in the `main` branch.
 
 ### FTMRate Repository
 
@@ -25,12 +25,12 @@ FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the I
 	git checkout wifi_ftm_ns3
 	```
 
-4. Install requirements:
+3. Install requirements:
 	```
 	pip install -e .
 	```
 
-5.  **Attention!** To enable GPU acceleration for JAX, run this additional command (For more info, see the official JAX [installation guide](https://github.com/google/jax#installation)):
+4. **Attention!** To enable GPU acceleration for JAX, run this additional command (For more info, see the official JAX [installation guide](https://github.com/google/jax#installation)):
 	```
 	pip install "jax[cuda11_pip]" -f https://storage.googleapis.com/jax-releases/jax_cuda_releases.html
 	```

@@ -110,6 +110,7 @@ MlWifiManager::DoReportAmpduTxStatus (WifiRemoteStation *station, uint16_t nSucc
                                       uint16_t nFailedMpdus, double rxSnr, double dataSnr,
                                       uint16_t dataChannelWidth, uint8_t dataNss)
 {
+  SampleModeWrapper (station, nSuccessfulMpdus, nFailedMpdus, 2);
   NS_LOG_FUNCTION (this << station << nSuccessfulMpdus << nFailedMpdus << rxSnr << dataSnr
                         << dataChannelWidth << dataNss);
 }
@@ -123,6 +124,7 @@ MlWifiManager::DoReportRtsFailed (WifiRemoteStation *station)
 void
 MlWifiManager::DoReportDataFailed (WifiRemoteStation *station)
 {
+  SampleModeWrapper (station, 0, 1, 0);
   NS_LOG_FUNCTION (this << station);
 }
 
@@ -137,6 +139,7 @@ void
 MlWifiManager::DoReportDataOk (WifiRemoteStation *station, double ackSnr, WifiMode ackMode,
                                double dataSnr, uint16_t dataChannelWidth, uint8_t dataNss)
 {
+  SampleModeWrapper (station, 1, 0, 1);
   NS_LOG_FUNCTION (this << station << ackSnr << ackMode << dataSnr << dataChannelWidth << +dataNss);
 }
 
@@ -158,15 +161,6 @@ MlWifiManager::DoGetDataTxVector (WifiRemoteStation *station)
   NS_LOG_FUNCTION (this << station);
 
   auto st = static_cast<MlWifiRemoteStation *> (station);
-
-#ifdef SAMPLE_INTERVAL
-  if (Simulator::Now ().GetSeconds () - st->last_sample >= SAMPLE_INTERVAL)
-    {
-      SampleMode (st);
-    }
-#else
-  SampleMode (st);
-#endif
 
   WifiMode mode ("HeMcs" + std::to_string (st->m_mode));
 
@@ -212,16 +206,19 @@ MlWifiManager::GetWifiNetDevice() const
 }
 
 void
-MlWifiManager::SampleMode(MlWifiRemoteStation *st)
+MlWifiManager::SampleMode(MlWifiRemoteStation *st, uint16_t nSuccessful, uint16_t nFailed, uint8_t report_source)
 {
   auto env = m_env->EnvSetterCond ();
   env->power = m_power;
   env->time = Simulator::Now ().GetSeconds ();
   env->distance = m_distance;
   env->station_id = st->m_station_id;
+  env->n_successful = nSuccessful;
+  env->n_failed = nFailed;
   env->mode = st->m_mode;
   env->type = 1;
   env->ftm_completed = m_ftmCompleted;
+  env->report_source = report_source;
   m_env->SetCompleted ();
 
   auto act = m_env->ActionGetterCond ();
@@ -281,6 +278,20 @@ MlWifiManager::FtmSessionOver (FtmSession session)
     {
       Simulator::Schedule (Seconds (FTM_RETRY_TIME), &MlWifiManager::FtmBurst, this);
     }
+}
+
+void MlWifiManager::SampleModeWrapper (WifiRemoteStation *station, uint16_t nSuccessful, uint16_t nFailed, uint8_t report_source)
+{
+  auto st = static_cast<MlWifiRemoteStation *> (station);
+
+  #ifdef SAMPLE_INTERVAL
+  if (Simulator::Now ().GetSeconds () - st->last_sample >= SAMPLE_INTERVAL)
+    {
+      SampleMode (st, nSuccessful, nFailed, report_source);
+    }
+  #else
+    SampleMode (st, nSuccessful, nFailed, report_source);
+  #endif
 }
 
 } //namespace ns3
