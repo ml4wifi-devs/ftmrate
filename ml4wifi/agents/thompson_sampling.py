@@ -5,7 +5,6 @@ import jax.numpy as jnp
 from chex import dataclass, Array, Scalar, PRNGKey
 
 from ml4wifi.agents.base_managers_container import BaseAgent, BaseManagersContainer
-from ml4wifi.utils.measurement_manager import MeasurementState, MeasurementManager
 from ml4wifi.utils.wifi_specs import wifi_modes_rates
 
 
@@ -112,20 +111,19 @@ def thompson_sampling(decay: Scalar = 1.0, n_arms: int = 12) -> BaseAgent:
 def select_ts_mcs(
         key: PRNGKey,
         state: Any,
-        m_state: MeasurementState,
         distance: Scalar,
+        measured: bool,
         tx_power: Scalar,
         time: Scalar,
         n_successful: jnp.int32,
         n_failed: jnp.int32,
         mode: jnp.int32,
         agent: BaseAgent,
-        measurements_manager: MeasurementManager
-) -> Tuple[PRNGKey, Any, MeasurementState, jnp.int32]:
+) -> Tuple[PRNGKey, Any, jnp.int32]:
     key, sample_key = jax.random.split(key)
     state = agent.update(state, mode, n_successful, n_failed, time)
     mcs = agent.sample(state, sample_key, wifi_modes_rates)
-    return key, state, m_state, mcs
+    return key, state, mcs
 
 
 class ManagersContainer(BaseManagersContainer):

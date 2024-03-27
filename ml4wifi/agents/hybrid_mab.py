@@ -10,7 +10,6 @@ from ml4wifi.agents.exponential_smoothing import exponential_smoothing
 from ml4wifi.agents.kalman_filter import kalman_filter
 from ml4wifi.agents.particle_filter import particle_filter
 from ml4wifi.agents.thompson_sampling import thompson_sampling
-from ml4wifi.utils.measurement_manager import MeasurementState, MeasurementManager, measurement_manager
 from ml4wifi.utils.wifi_specs import wifi_modes_rates
 
 
@@ -64,9 +63,9 @@ def hybrid_mab(
 
     def update(
             state: HybridMABState,
-            m_state: MeasurementState,
             key: PRNGKey,
             distance: Scalar,
+            measured: bool,
             tx_power: Scalar,
             time: Scalar,
             n_successful: jnp.int32,
@@ -81,12 +80,12 @@ def hybrid_mab(
         ----------
         state : HybridMABState
             Previous agent state
-        m_state : MeasurementState
-            Measurement state
         key : PRNGKey
             JAX random generator key
         distance : float
             Distance between the transmitter and the receiver
+        measured : bool
+            Whether the distance was measured or not
         tx_power : float
             Transmission power
         time : float
@@ -107,8 +106,8 @@ def hybrid_mab(
         mab_key, ftmrate_key, backup_key = jax.random.split(key, 3)
 
         mab_state = mab_agent.update(state.mab_state, state.last_manager, n_successful, n_failed, time)
-        _, ftmrate_state, _, ftmrate_rate = select_ftmrate_mcs(
-            ftmrate_key, state.ftmrate_state, m_state, distance, tx_power, time, n_successful, n_failed, mode
+        _, ftmrate_state, ftmrate_rate = select_ftmrate_mcs(
+            ftmrate_key, state.ftmrate_state, distance, measured, tx_power, time, n_successful, n_failed, mode
         )
         backup_state = backup_agent.update(state.backup_state, mode, n_successful, n_failed, time)
 
@@ -165,22 +164,20 @@ def hybrid_mab(
 def select_hybrid_mcs(
         key: PRNGKey,
         state: Any,
-        m_state: MeasurementState,
         distance: Scalar,
+        measured: bool,
         tx_power: Scalar,
         time: Scalar,
         n_successful: jnp.int32,
         n_failed: jnp.int32,
         mode: jnp.int32,
-        agent: BaseAgent,
-        measurements_manager: MeasurementManager
-) -> Tuple[PRNGKey, Any, MeasurementState, jnp.int32]:
+        agent: BaseAgent
+) -> Tuple[PRNGKey, Any, jnp.int32]:
 
     key, update_key, sample_key, noise_key = jax.random.split(key, 4)
-    state = agent.update(state, m_state, update_key, distance, tx_power, time, n_successful, n_failed, mode)
+    state = agent.update(state, update_key, distance, measured, tx_power, time, n_successful, n_failed, mode)
     mcs, state = agent.sample(state, sample_key)
-    m_state, _ = measurements_manager.update(m_state, distance, time, noise_key)
-    return key, state, m_state, mcs
+    return key, state, mcs
 
 
 class ManagersContainer(BaseManagersContainer):
@@ -204,18 +201,14 @@ class ManagersContainer(BaseManagersContainer):
 
         self.key = jax.random.PRNGKey(seed)
 
-        self.measurements_manager = measurement_manager()
-        self.measurements = {}
+        self.measurement_time = {}
+        self.requested = {}
 
         ftmrate_agent = ftmrate_agent()
         backup_agent = thompson_sampling()
-        select_ftmrate_mcs_fn = jax.jit(
-            partial(select_ftmrate_mcs, agent=ftmrate_agent, measurements_manager=self.measurements_manager)
-        )
+        select_ftmrate_mcs_fn = jax.jit(partial(select_ftmrate_mcs, agent=ftmrate_agent))
 
-        self.agent = hybrid_mab(
-            mab_agent, ftmrate_agent, backup_agent, select_ftmrate_mcs_fn
-        )
+        self.agent = hybrid_mab(mab_agent, ftmrate_agent, backup_agent, select_ftmrate_mcs_fn)
         self.states = {}
 
-        self.select_mcs = partial(select_hybrid_mcs, agent=self.agent, measurements_manager=self.measurements_manager)
+        self.select_mcs = partial(select_hybrid_mcs, agent=self.agent)
