@@ -25,6 +25,10 @@ run_equal_distance() {
       SIM_TIME=$(( 10 * N_WIFI + 50 ))
       N_REP=$(( N_WIFI <= 4 ? 6 : N_WIFI * N_WIFI / 2 ))
 
+      if [[ $MANAGER_NAME == "Minstrel" && $N_WIFI -eq 16 && $DISTANCE -eq 20 ]]; then
+        N_REP=$(( N_REP * 2 ))
+      fi
+
       START=$ARRAY_SHIFT
       END=$(( ARRAY_SHIFT + N_REP - 1 ))
 

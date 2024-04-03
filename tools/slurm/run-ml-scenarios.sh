@@ -201,13 +201,11 @@ run_hybrid_equal_distance() {
   N_POINTS=9
   DISTANCE=$1
 
-  THRESHOLDS=("0.8" "0.7" "0.6" "0.1")
-  MANAGERS_HYBRID=("thr_kf" "thr_kf" "thr_kf" "mab_kf")
-  MANAGERS_HYBRID_NAMES=("THR_KF_08" "THR_KF_07" "THR_KF_06" "MAB_KF")
+  MANAGERS_HYBRID=("mab_kf")
+  MANAGERS_HYBRID_NAMES=("MAB_KF")
   MANAGERS_HYBRID_LEN=${#MANAGERS_HYBRID[@]}
 
   for (( i = 0; i < MANAGERS_HYBRID_LEN; i++ )); do
-    THRESHOLD=${THRESHOLDS[$i]}
     MANAGER=${MANAGERS_HYBRID[$i]}
     MANAGER_NAME=${MANAGERS_HYBRID_NAMES[$i]}
 
@@ -224,7 +222,7 @@ run_hybrid_equal_distance() {
       MEMPOOL_SHIFT=$(( SHIFT + BASE_MEMPOOL ))
       ARRAY_SHIFT=$(( ARRAY_SHIFT + N_REP ))
 
-      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/distance/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME" "$MEMPOOL_SHIFT" "$THRESHOLD"
+      sbatch --ntasks-per-node="$TASKS_PER_NODE" -p gpu --array=$START-$END "$TOOLS_DIR/slurm/distance/ml.sh" "$SEED_SHIFT" "$MANAGER" "$MANAGER_NAME" "$N_WIFI" "$DISTANCE" "$SIM_TIME" "$MEMPOOL_SHIFT"
     done
 
     SHIFT=$(( SHIFT + N_POINTS * N_REP ))
@@ -241,8 +239,8 @@ run_hybrid_moving() {
   WALL_INTERVAL=5
   WALL_LOSS=3
 
-  MANAGERS_HYBRID=("kf" "thr_kf" "mab_kf")
-  MANAGERS_HYBRID_NAMES=("KF" "THR_KF" "MAB_KF")
+  MANAGERS_HYBRID=("kf" "mab_kf")
+  MANAGERS_HYBRID_NAMES=("KF" "MAB_KF")
   MANAGERS_HYBRID_LEN=${#MANAGERS_HYBRID[@]}
 
   START=0

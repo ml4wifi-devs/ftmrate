@@ -39,7 +39,6 @@ def plot_results(ax: plt.Axes, distance: int) -> None:
             ax.plot(mean.index, mean, marker=marker, markersize=2, label=manager_name, c=colors_map[manager])
             ax.fill_between(mean.index, ci_low, ci_high, alpha=0.3, color=colors_map[manager], linewidth=0.0)
 
-    ax.set_xlim((0, 16))
     ax.set_ylim((0, 25))
     ax.set_ylabel('Aggregate throughput [Mb/s]')
     ax.grid()
