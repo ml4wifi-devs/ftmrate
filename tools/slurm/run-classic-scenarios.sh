@@ -195,9 +195,6 @@ run_rwpm "1.4"                    # Fig. 12
 echo -e "\nQueue equal distance (d=1) scenario"
 run_equal_distance 1              # Fig. 13
 
-echo -e "\nQueue hybrid moving station (v=0.5) scenario with walls"
-run_hybrid_moving
-
 ## Legacy scenarios
 
 # echo -e "\nQueue equal distance (d=20) scenario"
@@ -232,3 +229,6 @@ run_hybrid_moving
 
 # echo -e "\nQueue power with moving station (delta=15, interval=8, v=0, start=5) scenario"
 # run_power_moving 15 8 0 5
+
+# echo -e "\nQueue hybrid moving station (v=0.5) scenario with walls"
+# run_hybrid_moving
