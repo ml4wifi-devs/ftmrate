@@ -133,6 +133,16 @@ export PYTHONPATH=$PYTHONPATH:$YOUR_PATH_TO_FTMRATE_ROOT
 ### Using the Slurm workload manager
 
 To produce reliable results, many independent simulations need to be run. [Slurm](https://slurm.schedmd.com/documentation.html) is a tool that we used to manage running multiple simulations on a GPU simultaneously. We have collected all the Slurm scripts in the `ftmrate/tools/slurm/` directory.  
+
+#### Adapting scripts to your Slurm configuration (important!)
+
+All scripts in the `ftmrate/tools/slurm/` directory are configured to work with our server configuration, so you need to adjust the scripts to work with your setup. The most important is to change the partition name and the software collection definition. The simplest way to do this is to:
+
+1. Remove the `-p gpu` flag from the `sbatch` command in all Slurm scripts.
+2. Replace the `#!/usr/bin/scl enable devtoolset-11 rh-python38 -- /bin/bash -l` line with `#!/bin/bash` in all Slurm scripts.
+
+#### Running simulations
+
 To collect results from multiple Wi-Fi scenarios so to reproduce our results presented in our article ([preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443), [Zenodo](https://zenodo.org/records/7875867)), you need to run
 ```
 sbatch ftmrate/tools/slurm/run-all-scenarios.sh
