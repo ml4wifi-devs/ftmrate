@@ -19,8 +19,8 @@ def plot_results(ax: plt.Axes, velocity: float) -> None:
     oracle = df[df.manager == 'Oracle']['throughput'].mean()
     ax.axhline(oracle, linestyle='--', c='gray', label=f'{ALL_MANAGERS["Oracle"]} mean')
 
-    ax.set_ylim((0, 90))
-    ax.set_yticks([0, 15, 30, 45, 60, 75, 90])
+    ax.set_ylim((0, 60))
+    ax.set_yticks([0, 10, 20, 30, 40, 50, 60])
     ax.set_ylabel('Aggregate throughput [Mb/s]')
 
     ax.set_xlabel('')

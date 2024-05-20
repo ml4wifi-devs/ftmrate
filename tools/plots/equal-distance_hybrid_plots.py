@@ -17,7 +17,7 @@ MANAGERS = {
 def plot_results() -> None:
     colors = pl.cm.viridis(np.linspace(0., 1., 5))
     colors_map = {
-        'MAB_KF': "tab:red",
+        'MAB_KF': colors[2],
         'TS': colors[1],
         'KF': colors[3],
     }
