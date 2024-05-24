@@ -40,6 +40,7 @@ def plot_results() -> None:
     plt.xlabel('Number of stations')
 
     plt.ylim((0, 125))
+    plt.yticks(range(0, 126, 25))
     plt.ylabel('Aggregate throughput [Mb/s]')
 
     plt.grid()
