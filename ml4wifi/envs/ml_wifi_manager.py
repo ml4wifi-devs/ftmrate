@@ -25,7 +25,7 @@ MANAGERS = {
     'ts': ThompsonSampling,
     'thr': HybridThreshold,
     'mab': HybridMAB,
-    'oracle_ftm': Identity
+    'oracle-ftm': Identity
 }
 
 # Simulation parameters for different scenarios
@@ -128,7 +128,7 @@ def main() -> None:
     NS3_ARGS['delta'] = args.delta
     NS3_ARGS['enableRtsCts'] = True if args.enableRtsCts == 'True' else False
     NS3_ARGS['fuzzTime'] = args.fuzzTime
-    NS3_ARGS['idealDistance'] = args.idealDistance or args.ml_manager == 'oracle_ftm'
+    NS3_ARGS['idealDistance'] = args.idealDistance or args.ml_manager == 'oracle-ftm'
     NS3_ARGS['interval'] = args.interval
     NS3_ARGS['lossModel'] = args.lossModel
     NS3_ARGS['managerName'] = args.managerName if args.managerName else ml_manager

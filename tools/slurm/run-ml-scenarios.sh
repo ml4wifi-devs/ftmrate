@@ -5,7 +5,7 @@ TOOLS_DIR="${TOOLS_DIR:=$HOME/ftmrate/tools}"
 export XLA_PYTHON_CLIENT_PREALLOCATE=false
 TASKS_PER_NODE=5
 
-MANAGERS=("es" "kf" "pf" "oracle_ftm")
+MANAGERS=("es" "kf" "pf" "oracle-ftm")
 MANAGERS_NAMES=("ES" "KF" "PF" "OracleFTM")
 MANAGERS_LEN=${#MANAGERS[@]}
 

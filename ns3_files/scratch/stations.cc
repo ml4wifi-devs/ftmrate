@@ -330,6 +330,11 @@ main (int argc, char *argv[])
                    PointerValue (staDevice.Get (j)->GetObject<WifiNetDevice>()));
     }
 
+  Config::Set ("/NodeList/" + std::to_string (wifiApNode.Get (0)->GetId ()) +
+                   "/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
+                   "$ns3::MlWifiManager/WifiNetDevice",
+               PointerValue (apDevice.Get (0)->GetObject<WifiNetDevice>()));
+
   Config::Set ("/NodeList/*/DeviceList/*/$ns3::WifiNetDevice/RemoteStationManager/"
                    "$ns3::MlWifiManager/ApAddress",
                Mac48AddressValue (Mac48Address::ConvertFrom (apDevice.Get (0)->GetAddress ())));
