@@ -13,10 +13,10 @@
 #include "ns3/wifi-utils.h"
 #include "ml-wifi-manager.h"
 
-#define SAMPLE_INTERVAL 0.01
+#define SAMPLE_INTERVAL 0.1
 #define RTT_TO_DISTANCE 0.00015
 #define FTM_RETRY_TIME 0.05
-#define MAX_DISTANCE 1000.
+#define MAX_DISTANCE 1000.0
 
 namespace ns3 {
 
