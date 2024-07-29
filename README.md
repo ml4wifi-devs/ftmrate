@@ -1,5 +1,5 @@
 # FTMRate
-[![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.7875867.svg)](https://doi.org/10.5281/zenodo.7875867)  
+[![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.7607129.svg)](https://zenodo.org/doi/10.5281/zenodo.7607129)  
 
 FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the IEEE 802.11 fine timing measurement (FTM) protocol to improve the per-frame selection of modulation and coding schemes. Its detailed operation and a performance analysis can be found in:
 
