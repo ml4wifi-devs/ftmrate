@@ -1,12 +1,13 @@
 # FTMRate
-
-[![DOI](https://img.shields.io/badge/DOI-10.1109/WoWMoM57956.2023.00039-blue.svg)](https://ieeexplore.ieee.org/document/10195443)
-[![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.7875867.svg)](https://doi.org/10.5281/zenodo.7875867)
+[![Zenodo](https://zenodo.org/badge/DOI/10.5281/zenodo.7875867.svg)](https://doi.org/10.5281/zenodo.7875867)  
 
 FTMRate is a rate adaptation algorithm for IEEE 802.11 networks which uses the IEEE 802.11 fine timing measurement (FTM) protocol to improve the per-frame selection of modulation and coding schemes. Its detailed operation and a performance analysis can be found in:
 
-- Wojciech Ciezobka, Maksymilian Wojnar, Katarzyna Kosek-Szott, Szymon Szott, and Krzysztof Rusek. "FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks." 24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM), 2023. [[preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443)]
-- Wojciech Ciezobka, Maksymilian Wojnar, Krzysztof Rusek, Katarzyna Kosek-Szott, Szymon Szott, Anatolij Zubow, and Falko Dressler. "Using Ranging for Collision-Immune IEEE 802.11 Rate Selection with Statistical Learning" (under review).
+- [![DOI](https://img.shields.io/badge/DOI-10.1109/WoWMoM57956.2023.00039-blue.svg)](https://ieeexplore.ieee.org/document/10195443)  
+  Wojciech Ciezobka, Maksymilian Wojnar, Katarzyna Kosek-Szott, Szymon Szott, and Krzysztof Rusek. "FTMRate: Collision-Immune Distance-based Data Rate Selection for IEEE 802.11 Networks." 24th IEEE International Symposium on a World of Wireless, Mobile and Multimedia Networks (WoWMoM), 2023. [[preprint](https://arxiv.org/pdf/2304.10140.pdf), [IEEE Xplore](https://ieeexplore.ieee.org/document/10195443)]  
+
+- [![DOI](https://img.shields.io/badge/DOI-10.1016/j.comcom.2024.07.001-blue.svg)](https://doi.org/10.1016/j.comcom.2024.07.001)  
+  Wojciech Ciezobka, Maksymilian Wojnar, Krzysztof Rusek, Katarzyna Kosek-Szott, Szymon Szott, Anatolij Zubow, and Falko Dressler. "Using ranging for collision-Immune IEEE 802.11 rate selection with statistical learning" [[Computer Communications](https://www.sciencedirect.com/science/article/pii/S0140366424002317)]. 
 
 ## Installation
 
