@@ -19,7 +19,7 @@ if __name__ == '__main__':
                 rssi_val = line.split(" ")[4][:-3]
                 try:
                     rssi_val_float = float(rssi_val)
-                    if rssi_val_float < -60:
+                    if rssi_val_float < -60:  # Filter out outliers
                         rssi_matrix.append([distance, rssi_val])
                 except ValueError:
                     print(f'Parsing Exception: "{rssi_val}"')

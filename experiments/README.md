@@ -55,7 +55,7 @@ cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/ftm
 sudo ./ftm.sh > d10_0.out
 ```
 
-The file naming convention we use is `dX_Y.out`, where `X` is the distance and `Y` is the measurement number.
+The file naming convention we use is `dX_Y.out`, where `X` is the distance in meters and `Y` is the measurement number.
 (It is worth retaining this convention, because subsequent scripts are adapted to this naming).
 
 **Attention!** We recommend taking multiple measurements for each distance due to multipath fading, which can cause 
@@ -71,6 +71,7 @@ python3 fit_ftm.py
 ```
 
 The results (coefficients of the line) should be assigned to constants `FTM_COEFF` and `FTM_BIAS` in the `ftmrate.py` file.
+Note that the returned values are expressed in centimeters.
 
 ### Kalman filter sensor noise calibration
 
@@ -87,9 +88,8 @@ The results (variance of the sensor noise) should be assigned to the `KF_SENSOR_
 ### Channel model calibration
 
 Next, to calibrate the channel model, run the `rssi.sh` script multiple times at
-different distances and save the results in a file. The script should run on the access point. While the script is 
-running, the station should send frames to the AP so the AP can measure the RSSI (for example by running 
-`send_frames_sta.py` script from the `experiments/calibration/success_probability` directory).
+different distances and save the results in a file. The script should run on the station. While the script is 
+running, the AP should send beacon frames to the STA so the STA can measure the RSSI.
 
 ```bash
 cd $PATH_TO_FTMRATE_ROOT/experiments/calibration/channel
