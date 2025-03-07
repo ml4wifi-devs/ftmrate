@@ -16,7 +16,7 @@ setup(
         # 'ns3-ai==1.0.2',
         'optax~=0.1.3',
         'pandas~=1.5.3',
-        'scipy~=1.10.0',
+        'scipy~=1.11.0',
         'seaborn~=0.12.2',
         'sympy~=1.11.1',
         'tensorflow-probability~=0.19.0',
